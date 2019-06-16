@@ -33,6 +33,10 @@ http://www.chessdb.cn/cdb.php?action=queryall&board=rnbqkbnr/pppppppp/8/8/8/8/PP
 
 http://www.chessdb.cn/cdb.php?action=querybest&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
 
+- To let the database provide follow-up move information for a position, try this:
+
+http://www.chessdb.cn/cdb.php?action=querypv&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
+
 Please check the corresponding source code for API syntax and output format.
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
