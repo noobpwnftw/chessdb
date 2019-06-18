@@ -1034,23 +1034,38 @@ try{
 											break;
 									}
 									shuffle( $finals );
-									echo 'move:' . end( $finals );
+									if( $isJson )
+										echo '"status":"ok","move":"' . end( $finals ) . '"';
+									else
+										echo 'move:' . end( $finals );
 								}
 								else {
-									echo 'nobestmove';
+									if( $isJson )
+										echo '"status":"nobestmove"';
+									else
+										echo 'nobestmove';
 								}
 							}
 							else {
 								if( end( $statmoves ) >= -50 ) {
-									echo 'move:' . end( array_keys( $statmoves ) );
+									if( $isJson )
+										echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+									else
+										echo 'move:' . end( array_keys( $statmoves ) );
 								}
 								else {
-									echo 'nobestmove';
+									if( $isJson )
+										echo '"status":"nobestmove"';
+									else
+										echo 'nobestmove';
 								}
 							}
 						}
 						else {
-							echo 'nobestmove';
+							if( $isJson )
+								echo '"status":"nobestmove"';
+							else
+								echo 'nobestmove';
 						}
 					}
 					else if( $action == 'query' ) {
@@ -1076,23 +1091,38 @@ try{
 											break;
 									}
 									shuffle( $finals );
-									echo 'move:' . end( $finals );
+									if( $isJson )
+										echo '"status":"ok","move":"' . end( $finals ) . '"';
+									else
+										echo 'move:' . end( $finals );
 								}
 								else {
-									echo 'nobestmove';
+									if( $isJson )
+										echo '"status":"nobestmove"';
+									else
+										echo 'nobestmove';
 								}
 							}
 							else {
 								if( end( $statmoves ) >= -50 ) {
-									echo 'move:' . end( array_keys( $statmoves ) );
+									if( $isJson )
+										echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+									else
+										echo 'move:' . end( array_keys( $statmoves ) );
 								}
 								else {
-									echo 'nobestmove';
+									if( $isJson )
+										echo '"status":"nobestmove"';
+									else
+										echo 'nobestmove';
 								}
 							}
 						}
 						else {
-							echo 'nobestmove';
+							if( $isJson )
+								echo '"status":"nobestmove"';
+							else
+								echo 'nobestmove';
 						}
 					}
 					else if( $action == 'queryall' ) {
@@ -1101,7 +1131,7 @@ try{
 						list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, $learn );
 						if( count( $statmoves ) > 0 ) {
 							if( $isJson )
-								echo '"status": "ok","move":[{';
+								echo '"status": "ok","moves":[{';
 
 							$oldscores = setOverrides( $row, $statmoves );
 							arsort( $statmoves );
@@ -1201,7 +1231,7 @@ try{
 							if( count( $allmoves ) > 0 ) {
 								if( $showall ) {
 									if( $isJson )
-										echo '"status":"ok","move":[{';
+										echo '"status":"ok","moves":[{';
 									$isfirst = true;
 									foreach( $allmoves as $record => $score ) {
 										if( !$isfirst ) {
