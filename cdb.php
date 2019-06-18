@@ -884,6 +884,14 @@ try{
 		exit(0);
 	}
 	$action = $_REQUEST['action'];
+	if( isset( $_REQUEST['json'] ) ) {
+		$isJson = is_true( $_REQUEST['json'] );
+	}
+	else {
+		$isJson = false;
+	}
+	if( $isJson )
+		echo '{';
 
 	if( isset( $_REQUEST['board'] ) && !empty( $_REQUEST['board'] ) ) {
 		$row = cbgetfen( $_REQUEST['board'] );
@@ -1091,39 +1099,82 @@ try{
 						$redis->pconnect('localhost', 8888);
 						list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, $learn );
 						if( count( $statmoves ) > 0 ) {
+							if( $isJson )
+								echo '"status": "ok","data":[{';
+
 							$oldscores = setOverrides( $row, $statmoves );
 							arsort( $statmoves );
 							$maxscore = reset( $statmoves );
 							$throttle = getthrottle( $maxscore );
 							$isfirst = true;
+
 							foreach( $statmoves as $record => $score ) {
 								$winrate = '';
-								if( abs( $score ) < 10000 )
-									$winrate = ',winrate:' . getWinRate( $score );
+								if( abs( $score ) < 10000 ) {
+									if( $isJson )
+										$winrate = ',"winrate":"' . getWinRate( $score ) . '"';
+									else
+										$winrate = ',winrate:' . getWinRate( $score );
+								}
 
-								if( !$isfirst && ( $isLearner || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) )
-									echo '|';
+								if( !$isfirst && ( $isLearner || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) ) {
+									if( $isJson )
+										echo '},{';
+									else
+										echo '|';
+								}
 								if( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) {
 									if( isset( $oldscores[$record] ) ) {
-										$score = $score . ' (' . $oldscores[$record] . ')';
-										$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
+										if( $isJson ) {
+											$score = $oldscores[$record];
+											$winrate = ',"winrate":"' . getWinRate( $oldscores[$record] ) . '"';
+										}
+										else {
+											$score = $score . ' (' . $oldscores[$record] . ')';
+											$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
+										}
 									}
-									echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
+									if( $isJson )
+										echo '"move":"' . $record . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+									else
+										echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 								}
 								else if( $score >= $throttle ) {
 									if( $isfirst || $isLearner ) {
-										if( isset( $oldscores[$record] ) )
-											$score = $score . ' (' . $oldscores[$record] . ')';
-										echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
+										if( isset( $oldscores[$record] ) ) {
+											if( $isJson ) {
+												$score = $oldscores[$record];
+												$winrate = ',"winrate":"' . getWinRate( $oldscores[$record] ) . '"';
+											}
+											else {
+												$score = $score . ' (' . $oldscores[$record] . ')';
+												$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
+											}
+										}
+										if( $isJson )
+											echo '"move":"' . $record . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+										else
+											echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
 									else
 										unset( $statmoves[$record] );
 								}
 								else {
 									if( $isfirst || $isLearner ) {
-										if( isset( $oldscores[$record] ) )
-											$score = $score . ' (' . $oldscores[$record] . ')';
-										echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
+										if( isset( $oldscores[$record] ) ) {
+											if( $isJson ) {
+												$score = $oldscores[$record];
+												$winrate = ',"winrate":"' . getWinRate( $oldscores[$record] ) . '"';
+											}
+											else {
+												$score = $score . ' (' . $oldscores[$record] . ')';
+												$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
+											}
+										}
+										if( $isJson )
+											echo '"move":"' . $record . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+										else
+											echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
 									else
 										unset( $statmoves[$record] );
@@ -1134,32 +1185,60 @@ try{
 								$allmoves = cbmovegen( $row );
 								foreach( $allmoves as $record => $score ) {
 									if( !isset( $statmoves[$record] ) ) {
-										echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
+										if( $isJson )
+											echo '},{"move":"' . $record . '","score":"??","rank":0,"note":"? (??-??)"';
+										else
+											echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
 									}
 								}
 							}
+							if( $isJson )
+								echo '}]';
 						}
 						else {
 							$allmoves = cbmovegen( $row );
 							if( count( $allmoves ) > 0 ) {
 								if( $showall ) {
+									if( $isJson )
+										echo '"status":"ok","data":[{';
 									$isfirst = true;
 									foreach( $allmoves as $record => $score ) {
-										if( !$isfirst )
-											echo '|';
+										if( !$isfirst ) {
+											if( $isJson )
+												echo '},{';
+											else
+												echo '|';
+										}
 										else
 											$isfirst = false;
-										echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
+										if( $isJson )
+											echo '"move":"' . $record . '","score":"??","rank":0,"note":"? (??-??)"';
+										else
+											echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
 									}
+									if( $isJson )
+										echo '}]';
 								}
-								else
-									echo 'unknown';
+								else {
+									if( $isJson )
+										echo '"status":"unknown"';
+									else
+										echo 'unknown';
+								}
 							}
 							else {
-								if( cbincheck( $row ) )
-									echo 'checkmate';
-								else
-									echo 'stalemate';
+								if( cbincheck( $row ) ) {
+									if( $isJson )
+										echo '"status":"checkmate"';
+									else
+										echo 'checkmate';
+								}
+								else {
+									if( $isJson )
+										echo '"status":"stalemate"';
+									else
+										echo 'stalemate';
+								}
 							}
 						}
 					}
@@ -1257,10 +1336,17 @@ try{
 						$redis->pconnect('localhost', 8888);
 						$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, $pv );
 						if( count( $statmoves ) > 0 ) {
-							echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
+							if( $isJson )
+								echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"]';
+							else
+								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 						}
-						else
-							echo 'unknown';
+						else {
+							if( $isJson )
+								echo '"status":"unknown"';
+							else
+								echo 'unknown';
+						}
 					}
 					else if( $action == 'queryscore' ) {
 						$redis = new Redis();
@@ -1270,10 +1356,16 @@ try{
 							setOverrides( $row, $statmoves );
 							arsort( $statmoves );
 							$maxscore = reset( $statmoves );
-							echo 'eval:' . $maxscore;
+							if( $isJson )
+								echo '"status":"ok","eval":' . $maxscore;
+							else
+								echo 'eval:' . $maxscore;
 						}
 						else {
-							echo 'unknown';
+							if( $isJson )
+								echo '"status":"unknown"';
+							else
+								echo 'unknown';
 						}
 					}
 					else if( $action == 'queue' ) {
@@ -1283,11 +1375,17 @@ try{
 						$redis->pconnect('localhost', 8888);
 						$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 100, true, true );
 						if( count( $statmoves ) >= 5 ) {
-							echo 'ok';
+							if( $isJson )
+								echo '"status":"ok"';
+							else
+								echo 'ok';
 						}
 						else if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 && count( cbmovegen( $row ) ) > 0 ) {
 							updateSel( $row, true );
-							echo 'ok';
+							if( $isJson )
+								echo '"status":"ok"';
+							else
+								echo 'ok';
 						}
 					}
 /*
@@ -1333,9 +1431,15 @@ try{
 			}
 		}
 		else {
-			echo 'invalid board';
+			if( $isJson )
+				echo '"status":"invalid board"';
+			else
+				echo 'invalid board';
 		}
-		echo "\0";
+		if( $isJson )
+			echo '}';
+		else
+			echo "\0";
 	}
 	else if( $action == 'getqueue' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
