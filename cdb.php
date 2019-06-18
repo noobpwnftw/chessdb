@@ -1101,7 +1101,7 @@ try{
 						list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, $learn );
 						if( count( $statmoves ) > 0 ) {
 							if( $isJson )
-								echo '"status": "ok","data":[{';
+								echo '"status": "ok","move":[{';
 
 							$oldscores = setOverrides( $row, $statmoves );
 							arsort( $statmoves );
@@ -1136,7 +1136,7 @@ try{
 										}
 									}
 									if( $isJson )
-										echo '"move":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+										echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 									else
 										echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 								}
@@ -1153,7 +1153,7 @@ try{
 											}
 										}
 										if( $isJson )
-											echo '"move":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 										else
 											echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
@@ -1173,7 +1173,7 @@ try{
 											}
 										}
 										if( $isJson )
-											echo '"move":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 										else
 											echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
@@ -1187,7 +1187,7 @@ try{
 								foreach( $allmoves as $record => $score ) {
 									if( !isset( $statmoves[$record] ) ) {
 										if( $isJson )
-											echo '},{"move":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":"??","rank":0,"note":"? (??-??)"';
+											echo '},{"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":"??","rank":0,"note":"? (??-??)"';
 										else
 											echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
 									}
@@ -1201,7 +1201,7 @@ try{
 							if( count( $allmoves ) > 0 ) {
 								if( $showall ) {
 									if( $isJson )
-										echo '"status":"ok","data":[{';
+										echo '"status":"ok","move":[{';
 									$isfirst = true;
 									foreach( $allmoves as $record => $score ) {
 										if( !$isfirst ) {
@@ -1213,7 +1213,7 @@ try{
 										else
 											$isfirst = false;
 										if( $isJson )
-											echo '"move":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":"??","rank":0,"note":"? (??-??)"';
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":"??","rank":0,"note":"? (??-??)"';
 										else
 											echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
 									}
