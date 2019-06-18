@@ -8,6 +8,7 @@ PHP_MINIT_FUNCTION(cboard);
 PHP_FUNCTION(cbgetfen);
 PHP_FUNCTION(cbmovegen);
 PHP_FUNCTION(cbmovemake);
+PHP_FUNCTION(cbmovesan);
 PHP_FUNCTION(cbincheck);
 
 PHP_FUNCTION(cbgetBWfen);

@@ -24,6 +24,7 @@ zend_function_entry cboard_functions[] = {
 	PHP_FE(cbgetfen, NULL)
 	PHP_FE(cbmovegen, NULL)
 	PHP_FE(cbmovemake, NULL)
+	PHP_FE(cbmovesan, NULL)
 
 	PHP_FE(cbgetBWfen, NULL)
 	PHP_FE(cbgetBWmove, NULL)
@@ -130,7 +131,23 @@ PHP_FUNCTION(cbmovemake)
 	}
 	RETURN_NULL();
 }
-
+PHP_FUNCTION(cbmovesan)
+{
+	char* fenstr;
+	int fenstr_len;
+	char* movestr;
+	int movestr_len;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &fenstr, &fenstr_len, &movestr, &movestr_len) != FAILURE) {
+		ChessPosition cp;
+		ChessMove move;
+		if(chess_fen_load(fenstr, &cp) && chess_parse_move(movestr, &cp, &move) == CHESS_PARSE_MOVE_OK) {
+			char san[10];
+			chess_print_move_san(move, &cp, san);
+			RETURN_STRING(san, 1);
+		}
+	}
+	RETURN_NULL();
+}
 char char2bithex(char ch)
 {
 	switch(ch)
