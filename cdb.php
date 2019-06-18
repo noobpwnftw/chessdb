@@ -1427,7 +1427,10 @@ try{
 				}
 				else {
 					//$memcache_obj->delete( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
-					echo 'rate limit exceeded';
+					if( $isJson )
+						echo '"status":"rate limit exceeded"';
+					else
+						echo 'rate limit exceeded';
 				}
 			}
 		}
