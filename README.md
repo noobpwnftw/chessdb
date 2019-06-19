@@ -23,20 +23,25 @@ Most parameters used in score calculations are from experience, however they can
 
 My API endpoint is accessable here:
 
-http://www.chessdb.cn/cdb.php
+https://www.chessdb.cn/cdb.php
+
+Also the non-HTTPS link should also work and it is recommended if you run large amounts queries.
 
 - To lookup information about all known moves of starting position, try this:
 
-http://www.chessdb.cn/cdb.php?action=queryall&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
+https://www.chessdb.cn/cdb.php?action=queryall&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
 
 - To let the database suggest a move for a position, try this:
 
-http://www.chessdb.cn/cdb.php?action=querybest&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
+https://www.chessdb.cn/cdb.php?action=querybest&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
 
 - To let the database provide follow-up move information for a position, try this:
 
-http://www.chessdb.cn/cdb.php?action=querypv&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
+https://www.chessdb.cn/cdb.php?action=querypv&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
 
-Please check the corresponding source code for API syntax and output format.
+Adding ``&json=1`` will turn outputs in JSON format, along with SAN move notations for certain types of queries.
+
+Please check the corresponding source code for detailed API syntax and output format.
+
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
