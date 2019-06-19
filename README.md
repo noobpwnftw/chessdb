@@ -25,7 +25,7 @@ My API endpoint is accessable here:
 
 https://www.chessdb.cn/cdb.php
 
-Also the non-HTTPS link should also work and it is recommended if you run large amounts queries.
+Also the non-HTTPS link should also work and it is recommended if you intend to run large amounts of queries.
 
 - To lookup information about all known moves of starting position, try this:
 
@@ -39,7 +39,7 @@ https://www.chessdb.cn/cdb.php?action=querybest&board=rnbqkbnr/pppppppp/8/8/8/8/
 
 https://www.chessdb.cn/cdb.php?action=querypv&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
 
-Adding ``&json=1`` will turn outputs in JSON format, along with SAN move notations for certain types of queries.
+Adding ``&json=1`` parameter will turn outputs into JSON format, along with SAN move notations for certain types of queries.
 
 Please check the corresponding source code for detailed API syntax and output format.
 
