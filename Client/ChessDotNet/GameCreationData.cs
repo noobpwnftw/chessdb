@@ -6,6 +6,7 @@
         {
             Moves = new DetailedMove[] {};
             Resigned = Player.None;
+            FullMoveNumber = 1;
         }
         public Piece[][] Board
         {

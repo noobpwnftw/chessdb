@@ -145,7 +145,7 @@ namespace ChessDBDiscover
                             outstr = EngineStreamReader.ReadLine();
                         }
                         WaitForReady();
-                        if (hasBestMove && score != int.MinValue)
+                        if (hasBestMove)
                         {
                             Console.WriteLine("[" + strThreadId + "] 正在提交结果...(NPS = " + nps.ToString() + "K)");
                             bool succeess = false;
