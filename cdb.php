@@ -1000,7 +1000,7 @@ try{
 				//require_once('include/counter.php');
 				//PHPCount::AddHit('Query');
 				//PHPCount::CloseDB();
-
+/*
 				$memcache_obj = new Memcache();
 				$memcache_obj->pconnect('localhost', 11211);
 				if( !$memcache_obj )
@@ -1012,6 +1012,7 @@ try{
 						$memcache_obj->add( 'QLimit::' . $_SERVER['REMOTE_ADDR'], 0, 0, 86400 );
 						$memcache_obj->increment( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
 					}
+*/
 					if( $action == 'querybest' ) {
 						$GLOBALS['counter'] = 0;
 						$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
@@ -1454,6 +1455,7 @@ try{
 							echo 'invalid movelist';
 					}
 */
+/*
 				}
 				else {
 					//$memcache_obj->delete( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
@@ -1462,6 +1464,7 @@ try{
 					else
 						echo 'rate limit exceeded';
 				}
+*/
 			}
 		}
 		else {
