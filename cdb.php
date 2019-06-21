@@ -586,7 +586,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 	}
 	return $moves1;
 }
-function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, $learn, &$pv, &$pvSAN ) {
+function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, $learn, &$pv ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 	if( $GLOBALS['counter'] < $enumlimit )
@@ -646,9 +646,8 @@ function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, 
 
 					if( $isbest ) {
 						array_push( $pv, $key );
-						array_push( $pvSAN, cbmovesan( $row, $key ) );
 					}
-					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $depth + 1, $enumlimit, $isbest, false, $pv, $pvSAN );
+					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $depth + 1, $enumlimit, $isbest, false, $pv );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
@@ -1167,7 +1166,7 @@ try{
 										}
 									}
 									if( $isJson )
-										echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+										echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 									else
 										echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 								}
@@ -1184,7 +1183,7 @@ try{
 											}
 										}
 										if( $isJson )
-											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 										else
 											echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
@@ -1204,7 +1203,7 @@ try{
 											}
 										}
 										if( $isJson )
-											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 										else
 											echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
@@ -1218,7 +1217,7 @@ try{
 								foreach( $allmoves as $record => $score ) {
 									if( !isset( $statmoves[$record] ) ) {
 										if( $isJson )
-											echo '},{"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":"??","rank":0,"note":"? (??-??)"';
+											echo '},{"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
 										else
 											echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
 									}
@@ -1244,7 +1243,7 @@ try{
 										else
 											$isfirst = false;
 										if( $isJson )
-											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, $record ) . '","score":"??","rank":0,"note":"? (??-??)"';
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
 										else
 											echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
 									}
@@ -1362,15 +1361,14 @@ try{
 					}
 					else if( $action == 'querypv' ) {
 						$pv = array();
-						$pvSAN = array();
 						$GLOBALS['counter'] = 0;
 						$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 						$redis = new Redis();
 						$redis->pconnect('localhost', 8888);
-						$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, $pv, $pvSAN );
+						$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, $pv );
 						if( count( $statmoves ) > 0 ) {
 							if( $isJson )
-								echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"],"pvSAN":["' . implode( '","', $pvSAN ) . '"]';
+								echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"],"pvSAN":["' . implode( '","', cbmovesan( $row, $pv ) ) . '"]';
 							else
 								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 						}

@@ -135,18 +135,29 @@ PHP_FUNCTION(cbmovesan)
 {
 	char* fenstr;
 	int fenstr_len;
-	char* movestr;
-	int movestr_len;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &fenstr, &fenstr_len, &movestr, &movestr_len) != FAILURE) {
+	zval* arr;
+	array_init(return_value);
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa", &fenstr, &fenstr_len, &arr) != FAILURE) {
 		ChessPosition cp;
-		ChessMove move;
-		if(chess_fen_load(fenstr, &cp) && chess_parse_move(movestr, &cp, &move) == CHESS_PARSE_MOVE_OK) {
-			char san[10];
-			chess_print_move_san(move, &cp, san);
-			RETURN_STRING(san, 1);
+		if(chess_fen_load(fenstr, &cp)) {
+			HashTable* arr_hash = Z_ARRVAL_P(arr);
+			HashPosition pointer;
+			zval** data;
+			for(zend_hash_internal_pointer_reset_ex(arr_hash, &pointer); zend_hash_get_current_data_ex(arr_hash, (void**) &data, &pointer) == SUCCESS; zend_hash_move_forward_ex(arr_hash, &pointer)) {
+				if (Z_TYPE_PP(data) == IS_STRING) {
+					ChessMove move;
+					if(chess_parse_move(Z_STRVAL_PP(data), &cp, &move) == CHESS_PARSE_MOVE_OK) {
+						char san[10];
+						chess_print_move_san(move, &cp, san);
+						add_next_index_string(return_value, san, 1);
+						chess_position_make_move(&cp, move);
+					}
+					else
+						break;
+				}
+			}
 		}
 	}
-	RETURN_NULL();
 }
 char char2bithex(char ch)
 {
