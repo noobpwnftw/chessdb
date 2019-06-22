@@ -890,10 +890,10 @@ try{
 	else {
 		$isJson = false;
 	}
-	if( $isJson )
-		echo '{';
-
 	if( isset( $_REQUEST['board'] ) && !empty( $_REQUEST['board'] ) ) {
+		if( $isJson )
+			echo '{';
+
 		$row = cbgetfen( $_REQUEST['board'] );
 		if( isset( $row ) && !empty( $row ) ) {
 			$banmoves = array();
@@ -1573,6 +1573,12 @@ try{
 	}
 	else if( $action == 'getip' ) {
 		echo $_SERVER['REMOTE_ADDR'];
+	}
+	else {
+		if( $isJson )
+			echo '{"status":"invalid parameters"}';
+		else
+			echo 'invalid parameters';
 	}
 }
 catch (MongoException $e) {
