@@ -175,8 +175,8 @@ function updateQueue( $row, $key, $priority ) {
 function getMoves( $redis, $row, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
-	$current_hash = crc32( $row );
-	$current_hash_bw = crc32( $BWfen );
+	$current_hash = abs( xxhash64( $row ) );
+	$current_hash_bw = abs( xxhash64( $BWfen ) );
 
 	$recurse = false;
 	if( !isset($moves1['ply']) || $moves1['ply'] > $depth )
@@ -294,7 +294,7 @@ function getMoves( $redis, $row, $depth ) {
 			{
 				array_push( $loopmoves, $GLOBALS['historytt'][$loop_hash]['move'] );
 				$loopfen = $GLOBALS['historytt'][$loop_hash]['fen'];
-				$loop_hash = crc32( $loopfen );
+				$loop_hash = abs( xxhash64( $loopfen ) );
 				if( !isset( $GLOBALS['historytt'][$loop_hash] ) )
 					break;
 			}

@@ -45,10 +45,19 @@ function getAllScores( $redis, $row ) {
 	}
 	return $moves;
 }
+function getPly( $redis, $row ) {
+	$BWfen = cbgetBWfen( $row );
+	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+	$ply = $redis->hGet( hex2bin($minhexfen), 'a0a0' );
+	if( $ply === FALSE )
+		return -1;
+	return $ply;
+}
 function updatePly( $redis, $row, $ply ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
+	$GLOBALS['counter_ply']++;
 }
 function updateScore( $redis, $row, $updatemoves ) {
 	$BWfen = cbgetBWfen( $row );
@@ -67,14 +76,34 @@ function updateScore( $redis, $row, $updatemoves ) {
 	}
 	$GLOBALS['counter_update']++;
 }
+function delScore( $redis, $row, $updatemoves ) {
+	$BWfen = cbgetBWfen( $row );
+	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+	if( $minindex == 0 ) {
+		if( $redis->hDel( hex2bin($minhexfen), $updatemoves ) === FALSE )
+			throw new RedisException( 'Server operation error.' );
+	}
+	else if( $minindex == 1 ) {
+		foreach( $updatemoves as $key => $newscore ) {
+			if( $redis->hDel( hex2bin($minhexfen), cbgetBWmove( $key ) ) === FALSE )
+				throw new RedisException( 'Server operation error.' );
+		}
+	}
+	$GLOBALS['counter_update']++;
+}
+function setCurrentPly( $redis, $row, $depth ) {
+	$ply = getPly( $redis, $row );
+	if( $ply < 0 || $ply > $depth )
+		updatePly( $redis, $row, $depth );
+}
 function getMoves( $redis, $row, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
-	$current_hash = crc32( $row );
-	$current_hash_bw = crc32( $BWfen );
+	$current_hash = abs( xxhash64( $row ) );
+	$current_hash_bw = abs( xxhash64( $BWfen ) );
 
 	$recurse = false;
-	if( !isset($moves1['ply']) || $moves1['ply'] > $depth )
+	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] > $depth )
 		updatePly( $redis, $row, $depth );
 
 	if( !isset($moves1['ply']) || $moves1['ply'] <= $depth )
@@ -91,6 +120,13 @@ function getMoves( $redis, $row, $depth ) {
 
 	if( $recurse && $depth < 30000 )
 	{
+		$errors = array_diff_key( $moves1, cbmovegen( $row ) );
+		if( count( $errors ) ) {
+			echo $row . "\n";
+			delScore( $redis, $row, $errors );
+			$moves1 = array_intersect_key( $moves1, cbmovegen( $row ) );
+		}
+
 		$updatemoves = array();
 		$isloop = true;
 		if( !isset( $GLOBALS['historytt'][$current_hash] ) )
@@ -114,6 +150,10 @@ function getMoves( $redis, $row, $depth ) {
 		if( !$isloop )
 		{
 			arsort( $moves1 );
+			foreach( $moves1 as $key => $item ) {
+				$nextfen = cbmovemake( $row, $key );
+				setCurrentPly( $redis, $nextfen, $depth + 1 );
+			}
 			foreach( $moves1 as $key => $item ) {
 
 				if( $depth == 0 )
@@ -170,7 +210,7 @@ function getMoves( $redis, $row, $depth ) {
 			{
 				array_push( $loopmoves, $GLOBALS['historytt'][$loop_hash]['move'] );
 				$loopfen = $GLOBALS['historytt'][$loop_hash]['fen'];
-				$loop_hash = crc32( $loopfen );
+				$loop_hash = abs( xxhash64( $loopfen ) );
 				if( !isset( $GLOBALS['historytt'][$loop_hash] ) )
 					break;
 			}
@@ -219,7 +259,7 @@ function getMoves( $redis, $row, $depth ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
 			if( $GLOBALS['counter'] % 10000 == 0) {
-				echo implode(' ', array( $GLOBALS['counter'], $GLOBALS['counter_dup'], $GLOBALS['counter_update'], $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_update'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ) ) ) . "\n";
+				echo implode(' ', array( $GLOBALS['counter'], $GLOBALS['counter_dup'], $GLOBALS['counter_update'], $GLOBALS['counter_ply'], $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_update'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ) ) ) . "\n";
 				$GLOBALS['last_counter'] = $GLOBALS['counter'] + $GLOBALS['counter_update'];
 				$GLOBALS['last_ts'] = time();
 			}
@@ -249,6 +289,7 @@ try{
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['counter_dup'] = 0;
 	$GLOBALS['counter_update'] = 0;
+	$GLOBALS['counter_ply'] = 0;
 	$GLOBALS['last_ts'] = time();
 	$GLOBALS['last_counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
