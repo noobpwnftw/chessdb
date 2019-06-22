@@ -890,6 +890,9 @@ try{
 	else {
 		$isJson = false;
 	}
+	if( $isJson )
+		header('Content-type: application/json');
+
 	if( isset( $_REQUEST['board'] ) && !empty( $_REQUEST['board'] ) ) {
 		if( $isJson )
 			echo '{';
