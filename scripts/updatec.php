@@ -106,7 +106,7 @@ function getMoves( $redis, $row, $depth ) {
 	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] > $depth )
 		updatePly( $redis, $row, $depth );
 
-	if( !isset($moves1['ply']) || $moves1['ply'] <= $depth )
+	if( !isset($moves1['ply']) || $moves1['ply'] >= $depth )
 	{
 		if( !isset( $GLOBALS['boardtt'][$current_hash] ) )
 		{
