@@ -983,9 +983,6 @@ try{
 					{
 						$move = substr( $move, 5 );
 						if( isset( $moves[$move] ) ) {
-							//require_once('include/counter.php');
-							//PHPCount::AddHit('Learn');
-							//PHPCount::CloseDB();
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, array(), false, false );
@@ -999,9 +996,6 @@ try{
 			}
 			else
 			{
-				//require_once('include/counter.php');
-				//PHPCount::AddHit('Query');
-				//PHPCount::CloseDB();
 /*
 				$memcache_obj = new Memcache();
 				$memcache_obj->pconnect('localhost', 11211);
@@ -1134,7 +1128,7 @@ try{
 						list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, $learn );
 						if( count( $statmoves ) > 0 ) {
 							if( $isJson )
-								echo '"status": "ok","moves":[{';
+								echo '"status":"ok","moves":[{';
 
 							$oldscores = setOverrides( $row, $statmoves );
 							arsort( $statmoves );
@@ -1481,9 +1475,6 @@ try{
 	}
 	else if( $action == 'getqueue' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
-			//require_once('include/counter2.php');
-			//PHPCount::AddHit('Client');
-			//PHPCount::CloseDB();
 			$memcache_obj = new Memcache();
 			$memcache_obj->pconnect('localhost', 11211);
 			if( !$memcache_obj )
@@ -1534,9 +1525,6 @@ try{
 	}
 	else if( $action == 'getsel' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
-			//require_once('include/counter2.php');
-			//PHPCount::AddHit('Client');
-			//PHPCount::CloseDB();
 			$memcache_obj = new Memcache();
 			$memcache_obj->pconnect('localhost', 11211);
 			if( !$memcache_obj )
