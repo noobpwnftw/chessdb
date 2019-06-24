@@ -91,11 +91,6 @@ function delScore( $redis, $row, $updatemoves ) {
 	}
 	$GLOBALS['counter_update']++;
 }
-function setCurrentPly( $redis, $row, $depth ) {
-	$ply = getPly( $redis, $row );
-	if( $ply < 0 || $ply > $depth )
-		updatePly( $redis, $row, $depth );
-}
 function getMoves( $redis, $row, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
@@ -150,10 +145,6 @@ function getMoves( $redis, $row, $depth ) {
 		if( !$isloop )
 		{
 			arsort( $moves1 );
-			foreach( $moves1 as $key => $item ) {
-				$nextfen = cbmovemake( $row, $key );
-				setCurrentPly( $redis, $nextfen, $depth + 1 );
-			}
 			foreach( $moves1 as $key => $item ) {
 
 				if( $depth == 0 )
