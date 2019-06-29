@@ -91,6 +91,17 @@ function delScore( $redis, $row, $updatemoves ) {
 	}
 	$GLOBALS['counter_update']++;
 }
+function shuffle_assoc(&$array) {
+	$keys = array_keys($array);
+	shuffle($keys);
+	$new = array();
+	foreach($keys as $key) {
+		$new[$key] = $array[$key];
+	}
+	$array = $new;
+	return true;
+}
+
 function getMoves( $redis, $row, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
@@ -144,7 +155,7 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			arsort( $moves1 );
+			shuffle_assoc( $moves1 );
 			foreach( $moves1 as $key => $item ) {
 
 				if( $depth == 0 )
