@@ -1,23 +1,26 @@
 # ChessDB
 
 ## Info
-To run the code you need to set up:
-- MongoDB for task queue.
-- Redis-compatible server for data storage.
-- Memcached for frontend cache.
-- A few PHP extensions for board operations and other utilities.
 
-All modules used are provided in source code. I use an optimized version of SSDB https://github.com/noobpwnftw/ssdb, which can greatly reduce database size and increase query performance.
+To run the code you need to set up the following:
+- MongoDB 3.4(newest supported by the legacy driver) for task queue.
+- A Redis-compatible server for data storage.
+- Memcached for frontend query cache.
+- PHP 5.x with Judy, redis and mongo(the legacy one) extensions.
+- A few custom PHP extensions for board operations and other utilities.
 
-The frontend is a PHP script(cdb.php) that handles API requests and database operations, you also need a swarm of workers that runs move sieving(Sel) and scoring(Client), for those I use this fork of Stockfish https://github.com/noobpwnftw/Stockfish/tree/siever.
+All custom PHP modules used are provided in source code, follow standard PHP extension building instructions to compile them. I use an optimized version of SSDB https://github.com/noobpwnftw/ssdb, which can greatly reduce database size and increase query performance.
+
+The frontend is a PHP script(cdb.php) that handles API requests and database operations, you also need a swarm of workers that runs move sieving(Sel) and scoring(Client) to consume the task queue, for those I use this fork of Stockfish https://github.com/noobpwnftw/Stockfish/tree/siever.
 
 For your data integrity, it is suggested to only allow trusted processing power for these tasks, you can specify your password in the beginning of the PHP script and generate access tokens to your workers accordingly, access tokens are IP address bound.
 
-To further extend the database you can let an engine play against the database, there is a tool(Discover) for that, and it may be *safe* to let users contribute their processing power and use their own engines.
+To further extend the database you can let anyone play against the database, and it may be *safe* to let users contribute their processing power using their own chess engines, there is a tool(Discover) for that, as all new moves and positions are only added to the task queue.
 
 To check your database status, there is another PHP script(statsc.php), there are also a few utilities located in scripts folder, which are mostly for bootstraping and import/export.
 
 Most parameters used in score calculations are from experience, however they can be changed with ease.
+
 
 ## Official API
 
@@ -42,6 +45,11 @@ https://www.chessdb.cn/cdb.php?action=querypv&board=rnbqkbnr/pppppppp/8/8/8/8/PP
 Adding ``&json=1`` parameter will turn outputs into JSON format, along with SAN move notations for certain types of queries.
 
 Please check the corresponding source code for detailed API syntax and output format.
+
+- A status page showing database statistics:
+
+https://www.chessdb.cn/statsc.php?lang=1
+
 
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
