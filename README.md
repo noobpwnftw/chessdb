@@ -6,10 +6,10 @@ To run the code you need to set up the following:
 - MongoDB 3.4(newest supported by the legacy driver) for task queue.
 - A Redis-compatible server for data storage.
 - Memcached for frontend query cache.
-- PHP 5.x with Judy, redis and mongo(the legacy one) extensions.
+- PHP 5.x with Judy, redis, memcache and mongo(the legacy one) extensions.
 - A few custom PHP extensions for board operations and other utilities.
 
-All custom PHP modules used are provided in source code, follow standard PHP extension building instructions to compile them. I use an optimized version of SSDB https://github.com/noobpwnftw/ssdb, which can greatly reduce database size and increase query performance.
+All custom PHP modules used are provided in source code, follow standard PHP extension building instructions to compile and install. I use an optimized version of SSDB https://github.com/noobpwnftw/ssdb, which can greatly reduce database size and increase query performance.
 
 The frontend is a PHP script(cdb.php) that handles API requests and database operations, you also need a swarm of workers that runs move sieving(Sel) and scoring(Client) to consume the task queue, for those I use this fork of Stockfish https://github.com/noobpwnftw/Stockfish/tree/siever.
 
@@ -30,6 +30,10 @@ https://www.chessdb.cn/cdb.php
 
 Also the non-HTTPS link should also work and it is recommended if you intend to run large amounts of queries.
 
+- A status page showing current database statistics:
+
+https://www.chessdb.cn/statsc.php?lang=1
+
 - To lookup information about all known moves of starting position, try this:
 
 https://www.chessdb.cn/cdb.php?action=queryall&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
@@ -46,9 +50,6 @@ Adding ``&json=1`` parameter will turn outputs into JSON format, along with SAN 
 
 Please check the corresponding source code for detailed API syntax and output format.
 
-- A status page showing database statistics:
-
-https://www.chessdb.cn/statsc.php?lang=1
 
 
 
