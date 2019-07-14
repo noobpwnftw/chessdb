@@ -261,7 +261,8 @@ function getMoves( $redis, $row, $depth ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
 			if( $GLOBALS['counter'] % 10000 == 0) {
-				echo implode(' ', array( $GLOBALS['counter'], $GLOBALS['counter_dup'], $GLOBALS['counter_update'], $GLOBALS['counter_ply'], $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_update'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ) ) ) . "\n";
+				gc_collect_cycles();
+				echo implode(' ', array( $GLOBALS['counter'], $GLOBALS['counter_dup'], $GLOBALS['counter_update'], $GLOBALS['counter_ply'], $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_update'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ), count( $GLOBALS['looptt'] ), $GLOBALS['boardtt']->memoryUsage() ) ) . "\n";
 				$GLOBALS['last_counter'] = $GLOBALS['counter'] + $GLOBALS['counter_update'];
 				$GLOBALS['last_ts'] = time();
 			}
@@ -294,6 +295,7 @@ try{
 	$GLOBALS['counter_ply'] = 0;
 	$GLOBALS['last_ts'] = time();
 	$GLOBALS['last_counter'] = 0;
+	$GLOBALS['looptt'] = array();
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
 	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
 	echo 'ok' . "\n";
