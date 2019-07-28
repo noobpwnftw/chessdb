@@ -50,7 +50,11 @@ Adding ``&json=1`` parameter will turn outputs into JSON format, along with SAN 
 
 Please check the corresponding source code for detailed API syntax and output format.
 
+## Database Snapshot
 
+A full database snapshot which contains about 3 billion unique positions as of 2019-07-28 is available at:
+
+ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-20190728.tar
 
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
