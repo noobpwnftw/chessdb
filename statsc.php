@@ -2,7 +2,6 @@
 ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
-include_once('include/SSDB.php');
 
 if (!function_exists('http_response_code')) {
 	function http_response_code($code = NULL) {
@@ -67,9 +66,9 @@ try{
 	if( isset( $_REQUEST['lang'] ) ) {
 		$lang = intval($_REQUEST['lang']);
 	}
-
-	$ssdb = new SimpleSSDB('localhost', 8888);
-	$count = $ssdb->dbsize();
+	$redis = new Redis();
+	$redis->pconnect('localhost', 8888);
+	$count = $redis->dbsize();
 
 	$m = new MongoClient();
 	$dbs = $m->listDBs();
