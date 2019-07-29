@@ -128,7 +128,7 @@ catch (MongoException $e) {
 	echo 'Error: ' . $e->getMessage();
 	http_response_code(503);
 }
-catch (SSDBException $e) {
+catch (RedisException $e) {
 	echo 'Error: ' . $e->getMessage();
 	http_response_code(503);
 }
