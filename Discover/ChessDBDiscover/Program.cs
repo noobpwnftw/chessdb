@@ -216,6 +216,12 @@ namespace ChessDBDiscover
         {
             System.Console.TreatControlCAsInput = true;
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
+            string sEngine = Directory.GetCurrentDirectory() + @"/engine/" + ConfigurationManager.AppSettings["EngineFileName"];
+            if (!File.Exists(sEngine))
+            {
+                Console.WriteLine("Engine not found!\n");
+                return;
+            }
             int ThreadCount;
             if (!int.TryParse(ConfigurationManager.AppSettings["Threads"], out ThreadCount))
             {
