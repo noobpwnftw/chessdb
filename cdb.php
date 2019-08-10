@@ -1484,6 +1484,7 @@ try{
 					$collection = $m->selectDB('cdbqueue')->selectCollection('queuedb');
 					$cursor = $collection->find()->sort( array( 'p' => -1 ) )->limit(10);
 					$docs = array();
+					$queueout = '';
 					foreach( $cursor as $doc ) {
 						$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
 						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 ) {
@@ -1497,12 +1498,17 @@ try{
 									$moves[] = $key;
 							}
 							if( count( $moves ) > 0 ) {
-								echo $fen . "\n";
+								$queueout .= $fen . "\n";
 								foreach( $moves as $move )
-									echo $fen . ' moves ' . $move . "\n";
+									$queueout .= $fen . ' moves ' . $move . "\n";
 							}
 						}
 						$docs[] = $doc['_id'];
+					}
+					if( strlen($queueout) > 0 ) {
+						$collection2 = $m->selectDB('cdbqueue')->selectCollection('ackqueuedb');
+						$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'] ), array( 'upsert' => true ) );
+						echo $queueout;
 					}
 					if( count( $docs ) > 0 ) {
 						$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
@@ -1517,6 +1523,17 @@ try{
 		else {
 			echo 'tokenerror';
 			//error_log($_SERVER['REMOTE_ADDR'], 0 );
+		}
+	}
+	else if( $action == 'ackqueue' ) {
+		if( isset( $_REQUEST['key'] ) && isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) . $_REQUEST['key'] ) ) {
+			$m = new MongoClient('mongodb://localhost');
+			$collection = $m->selectDB('cdbqueue')->selectCollection('ackqueuedb');
+			$collection->remove( array( '_id' => new MongoBinData(hex2bin($_REQUEST['key'])) ) );
+			echo 'ok';
+		}
+		else {
+			echo 'tokenerror';
 		}
 	}
 	else if( $action == 'getsel' ) {
