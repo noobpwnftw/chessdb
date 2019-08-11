@@ -21,6 +21,20 @@ To check your database status, there is another PHP script(statsc.php), there ar
 
 Most parameters used in score calculations are from experience, however they can be changed with ease.
 
+## Task Queue
+
+The following indexes of MongoDB are required to ensure proper performance:
+
+For cdbqueue:
+```
+db.queuedb.ensureIndex({p:-1})
+db.ackqueuedb.ensureIndex({ts:1})
+```
+
+For cdbsel:
+```
+db.seldb.ensureIndex({p:-1})
+```
 
 ## Official API
 
