@@ -1485,6 +1485,7 @@ try{
 					$cursor = $collection->find()->sort( array( 'p' => -1 ) )->limit(10);
 					$docs = array();
 					$queueout = '';
+					$hasResult = FALSE;
 					foreach( $cursor as $doc ) {
 						$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
 						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 ) {
@@ -1505,14 +1506,23 @@ try{
 						}
 						$docs[] = $doc['_id'];
 					}
+					$collection2 = $m->selectDB('cdbqueue')->selectCollection('ackqueuedb');
 					if( strlen($queueout) > 0 ) {
-						$collection2 = $m->selectDB('cdbqueue')->selectCollection('ackqueuedb');
-						$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'] ), array( 'upsert' => true ) );
+						$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
 						echo $queueout;
+					}
+					else {
+						$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+						if( !empty( $doc ) && isset( $doc['data'] ) ) {
+							$queueout = $doc['data'];
+							$hasResult = TRUE;
+						}
 					}
 					if( count( $docs ) > 0 ) {
 						$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
-					} else {
+						$hasResult = TRUE;
+					}
+					if( !$hasResult ) {
 						$memcache_obj->add( 'QueueEmpty3', 1, 0, 30 );
 					}
 					$cursor->reset();
