@@ -1514,7 +1514,7 @@ try{
 					else {
 						$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
 						if( !empty( $doc ) && isset( $doc['data'] ) ) {
-							$queueout = $doc['data'];
+							echo $doc['data'];
 							$hasResult = TRUE;
 						}
 					}
