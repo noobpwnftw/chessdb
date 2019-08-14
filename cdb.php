@@ -187,6 +187,16 @@ function getAllScores( $redis, $row ) {
 	}
 	return $moves;
 }
+function scoreExists( $redis, $row, $move ) {
+	$BWfen = cbgetBWfen( $row );
+	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+	if( $minindex == 0 ) {
+		return $redis->hExists( hex2bin( $minhexfen ), $move );
+	}
+	else {
+		return $redis->hExists( hex2bin( $minhexfen ), cbgetBWmove( $move ) );
+	}
+}
 function updateScore( $redis, $row, $updatemoves ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
@@ -964,8 +974,7 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, array(), false, false );
-							if( !isset( $statmoves[$move] ) ) {
+							if( !scoreExists( $redis, $row, $move ) ) {
 								updateScore( $redis, $row, array( $move => $score ) );
 								echo 'ok';
 							}
@@ -981,8 +990,7 @@ try{
 						if( isset( $moves[$move] ) ) {
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, array(), false, false );
-							if( !isset( $statmoves[$move] ) ) {
+							if( !scoreExists( $redis, $row, $move ) ) {
 								updateQueue( $row, $move, true );
 								echo 'ok';
 							}
@@ -1475,9 +1483,9 @@ try{
 			$memcache_obj->pconnect('localhost', 11211);
 			if( !$memcache_obj )
 				throw new Exception( 'Memcache error.' );
-			//if( $readwrite_queue->trywritelock() )
+			if( $readwrite_queue->trywritelock() )
 			{
-				$readwrite_queue->writelock();
+				//$readwrite_queue->writelock();
 				$canskip = $memcache_obj->get( 'QueueEmpty3' );
 				if( $canskip === FALSE ) {
 					$m = new MongoClient('mongodb://localhost');
@@ -1506,13 +1514,13 @@ try{
 						}
 						$docs[] = $doc['_id'];
 					}
-					$collection2 = $m->selectDB('cdbqueue')->selectCollection('ackqueuedb');
+					$collection2 = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
 					if( strlen($queueout) > 0 ) {
 						$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
 						echo $queueout;
 					}
 					else {
-						$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+						$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
 						if( !empty( $doc ) && isset( $doc['data'] ) ) {
 							echo $doc['data'];
 							$hasResult = TRUE;
@@ -1538,7 +1546,7 @@ try{
 	else if( $action == 'ackqueue' ) {
 		if( isset( $_REQUEST['key'] ) && isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) . $_REQUEST['key'] ) ) {
 			$m = new MongoClient('mongodb://localhost');
-			$collection = $m->selectDB('cdbqueue')->selectCollection('ackqueuedb');
+			$collection = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
 			$collection->remove( array( '_id' => new MongoBinData(hex2bin($_REQUEST['key'])) ) );
 			echo 'ok';
 		}
@@ -1552,9 +1560,9 @@ try{
 			$memcache_obj->pconnect('localhost', 11211);
 			if( !$memcache_obj )
 				throw new Exception( 'Memcache error.' );
-			//if( $readwrite_sel->trywritelock() )
+			if( $readwrite_sel->trywritelock() )
 			{
-				$readwrite_sel->writelock();
+				//$readwrite_sel->writelock();
 				$canskip = $memcache_obj->get( 'QueueEmpty4' );
 				if( $canskip === FALSE ) {
 					$m = new MongoClient('mongodb://localhost');

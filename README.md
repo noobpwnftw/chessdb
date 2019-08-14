@@ -28,6 +28,10 @@ The following indexes of MongoDB are required to ensure proper performance:
 For cdbqueue:
 ```
 db.queuedb.ensureIndex({p:-1})
+```
+
+For cdbackqueue:
+```
 db.ackqueuedb.ensureIndex({ts:1})
 ```
 
