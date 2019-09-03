@@ -124,6 +124,12 @@ namespace ChessDBSel
                         String fen = TrimFromZero(sr.ReadLine());
                         while (fen != null && fen.Length > 0)
                         {
+                            bool priority = false;
+                            if(fen.StartsWith("!"))
+                            {
+                                fen = fen.Substring(1);
+                                priority = true;
+                            }
                             Console.WriteLine("[" + strThreadId + "] 正在筛选...");
                             EngineStreamWriter.WriteLine("position fen " + fen);
                             EngineStreamWriter.WriteLine(ConfigurationManager.AppSettings["GoCommand"]);
@@ -140,7 +146,11 @@ namespace ChessDBSel
                                         {
                                             try
                                             {
-                                                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + fen + "&move=move:" + tmp[i]);
+                                                HttpWebRequest req;
+                                                if (priority)
+                                                    req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + fen + "&move=move:" + tmp[i] + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + tmp[i]));
+                                                else
+                                                    req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + fen + "&move=move:" + tmp[i]);
                                                 HttpWebResponse response = (HttpWebResponse)req.GetResponse();
                                                 if (response.StatusCode != HttpStatusCode.OK)
                                                     throw new Exception("提交结果失败。");
