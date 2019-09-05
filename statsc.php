@@ -90,6 +90,39 @@ try{
 	$count3 = $cursor->count();
 	$cursor->reset();
 
+	$egtb_count_wdl = 0;
+	$egtb_size_wdl = 0;
+	$egtb_count_dtz = 0;
+	$egtb_size_dtz = 0;
+	$memcache_obj = new Memcache();
+	$memcache_obj->pconnect('localhost', 11211);
+	if( !$memcache_obj )
+		throw new Exception( 'Memcache error.' );
+	$egtbstats = $memcache_obj->get( 'EGTBStats2' );
+	if( $egtbstats !== FALSE ) {
+		$egtb_count_wdl = $egtbstats[0];
+		$egtb_size_wdl = $egtbstats[1];
+		$egtb_count_dtz = $egtbstats[2];
+		$egtb_size_dtz = $egtbstats[3];
+	} else {
+		$egtb_dirs = array( '/home/syzygy/3-6men/', '/home/syzygy/7men/4v3_pawnful', '/home/syzygy/7men/4v3_pawnless', '/home/syzygy/7men/5v2_pawnful', '/home/syzygy/7men/5v2_pawnless', '/home/syzygy/7men/6v1_pawnful', '/home/syzygy/7men/6v1_pawnless' );
+		foreach( $egtb_dirs as $dir ) {
+			$dir_iter = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
+			foreach( $dir_iter as $filename => $file ) {
+				if( strpos($filename, '.rtbw') !== FALSE )
+				{
+					$egtb_count_wdl++;
+					$egtb_size_wdl += $file->getSize();
+				}
+				else if( strpos($filename, '.rtbz') !== FALSE )
+				{
+					$egtb_count_dtz++;
+					$egtb_size_dtz += $file->getSize();
+				}
+			}
+		}
+		$memcache_obj->set( 'EGTBStats2', array( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ), 0, 86400 );
+	}
 	$ppm = 0;
 	$nps = 0;
 	$memcache_obj = new Memcache();
@@ -117,10 +150,14 @@ try{
 		echo '<tr><td>数据体积（常规 / 队列）：</td><td style="text-align: right;">' . sizeFilter( $count ) . ' / ' . sizeFilter( $count1 ) . '</td></tr>';
 		echo '<tr><td>后台队列（评估 / 学习）：</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
 		echo '<tr><td>计算速度（局面 / 分钟）：</td><td style="text-align: right;">' . number_format( $ppm ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>残局库数量（ WDL / DTZ ）：</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
+		echo '<tr><td>残局库体积（ WDL / DTZ ）：</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	} else {
 		echo '<tr><td>DB Size ( Storage / Queue ) :</td><td style="text-align: right;">' . sizeFilter( $count ) . ' / ' . sizeFilter( $count1 ) . '</td></tr>';
 		echo '<tr><td>Queue ( Scoring / Learning ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
 		echo '<tr><td>Speed ( Position / Minute ) :</td><td style="text-align: right;">' . number_format( $ppm ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>EGTB Count ( WDL / DTZ ) :</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
+		echo '<tr><td>EGTB File Size ( WDL / DTZ ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	}
 	echo '</table>';
 }
