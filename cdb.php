@@ -94,11 +94,6 @@ function count_attackers( $fen ) {
 	$pieces = 'qrbn';
 	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
 }
-function count_attacker_pieces( $fen ) {
-	@list( $board, $color ) = explode( " ", $fen );
-	$pieces = ( $color == 'b' ? 'qrbn' : 'QRBN' );
-	return strlen( $board ) - strlen( str_replace( str_split( $pieces ), '', $board ) );
-}
 function getthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
 		$throttle = $maxscore;
@@ -253,7 +248,7 @@ function updateSel( $row, $priority ) {
 	$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), $doc, array( 'upsert' => true ) );
 	$readwrite_sel->writeunlock();
 }
-function getMoves( $redis, $row, $banmoves, $update, $learn ) {
+function getMoves( $redis, $row, $update, $learn ) {
 	$moves1 = getAllScores( $redis, $row );
 	$moves2 = array();
 
@@ -264,7 +259,7 @@ function getMoves( $redis, $row, $banmoves, $update, $learn ) {
 		foreach( $moves1 as $key => $item ) {
 			$knownmoves[$key] = 0;
 			$nextfen = cbmovemake( $row, $key );
-			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false );
+			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false );
 			$moves2[ $key ][0] = 0;
 			$moves2[ $key ][1] = 0;
 			if( count( $nextmoves ) > 0 ) {
@@ -325,7 +320,7 @@ function getMoves( $redis, $row, $banmoves, $update, $learn ) {
 				}
 				foreach( $findmoves as $key => $item ) {
 					$nextfen = cbmovemake( $row, $key );
-					list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false );
+					list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false );
 					if( count( $nextmoves ) > 0 ) {
 						updateQueue( $row, $key, true );
 					}
@@ -342,9 +337,6 @@ function getMoves( $redis, $row, $banmoves, $update, $learn ) {
 		}
 	}
 
-	$moves1 = array_diff_key( $moves1, $banmoves );
-	$moves2 = array_diff_key( $moves2, $banmoves );
-
 	foreach( $moves1 as $key => $entry ) {
 		if( abs( $moves1[$key] ) > 10000 ) {
 			if( $moves1[$key] < 0 ) {
@@ -357,7 +349,7 @@ function getMoves( $redis, $row, $banmoves, $update, $learn ) {
 	}
 	return array( $moves1, $moves2 );
 }
-function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetlimit, $learn ) {
+function getMovesWithCheck( $redis, $row, $depth, $enumlimit, $resetlimit, $learn ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 	if( $GLOBALS['counter'] < $enumlimit )
@@ -427,7 +419,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 					else
 						$GLOBALS['counter1']++;
 
-					$nextmoves = getMovesWithCheck( $redis, $nextfen, array(), $depth + 1, $enumlimit, false, false );
+					$nextmoves = getMovesWithCheck( $redis, $nextfen, $depth + 1, $enumlimit, false, false );
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
 						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
@@ -578,8 +570,6 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 		}
 	}
 
-	$moves1 = array_diff_key( $moves1, $banmoves );
-
 	foreach( $moves1 as $key => $entry ) {
 		if( abs( $moves1[$key] ) > 10000 ) {
 			if( $moves1[$key] < 0 ) {
@@ -592,7 +582,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 	}
 	return $moves1;
 }
-function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, $learn, &$pv ) {
+function getAnalysisPath( $redis, $row, $depth, $enumlimit, $isbest, $learn, &$pv ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 	if( $GLOBALS['counter'] < $enumlimit )
@@ -786,8 +776,6 @@ function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, 
 		}
 	}
 
-	$moves1 = array_diff_key( $moves1, $banmoves );
-
 	foreach( $moves1 as $key => $entry ) {
 		if( abs( $moves1[$key] ) > 10000 ) {
 			if( $moves1[$key] < 0 ) {
@@ -905,13 +893,6 @@ try{
 
 		$row = cbgetfen( $_REQUEST['board'] );
 		if( isset( $row ) && !empty( $row ) ) {
-			$banmoves = array();
-			if( isset( $_REQUEST['ban'] ) && !empty( $_REQUEST['ban'] ) ) {
-				$banlist = explode( "|", $_REQUEST['ban'] );
-				foreach( $banlist as $key => $entry ) {
-					$banmoves[substr( $entry, 5 )] = 0;
-				}
-			}
 			if( isset( $_REQUEST['endgame'] ) ) {
 				$endgame = is_true( $_REQUEST['endgame'] );
 			}
@@ -980,10 +961,10 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							//if( !scoreExists( $redis, $row, $move ) ) {
+							if( !scoreExists( $redis, $row, $move ) ) {
 								updateScore( $redis, $row, array( $move => $score ) );
 								echo 'ok';
-							//}
+							}
 						}
 						else {
 							echo 'tokenerror';
@@ -1258,7 +1239,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -1314,7 +1295,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -1369,7 +1350,7 @@ try{
 						else if( $action == 'queryall' ) {
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, $learn );
+							list( $statmoves, $variations ) = getMoves( $redis, $row, true, $learn );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
@@ -1519,7 +1500,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -1575,7 +1556,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -1643,7 +1624,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, $pv );
+							$statmoves = getAnalysisPath( $redis, $row, 0, 50, true, $learn, $pv );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
 									echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"],"pvSAN":["' . implode( '","', cbmovesan( $row, $pv ) ) . '"]';
@@ -1660,7 +1641,7 @@ try{
 						else if( $action == 'queryscore' ) {
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true );
+							list( $statmoves, $variations ) = getMoves( $redis, $row, true, true );
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
@@ -1681,7 +1662,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 100, true, true );
+							$statmoves = getMovesWithCheck( $redis, $row, 0, 100, true, true );
 							if( count( $statmoves ) >= 5 ) {
 								if( $isJson )
 									echo '"status":"ok"';
