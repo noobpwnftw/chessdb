@@ -45,14 +45,6 @@ function getAllScores( $redis, $row ) {
 	}
 	return $moves;
 }
-function getPly( $redis, $row ) {
-	$BWfen = cbgetBWfen( $row );
-	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
-	$ply = $redis->hGet( hex2bin($minhexfen), 'a0a0' );
-	if( $ply === FALSE )
-		return -1;
-	return $ply;
-}
 function updatePly( $redis, $row, $ply ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
@@ -126,13 +118,14 @@ function getMoves( $redis, $row, $depth ) {
 
 	if( $recurse && $depth < 30000 )
 	{
+/*
 		$errors = array_diff_key( $moves1, cbmovegen( $row ) );
 		if( count( $errors ) ) {
 			echo $row . "\n";
 			delScore( $redis, $row, $errors );
 			$moves1 = array_intersect_key( $moves1, cbmovegen( $row ) );
 		}
-
+*/
 		$updatemoves = array();
 		$isloop = true;
 		if( !isset( $GLOBALS['historytt'][$current_hash] ) )
@@ -237,8 +230,6 @@ function getMoves( $redis, $row, $depth ) {
 		}
 		if( count( $loopinfo ) > 0 ) {
 			$loopdraws = array();
-			$loopmebans = array();
-			$loopoppbans = array();
 			foreach( $loopinfo as $key => $entry ) {
 				if( $entry == 1 )
 					$loopdraws[$key] = 1;

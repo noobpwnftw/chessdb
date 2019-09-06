@@ -210,7 +210,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
-	if( $recurse && $depth < 12 )
+	if( $recurse && $depth < 30000 )
 	{
 		$updatemoves = array();
 		$isloop = true;
@@ -339,8 +339,6 @@ function getMoves( $redis, $row, $depth ) {
 		}
 		if( count( $loopinfo ) > 0 ) {
 			$loopdraws = array();
-			$loopmebans = array();
-			$loopoppbans = array();
 			foreach( $loopinfo as $key => $entry ) {
 				if( $entry == 1 )
 					$loopdraws[$key] = 1;
