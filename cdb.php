@@ -643,7 +643,7 @@ function getAnalysisPath( $redis, $row, $depth, $enumlimit, $isbest, $learn, &$p
 					if( $isbest ) {
 						array_push( $pv, $key );
 					}
-					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $depth + 1, $enumlimit, $isbest, false, $pv );
+					$nextmoves = getAnalysisPath( $redis, $nextfen, $depth + 1, $enumlimit, $isbest, false, $pv );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
