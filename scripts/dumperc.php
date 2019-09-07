@@ -68,11 +68,16 @@ function getAllScores( $redis, $row ) {
 	}
 	return $moves;
 }
+function updatePly( $redis, $row, $ply ) {
+	$BWfen = cbgetBWfen( $row );
+	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+	$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
+}
 function getMoves( $redis, $row, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
-	$current_hash = crc32( $row );
-	$current_hash_bw = crc32( $BWfen );
+	$current_hash = abs( xxhash64( $row ) );
+	$current_hash_bw = abs( xxhash64( $BWfen ) );
 
 	$recurse = false;
 	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] > $depth )
@@ -90,7 +95,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
-	if( $recurse && $depth < 30000 )
+	if( $recurse && $depth < 5 )
 	{
 		$isloop = true;
 		if( !isset( $GLOBALS['historytt'][$current_hash] ) )
@@ -128,10 +133,6 @@ function getMoves( $redis, $row, $depth ) {
 			}
 			arsort( $moves2 );
 			foreach( $moves2 as $key => $item ) {
-
-				if( $depth == 0 )
-					$GLOBALS['curmove'] = $key;
-
 				$nextfen = cbmovemake( $row, $key );
 				$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
 				$GLOBALS['historytt'][$current_hash]['move'] = $key;
@@ -151,7 +152,7 @@ function getMoves( $redis, $row, $depth ) {
 			{
 				array_push( $loopmoves, $GLOBALS['historytt'][$loop_hash]['move'] );
 				$loopfen = $GLOBALS['historytt'][$loop_hash]['fen'];
-				$loop_hash = crc32( $loopfen );
+				$loop_hash = abs( xxhash64( $loopfen ) );
 				if( !isset( $GLOBALS['historytt'][$loop_hash] ) )
 					break;
 			}
@@ -197,17 +198,7 @@ function getMoves( $redis, $row, $depth ) {
 		} else {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
-			arsort( $moves1 );
-			$maxscore = reset( $moves1 );
-			$throttle = getthrottle( $maxscore );
-			foreach( $moves1 as $move => $score ) {
-				if( $score >= $throttle && $score >= getbestthrottle( $maxscore ) )
-					echo $row . " " . $move . " 2\n";
-				else if( $score >= $throttle )
-					echo $row . " " . $move . " 1\n";
-				else
-					break;
-			}
+			echo $row . "\n";
 		}
 	}
 	return $moves1;
