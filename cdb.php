@@ -906,16 +906,12 @@ try{
 				$showall = false;
 			}
 			
-			$learn = true;
-			$isLearner = true;
-/*
 			if( isset( $_REQUEST['learn'] ) ) {
-				$isLearner = is_true( $_REQUEST['learn'] );
+				$learn = is_true( $_REQUEST['learn'] );
 			}
 			else {
-				$isLearner = false;
+				$learn = true;
 			}
-*/
 
 			if( $action == 'store' ) {
 				if( isset( $_REQUEST['move'] ) && !empty( $_REQUEST['move'] ) && count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
@@ -1155,9 +1151,9 @@ try{
 									}
 									shuffle( $finals );
 									if( $isJson )
-										echo '"status":"ok","move":"' . end( $finals ) . '"';
+										echo '"status":"ok","egtb":"' . end( $finals ) . '"';
 									else
-										echo 'move:' . end( $finals );
+										echo 'egtb:' . end( $finals );
 								}
 								else if( $bestmove['wdl'] == 0 )
 								{
@@ -1370,7 +1366,7 @@ try{
 											$winrate = ',winrate:' . getWinRate( $score );
 									}
 
-									if( !$isfirst && ( $isLearner || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) ) {
+									if( !$isfirst && ( $learn || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) ) {
 										if( $isJson )
 											echo '},{';
 										else
@@ -1393,7 +1389,7 @@ try{
 											echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
 									else if( $score >= $throttle ) {
-										if( $isfirst || $isLearner ) {
+										if( $isfirst || $learn ) {
 											if( isset( $oldscores[$record] ) ) {
 												if( $isJson ) {
 													$score = $oldscores[$record];
@@ -1413,7 +1409,7 @@ try{
 											unset( $statmoves[$record] );
 									}
 									else {
-										if( $isfirst || $isLearner ) {
+										if( $isfirst || $learn ) {
 											if( isset( $oldscores[$record] ) ) {
 												if( $isJson ) {
 													$score = $oldscores[$record];
@@ -1434,7 +1430,7 @@ try{
 									}
 									$isfirst = false;
 								}
-								if( $showall || !$isLearner ) {
+								if( $showall || !$learn ) {
 									$allmoves = cbmovegen( $row );
 									foreach( $allmoves as $record => $score ) {
 										if( !isset( $statmoves[$record] ) ) {
