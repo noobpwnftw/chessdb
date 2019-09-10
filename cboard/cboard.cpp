@@ -267,6 +267,13 @@ char extra2bithex(char ch)
 			return '8';
 		case ' ':
 			return '9';
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F':
+		case 'G':
+			return 'e';
 		default:
 			return ch;
 	}
@@ -331,6 +338,10 @@ PHP_FUNCTION(cbfen2hexfen)
 				while(index < fenstr_len)
 				{
 					bitstr[tmpindex++] = extra2bithex(fenstr[index++]);
+					if(bitstr[tmpindex - 1] == 'e')
+					{
+						bitstr[tmpindex++] = extra2bithex(tolower(fenstr[index - 1]));
+					}
 				}
 				break;
 			}
@@ -418,7 +429,16 @@ PHP_FUNCTION(cbhexfen2fen)
 		tmpidx += 3;
 		do
 		{
-			fen[tmpidx++] = bithex2extra(fenstr[index++]);
+			if(fenstr[index] == 'e')
+			{
+				index++;
+				fen[tmpidx++] = toupper(bithex2extra(fenstr[index++]));
+			}
+			else
+			{
+				fen[tmpidx++] = bithex2extra(fenstr[index++]);
+			}
+			
 		}
 		while(fen[tmpidx - 1] != ' ');
 		if(index < fenstr_len)
@@ -467,104 +487,31 @@ PHP_FUNCTION(cbgetBWfen)
 				strcpy(fen, tmp);
 				if(fenstr[index+1] == 'w')
 				{
-					strcat(fen, " b");
+					strcat(fen, " b ");
 				}
 				else
 				{
-					strcat(fen, " w");
+					strcat(fen, " w ");
 				}
-				index += 2;
-				if(fenstr[index+1] == 'K')
-				{
-					if(fenstr[index+2] == 'Q')
-					{
-						if(fenstr[index+3] == 'k')
-						{
-							if(fenstr[index+4] == 'q')
-							{
-								strcat(fen, " KQkq");
-							}
-							else
-							{
-								strcat(fen, " Kkq");
-							}
-						}
-						else if(fenstr[index+3] == 'q')
-						{
-							strcat(fen, " Qkq");
-						}
-						else
-						{
-							strcat(fen, " kq");
-						}
-					}
-					else if(fenstr[index+2] == 'k')
-					{
-						if(fenstr[index+3] == 'q')
-						{
-							strcat(fen, " KQk");
-						}
-						else
-						{
-							strcat(fen, " Kk");
-						}
-					}
-					else if(fenstr[index+2] == 'q')
-					{
-						strcat(fen, " Qk");
-					}
-					else
-					{
-						strcat(fen, " k");
-					}
-				}
-				else if(fenstr[index+1] == 'Q')
-				{
-					if(fenstr[index+2] == 'k')
-					{
-						if(fenstr[index+3] == 'q')
-						{
-							strcat(fen, " KQq");
-						}
-						else
-						{
-							strcat(fen, " Kq");
-						}
-					}
-					else if(fenstr[index+2] == 'q')
-					{
-						strcat(fen, " Qq");
-					}
-					else
-					{
-						strcat(fen, " q");
-					}
-				}
-				else if(fenstr[index+1] == 'k')
-				{
-					if(fenstr[index+2] == 'q')
-					{
-						strcat(fen, " KQ");
-					}
-					else
-					{
-						strcat(fen, " K");
-					}
-				}
-				else if(fenstr[index+1] == 'q')
-				{
-					strcat(fen, " Q");
-				}
-				else
-				{
-					strcat(fen, " -");
-				}
-
+				index += 3;
+				tmpidx = 0;
+				char tmp2[3];
+				int tmpidx2 = 0;
 				do
 				{
-					index++;
+					if(isupper(fenstr[index]))
+						tmp2[tmpidx2++] = tolower(fenstr[index++]);
+					else
+						tmp[tmpidx++] = toupper(fenstr[index++]);
 				}
 				while(fenstr[index] != ' ');
+				tmp[tmpidx] = '\0';
+				tmp2[tmpidx2++] = ' ';
+				tmp2[tmpidx2] = '\0';
+				strcat(fen, tmp);
+				strcat(fen, tmp2);
+				index++;
+
 				while(index < fenstr_len)
 				{
 					char tmp = MoveToBW[fenstr[index]];
