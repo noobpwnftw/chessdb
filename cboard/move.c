@@ -4,20 +4,20 @@
 #include "chess.h"
 #include "move.h"
 
-static const char promote_chars[] = "nbrq";
+static const char promote_chars[] = "qrbn";
 
 ChessMove CHESS_MOVE_NULL = 0x80000000;
 
 ChessMovePromote chess_move_promote_from_char(char c)
 {
     char* s = strchr(promote_chars, c);
-    return (s && *s) ? CHESS_MOVE_PROMOTE_KNIGHT + (s - promote_chars) : CHESS_MOVE_PROMOTE_NONE;
+    return (s && *s) ? CHESS_MOVE_PROMOTE_QUEEN + (s - promote_chars) : CHESS_MOVE_PROMOTE_NONE;
 }
 
 char chess_move_promote_to_char(ChessMovePromote promote)
 {
-    assert(promote >= CHESS_MOVE_PROMOTE_KNIGHT && promote <= CHESS_MOVE_PROMOTE_QUEEN);
-    return promote_chars[promote - CHESS_MOVE_PROMOTE_KNIGHT];
+    assert(promote >= CHESS_MOVE_PROMOTE_QUEEN && promote <= CHESS_MOVE_PROMOTE_KNIGHT);
+    return promote_chars[promote - CHESS_MOVE_PROMOTE_QUEEN];
 }
 
 ChessSquare chess_move_from(ChessMove move)

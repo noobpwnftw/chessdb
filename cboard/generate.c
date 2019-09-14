@@ -138,7 +138,7 @@ static ChessMove gen_next(ChessMoveGenerator* gen)
     if (gen->promote != CHESS_MOVE_PROMOTE_NONE)
     {
 gen_pawn_promotes:
-        if (++gen->promote <= CHESS_MOVE_PROMOTE_QUEEN)
+        if (++gen->promote <= CHESS_MOVE_PROMOTE_KNIGHT)
             return chess_move_make_promote(gen->sq, gen->to, gen->promote);
         gen->promote = CHESS_MOVE_PROMOTE_NONE;
     }

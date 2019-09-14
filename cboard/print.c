@@ -20,7 +20,7 @@ int chess_print_move(ChessMove move, char* s)
     s[n++] = chess_rank_to_char(chess_square_rank(to));
     if (promote != CHESS_MOVE_PROMOTE_NONE)
     {
-        static const char chars[] = " nbrq";
+        static const char chars[] = " qrbn";
         s[n++] = chars[promote];
     }
     s[n] = '\0';
@@ -133,7 +133,7 @@ int chess_print_move_san(ChessMove move, const ChessPosition* position, char* s)
 
     if (promote != CHESS_MOVE_PROMOTE_NONE)
     {
-        static char chars[] = " NBRQ";
+        static char chars[] = " QRBN";
         s[n++] = '=';
         s[n++] = chars[promote];
     }
