@@ -800,14 +800,21 @@ function getEngineMove( $row, $movelist ) {
 		}
 		fwrite( $pipes[0], PHP_EOL . 'go depth 22' . PHP_EOL );
 		$startTime = time();
-		while( $out = fgets( $pipes[1] ) ) {
-			if( $move = strstr( $out, 'bestmove' ) ) {
-				$result = rtrim( substr( $move, 9, 5 ) );
-				break;
+		$readfd = array( $pipes[1] );
+		$writefd = NULL;
+		$errfd = NULL;
+		stream_set_blocking( $pipes[1], FALSE );
+		while( ( $res = stream_select( $readfd, $writefd, $errfd, 1 ) ) !== FALSE ) {
+			if( $res > 0 && ( $out = fgets( $pipes[1] ) ) ) {
+				if( $move = strstr( $out, 'bestmove' ) ) {
+					$result = rtrim( substr( $move, 9, 5 ) );
+					break;
+				}
 			}
 			else if( time() - $startTime >= 5 ) {
 				fwrite( $pipes[0], 'stop' . PHP_EOL );
 			}
+			$readfd = array( $pipes[1] );
 		}		
 		fclose( $pipes[0] );
 		fclose( $pipes[1] );
