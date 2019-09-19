@@ -1816,18 +1816,30 @@ try{
 				$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
 				$cursor = $collection->find()->sort( array( 'p' => -1 ) )->limit(20);
 				$docs = array();
+				$selout = '';
 				foreach( $cursor as $doc ) {
 					$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
 					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
 					{
 						if( isset( $doc['p'] ) && $doc['p'] > 0 )
-							echo '!' . $fen . "\n";
+							$selout .= '!' . $fen . "\n";
 						else
-							echo $fen . "\n";
+							$selout .=  $fen . "\n";
 					}
 					$docs[] = $doc['_id'];
 				}
 				$cursor->reset();
+				$collection2 = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
+				if( strlen($selout) > 0 ) {
+					$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+					echo $selout;
+				}
+				else {
+					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+					if( !empty( $doc ) && isset( $doc['data'] ) ) {
+						echo $doc['data'];
+					}
+				}
 				if( count( $docs ) > 0 ) {
 					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
 				}
@@ -1837,6 +1849,17 @@ try{
 		else {
 			echo 'tokenerror';
 			//error_log($_SERVER['REMOTE_ADDR'], 0 );
+		}
+	}
+	else if( $action == 'acksel' ) {
+		if( isset( $_REQUEST['key'] ) && isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) . $_REQUEST['key'] ) ) {
+			$m = new MongoClient('mongodb://localhost');
+			$collection = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
+			$collection->remove( array( '_id' => new MongoBinData(hex2bin($_REQUEST['key'])) ) );
+			echo 'ok';
+		}
+		else {
+			echo 'tokenerror';
 		}
 	}
 	else if( $action == 'gettoken' && isset( $_REQUEST['key'] ) ) {

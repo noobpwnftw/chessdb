@@ -120,7 +120,8 @@ namespace ChessDBSel
                     }
                     if (File.Exists("last" + strThreadId + ".txt"))
                     {
-                        StringReader sr = new StringReader(File.ReadAllText("last" + strThreadId + ".txt"));
+                        String fenkey = File.ReadAllText("last" + strThreadId + ".txt");
+                        StringReader sr = new StringReader(fenkey);
                         String fen = TrimFromZero(sr.ReadLine());
                         while (fen != null && fen.Length > 0)
                         {
@@ -177,6 +178,25 @@ namespace ChessDBSel
                             }
                             WaitForReady();
                             fen = TrimFromZero(sr.ReadLine());
+                        }
+                        fenkey = StringToMD5Hash(fenkey);
+                        try
+                        {
+                            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=acksel&key=" + fenkey + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + fenkey));
+                            HttpWebResponse response = (HttpWebResponse)req.GetResponse();
+                            if (response.StatusCode != HttpStatusCode.OK)
+                                throw new Exception("提交结果失败。");
+                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                            String result = TrimFromZero(myStreamReader.ReadToEnd());
+                            myStreamReader.Close();
+                            response.Close();
+                            if (result == "tokenerror")
+                                throw new Exception("AccessToken错误。");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.ToString());
+                            Thread.Sleep(1000);
                         }
                         File.Delete("last" + strThreadId + ".txt");
                         if (bResuming)

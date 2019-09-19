@@ -1,0 +1,6 @@
+ARG_ENABLE("ccboard", "CCBoard Support", "no");
+
+if (PHP_CCBOARD == "yes") {
+	EXTENSION("ccboard", "ccboard.cpp board.cpp data.cpp move.cpp piece.cpp square.cpp");
+	AC_DEFINE('HAVE_CCBOARD', 1, 'Have CCBoard support', false);
+}
