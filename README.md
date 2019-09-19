@@ -40,6 +40,11 @@ For cdbsel:
 db.seldb.ensureIndex({p:-1})
 ```
 
+For cdbacksel:
+```
+db.ackseldb.ensureIndex({ts:1})
+```
+
 ## Official API
 
 My API endpoint is accessable here:

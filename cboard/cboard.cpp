@@ -84,9 +84,8 @@ PHP_FUNCTION(cbmovegen)
 {
 	char* fenstr;
 	int fenstr_len;
-	zend_bool checked = 0;
 	array_init(return_value);
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &fenstr, &fenstr_len, &checked) != FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fenstr, &fenstr_len) != FAILURE) {
 		ChessPosition cp;
 		if(chess_fen_load(fenstr, &cp)) {
 			ChessMoveGenerator generator;
