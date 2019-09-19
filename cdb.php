@@ -1770,6 +1770,10 @@ try{
 					$docs[] = $doc['_id'];
 				}
 				$cursor->reset();
+				if( count( $docs ) > 0 ) {
+					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
+				}
+				$readwrite_queue->writeunlock();
 				$collection2 = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
 				if( strlen($queueout) > 0 ) {
 					$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
@@ -1781,10 +1785,6 @@ try{
 						echo $doc['data'];
 					}
 				}
-				if( count( $docs ) > 0 ) {
-					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
-				}
-				$readwrite_queue->writeunlock();
 			}
 		}
 		else {
@@ -1829,6 +1829,10 @@ try{
 					$docs[] = $doc['_id'];
 				}
 				$cursor->reset();
+				if( count( $docs ) > 0 ) {
+					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
+				}
+				$readwrite_sel->writeunlock();
 				$collection2 = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
 				if( strlen($selout) > 0 ) {
 					$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
@@ -1840,10 +1844,6 @@ try{
 						echo $doc['data'];
 					}
 				}
-				if( count( $docs ) > 0 ) {
-					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
-				}
-				$readwrite_sel->writeunlock();
 			}
 		}
 		else {
