@@ -24,10 +24,36 @@ ChessBoolean chess_position_validate(ChessPosition* position)
     chess_position_copy(position, &temp_position);
     temp_position.wking = CHESS_SQUARE_INVALID;
     temp_position.bking = CHESS_SQUARE_INVALID;
-
+    int w_count = 0;
+    int b_count = 0;
+    int w_pcount = 0;
+    int b_pcount = 0;
     for (sq = CHESS_SQUARE_A1; sq <= CHESS_SQUARE_H8; ++sq)
     {
         pc = position->piece[sq];
+        switch(pc)
+        {
+            case CHESS_PIECE_WHITE_PAWN:
+                w_pcount++;
+            case CHESS_PIECE_WHITE_KNIGHT:
+            case CHESS_PIECE_WHITE_BISHOP:
+            case CHESS_PIECE_WHITE_ROOK:
+            case CHESS_PIECE_WHITE_QUEEN:
+            case CHESS_PIECE_WHITE_KING:
+                w_count++;
+                break;
+            case CHESS_PIECE_BLACK_PAWN:
+                b_pcount++;
+            case CHESS_PIECE_BLACK_KNIGHT:
+            case CHESS_PIECE_BLACK_BISHOP:
+            case CHESS_PIECE_BLACK_ROOK:
+            case CHESS_PIECE_BLACK_QUEEN:
+            case CHESS_PIECE_BLACK_KING:
+                b_count++;
+                break;
+            default:
+                break;
+	}
         if (pc == CHESS_PIECE_WHITE_KING)
         {
             if (temp_position.wking != CHESS_SQUARE_INVALID)
@@ -57,6 +83,11 @@ ChessBoolean chess_position_validate(ChessPosition* position)
         || temp_position.bking == CHESS_SQUARE_INVALID)
     {
         /* No white king or black king */
+        return CHESS_FALSE;
+    }
+
+    if (w_count > 16 || b_count > 16 || w_pcount > 8 || b_pcount > 8)
+    {
         return CHESS_FALSE;
     }
 
