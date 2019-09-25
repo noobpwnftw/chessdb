@@ -26,28 +26,74 @@ ChessBoolean chess_position_validate(ChessPosition* position)
     temp_position.bking = CHESS_SQUARE_INVALID;
     int w_count = 0;
     int b_count = 0;
-    int w_pcount = 0;
-    int b_pcount = 0;
+    int w_pcount[5] = {0};
+    int b_pcount[5] = {0};
+    int w_promotes = 0;
+    int b_promotes = 0;
     for (sq = CHESS_SQUARE_A1; sq <= CHESS_SQUARE_H8; ++sq)
     {
         pc = position->piece[sq];
         switch(pc)
         {
             case CHESS_PIECE_WHITE_PAWN:
-                w_pcount++;
+                w_pcount[0]++;
+                w_count++;
+                break;
             case CHESS_PIECE_WHITE_KNIGHT:
+                w_pcount[1]++;
+                w_count++;
+                if(w_pcount[1] > 2)
+                    w_promotes++;
+                break;
             case CHESS_PIECE_WHITE_BISHOP:
+                w_pcount[2]++;
+                w_count++;
+                if(w_pcount[2] > 2)
+                    w_promotes++;
+                break;
             case CHESS_PIECE_WHITE_ROOK:
+                w_pcount[3]++;
+                w_count++;
+                if(w_pcount[3] > 2)
+                    w_promotes++;
+                break;
             case CHESS_PIECE_WHITE_QUEEN:
+                w_pcount[4]++;
+                w_count++;
+                if(w_pcount[4] > 1)
+                    w_promotes++;
+                break;
             case CHESS_PIECE_WHITE_KING:
                 w_count++;
                 break;
             case CHESS_PIECE_BLACK_PAWN:
-                b_pcount++;
+                b_pcount[0]++;
+                b_count++;
+                break;
             case CHESS_PIECE_BLACK_KNIGHT:
+                b_pcount[1]++;
+                b_count++;
+                if(b_pcount[1] > 2)
+                    b_promotes++;
+                break;
             case CHESS_PIECE_BLACK_BISHOP:
+                b_pcount[2]++;
+                b_count++;
+                if(b_pcount[2] > 2)
+                    b_promotes++;
+                break;
             case CHESS_PIECE_BLACK_ROOK:
+                b_pcount[3]++;
+                b_count++;
+                if(b_pcount[3] > 2)
+                    b_promotes++;
+                break;
             case CHESS_PIECE_BLACK_QUEEN:
+                b_pcount[4]++;
+                b_count++;
+                if(b_pcount[4] > 1)
+                    b_promotes++;
+                break;
             case CHESS_PIECE_BLACK_KING:
                 b_count++;
                 break;
@@ -86,7 +132,8 @@ ChessBoolean chess_position_validate(ChessPosition* position)
         return CHESS_FALSE;
     }
 
-    if (w_count > 16 || b_count > 16 || w_pcount > 8 || b_pcount > 8)
+    if (w_count > 16 || b_count > 16
+        || w_promotes + w_pcount[0] > 8 || b_promotes + b_pcount[0] > 8)
     {
         return CHESS_FALSE;
     }
