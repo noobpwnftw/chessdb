@@ -1479,8 +1479,10 @@ try{
 							{
 								if( $score < 0 && $score > -30000 )
 									$score = $score - 1;
-								else if( $score > 0 )
+								else if( $score > 0 && $score < 30000 )
 									$score = $score + 1;
+								else
+									$score = 0;
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);

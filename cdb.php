@@ -959,8 +959,10 @@ try{
 							{
 								if( $score < 0 && $score > -30000 )
 									$score = $score - 1;
-								else if( $score > 0 )
+								else if( $score > 0 && $score < 30000 )
 									$score = $score + 1;
+								else
+									$score = 0;
 							}
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
@@ -1034,6 +1036,8 @@ try{
 												$score = 20000 - $step;
 											else
 												$score = 30000 - $step;
+											if( $move['zeroing'] || $move['checkmate'] )
+												$step = 0;
 											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
 												if( $isJson )
 													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
@@ -1077,6 +1081,8 @@ try{
 												$score = $step - 20000;
 											else
 												$score = $step - 30000;
+											if( $move['zeroing'] || $move['checkmate'] )
+												$step = 0;
 											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
 												if( $isJson )
 													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
@@ -1114,6 +1120,8 @@ try{
 													$score = 20000 - $step;
 												else
 													$score = 30000 - $step;
+												if( $move['zeroing'] || $move['checkmate'] )
+													$step = 0;
 												if( $isJson )
 													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
 												else
@@ -1125,6 +1133,8 @@ try{
 													$score = $step - 20000;
 												else
 													$score = $step - 30000;
+												if( $move['zeroing'] || $move['checkmate'] )
+													$step = 0;
 												if( $isJson )
 													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
 												else
