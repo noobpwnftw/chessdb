@@ -8,7 +8,6 @@
 #define Is_White_Side(sq)           ((sq) > I4)
 #define Is_Black_Side(sq)           ((sq) < A5)
 
-/* */
 void Board::clear(void)
 {
     int i;
@@ -38,13 +37,11 @@ void Board::clear(void)
     rank[9]=0;
 }
 
-/* */
 bool Board::init(void)
 {
     return init("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w");
 }
 
-/* */
 int Board::char2type(char a)
 {
     switch(a)
@@ -86,7 +83,6 @@ int Board::char2type(char a)
     return 0;
 }
 
-/* */
 bool Board::init(const char *fen)
 {
     clear();
@@ -97,73 +93,77 @@ bool Board::init(const char *fen)
     {
         if(fen[i] >= '0' && fen[i] <= '9')
             sq+=fen[i] - '0';
+
+        if(sq > 90)
+            break;
+
         else if((fen[i] >= 'a' && fen[i] <= 'z') || (fen[i] >= 'A' && fen[i] <= 'Z'))
         {
             if((type=char2type(fen[i])) != 0)
             {
-				sq256 = Square_From_90(sq);
-				switch(type)
-				{
-				case RedKing:
-					if (!King_In_City(sq256) || !Is_White_Side(sq256) || number[type] > 0)
-					{
-						return false;
-					}
-					break;
-				case RedAdvisor:
-					if (!Advisor_In_City(sq256) || !Is_White_Side(sq256) || number[type] > 1)
-					{
-						return false;
-					}
-					break;
-				case RedBishop:
-					if (!Bishop_In_City(sq256) || !Is_White_Side(sq256) || number[type] > 1)
-					{
-						return false;
-					}
-					break;
-				case BlackKing:
-					if (!King_In_City(sq256) || !Is_Black_Side(sq256) || number[type] > 0)
-					{
-						return false;
-					}
-					break;
-				case BlackAdvisor:
-					if (!Advisor_In_City(sq256) || !Is_Black_Side(sq256) || number[type] > 1)
-					{
-						return false;
-					}
-					break;
-				case BlackBishop:
-					if (!Bishop_In_City(sq256) || !Is_Black_Side(sq256) || number[type] > 1)
-					{
-						return false;
-					}
-					break;
-				case RedPawn:
-					if(!Red_Pawn_Valid(sq256) || number[type] > 4)
-					{
-						return false;
-					}
-					break;
-				case BlackPawn:
-					if(!Black_Pawn_Valid(sq256) || number[type] > 4)
-					{
-						return false;
-					}
-					break;
-				case RedCannon:
-				case BlackCannon:
-				case RedKnight:
-				case BlackKnight:
-				case RedRook:
-				case BlackRook:
-					if(number[type] > 1)
-					{
-						return false;
-					}
-					break;
-				}
+                sq256 = Square_From_90(sq);
+                switch(type)
+                {
+                case RedKing:
+                    if (!King_In_City(sq256) || !Is_White_Side(sq256) || number[type] > 0)
+                    {
+                        return false;
+                    }
+                    break;
+                case RedAdvisor:
+                    if (!Advisor_In_City(sq256) || !Is_White_Side(sq256) || number[type] > 1)
+                    {
+                        return false;
+                    }
+                    break;
+                case RedBishop:
+                    if (!Bishop_In_City(sq256) || !Is_White_Side(sq256) || number[type] > 1)
+                    {
+                        return false;
+                    }
+                    break;
+                case BlackKing:
+                    if (!King_In_City(sq256) || !Is_Black_Side(sq256) || number[type] > 0)
+                    {
+                        return false;
+                    }
+                    break;
+                case BlackAdvisor:
+                    if (!Advisor_In_City(sq256) || !Is_Black_Side(sq256) || number[type] > 1)
+                    {
+                        return false;
+                    }
+                    break;
+                case BlackBishop:
+                    if (!Bishop_In_City(sq256) || !Is_Black_Side(sq256) || number[type] > 1)
+                    {
+                        return false;
+                    }
+                    break;
+                case RedPawn:
+                    if(!Red_Pawn_Valid(sq256) || number[type] > 4)
+                    {
+                        return false;
+                    }
+                    break;
+                case BlackPawn:
+                    if(!Black_Pawn_Valid(sq256) || number[type] > 4)
+                    {
+                        return false;
+                    }
+                    break;
+                case RedCannon:
+                case BlackCannon:
+                case RedKnight:
+                case BlackKnight:
+                case RedRook:
+                case BlackRook:
+                    if(number[type] > 1)
+                    {
+                        return false;
+                    }
+                    break;
+                }
                 piece[Type2Index[type] + number[type]]= sq256;
                 square[sq256]=Type2Index[type] + number[type];
                 number[type]++;
@@ -518,11 +518,12 @@ void Board::getfen(char *fen) const
         fen[index++]='b';
     fen[index]='\0';
 }
+
 void Board::makemove(const Move &move)
 {
     int row, col, index;
-	lastmove = move;
-	lastcpt=square[move.wmv.dst];
+    lastmove = move;
+    lastcpt=square[move.wmv.dst];
     if(square[move.wmv.dst] != PieceNone)
     {
         index=square[move.wmv.dst];
@@ -555,6 +556,7 @@ void Board::makemove(const Move &move)
 
     turn^=1;
 }
+
 void Board::unmakemove(void)
 {
     int row, col, index;
@@ -615,7 +617,6 @@ bool Board::incheck(int side) const
     rowbit=rank[row];
     colbit=file[col];
 
-    //车将军
     if((sq=piece[rook_ix]) != 0)
     {
         if(Equal_File(sq, king_sq))
@@ -644,7 +645,6 @@ bool Board::incheck(int side) const
         }
     }
 
-    //炮将军
     if((sq=piece[cannon_ix]) != 0)
     {
         if(Equal_File(king_sq, sq))
@@ -673,7 +673,6 @@ bool Board::incheck(int side) const
         }
     }
 
-    //马将军
     if((sq=piece[knight_ix]) != 0)
     {
         if(square[sq + NLegalDt[king_sq - sq + 256]] == SquareNone) return true;
@@ -684,7 +683,6 @@ bool Board::incheck(int side) const
         if(square[sq + NLegalDt[king_sq - sq + 256]] == SquareNone) return true;
     }
 
-    //对脸和兵将军
     if(side)
     {
         sq=RookFileCapMax[row][colbit] + col;
