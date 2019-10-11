@@ -180,29 +180,33 @@ function getAllScores( $redis, $row ) {
 		if( $minindex == 0 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
-					continue;
-				$moves[$key] = -$item;
+					$moves['ply'] = $item;
+				else
+					$moves[$key] = -$item;
 			}
 		}
 		else if( $minindex == 1 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
-					continue;
-				$moves[ccbgetBWmove( $key )] = -$item;
+					$moves['ply'] = $item;
+				else
+					$moves[ccbgetBWmove( $key )] = -$item;
 			}
 		}
 		else if( $minindex == 2 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
-					continue;
-				$moves[ccbgetLRmove( $key )] = -$item;
+					$moves['ply'] = $item;
+				else
+					$moves[ccbgetLRmove( $key )] = -$item;
 			}
 		}
 		else {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
-					continue;
-				$moves[ccbgetLRBWmove( $key )] = -$item;
+					$moves['ply'] = $item;
+				else
+					$moves[ccbgetLRBWmove( $key )] = -$item;
 			}
 		}
 	}
@@ -214,15 +218,17 @@ function getAllScores( $redis, $row ) {
 		if( $minindex == 0 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
-					continue;
-				$moves[$key] = -$item;
+					$moves['ply'] = $item;
+				else
+					$moves[$key] = -$item;
 			}
 		}
 		else {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
-					continue;
-				$moves[ccbgetBWmove( $key )] = -$item;
+					$moves['ply'] = $item;
+				else
+					$moves[ccbgetBWmove( $key )] = -$item;
 			}
 		}
 	}
@@ -459,10 +465,41 @@ function updateSel( $row, $priority ) {
 		$readwrite_sel->writeunlock();
 	}
 }
-function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn ) {
+function updatePly( $redis, $row, $ply ) {
+	$LRfen = ccbgetLRfen( $row );
+	$BWfen = ccbgetBWfen( $row );
+	$hasLRmirror = ( $row == $LRfen ? false : true );
+	if( $hasLRmirror ) {
+		$LRBWfen = ccbgetLRfen( $BWfen );
+		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen), ccbfen2hexfen($LRfen), ccbfen2hexfen($LRBWfen) ) );
+		$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
+	}
+	else {
+		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
+		$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
+	}
+}
+function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 	$hasLRmirror = ( $row == ccbgetLRfen( $row ) ? false : true );
 	$moves1 = getAllScores( $redis, $row );
 	$moves2 = array();
+
+	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	{
+		if( $depth > 0 && $moves1['ply'] > $depth )
+		{
+			updatePly( $redis, $row, $depth );
+			$depth++;
+		}
+		else
+			$depth = $moves1['ply'] + 1;
+	}
+	else if( $depth > 0 )
+	{
+		updatePly( $redis, $row, $depth );
+		$depth++;
+	}
+	unset( $moves1['ply'] );
 
 	if( $update )
 	{
@@ -474,7 +511,7 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn ) {
 				$knownmoves[ccbgetLRmove( $key )] = 0;
 			}
 			$nextfen = ccbmovemake( $row, $key );
-			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false );
+			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false, $depth );
 			$moves2[ $key ][0] = 0;
 			$moves2[ $key ][1] = 0;
 			if( count( $nextmoves ) > 0 ) {
@@ -537,7 +574,7 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn ) {
 				}
 				foreach( $findmoves as $key => $item ) {
 					$nextfen = ccbmovemake( $row, $key );
-					list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false );
+					list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false, $depth );
 					if( count( $nextmoves ) > 0 ) {
 						updateQueue( $row, $key, true );
 					}
@@ -580,13 +617,30 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn ) {
 	}
 	return array( $moves1, $moves2 );
 }
-function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetlimit, $learn ) {
+function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlimit, $learn, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
 	if( $hasLRmirror )
 		$LRBWfen = ccbgetLRfen( $BWfen );
+
+	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	{
+		if( $depth > 0 && $moves1['ply'] > $depth )
+		{
+			updatePly( $redis, $row, $depth );
+			$depth++;
+		}
+		else
+			$depth = $moves1['ply'] + 1;
+	}
+	else if( $depth > 0 )
+	{
+		updatePly( $redis, $row, $depth );
+		$depth++;
+	}
+	unset( $moves1['ply'] );
 
 	if( $GLOBALS['counter'] < $enumlimit )
 	{
@@ -670,19 +724,19 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 				$moves2 = array();
 				$knownmoves = array();
 				foreach( $moves1 as $key => $item ) {
-					if( $depth == 0 ) {
+					if( $ply == 0 ) {
 						$knownmoves[$key] = 0;
 						if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
 							$knownmoves[ccbgetLRmove( $key )] = 0;
 						}
 					}
-					if( ( $depth == 0 && $resetlimit && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
+					if( ( $ply == 0 && $resetlimit && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
 						$moves2[ $key ] = $item;
 					}
 				}
 				arsort( $moves2 );
 
-				if( $depth == 0 ) {
+				if( $ply == 0 ) {
 					$GLOBALS['movecnt'] = array();
 				}
 				foreach( $moves2 as $key => $item ) {
@@ -694,18 +748,18 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 					else
 						$GLOBALS['counter']++;
 
-					if( $depth == 0 )
+					if( $ply == 0 )
 						$GLOBALS['counter1'] = 1;
 					else
 						$GLOBALS['counter1']++;
 
-					$nextmoves = getMovesWithCheck( $redis, $nextfen, array(), $depth + 1, $enumlimit, false, false );
+					$nextmoves = getMovesWithCheck( $redis, $nextfen, array(), $ply + 1, $enumlimit, false, false, $depth );
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
 						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
 						unset( $GLOBALS['loopcheck'] );
 					}
-					if( $depth == 0 )
+					if( $ply == 0 )
 						$GLOBALS['movecnt'][$key] = $GLOBALS['counter1'];
 
 					if( count( $nextmoves ) > 0 ) {
@@ -746,7 +800,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 					}
 				}
 				
-				if( $depth == 0 ) {
+				if( $ply == 0 ) {
 					if( count( $moves2 ) > 0 ) {
 						arsort( $moves2 );
 						$bestscore = reset( $moves2 );
@@ -921,13 +975,30 @@ function getMovesWithCheck( $redis, $row, $banmoves, $depth, $enumlimit, $resetl
 	}
 	return $moves1;
 }
-function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, $learn, &$pv ) {
+function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $learn, $depth, &$pv ) {
 	$moves1 = getAllScores( $redis, $row );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
 	if( $hasLRmirror )
 		$LRBWfen = ccbgetLRfen( $BWfen );
+
+	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	{
+		if( $depth > 0 && $moves1['ply'] > $depth )
+		{
+			updatePly( $redis, $row, $depth );
+			$depth++;
+		}
+		else
+			$depth = $moves1['ply'] + 1;
+	}
+	else if( $depth > 0 )
+	{
+		updatePly( $redis, $row, $depth );
+		$depth++;
+	}
+	unset( $moves1['ply'] );
 
 	if( $GLOBALS['counter'] < $enumlimit )
 	{
@@ -1011,13 +1082,13 @@ function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, 
 				$moves2 = array();
 				$knownmoves = array();
 				foreach( $moves1 as $key => $item ) {
-					if( $depth == 0 ) {
+					if( $ply == 0 ) {
 						$knownmoves[$key] = 0;
 						if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
 							$knownmoves[ccbgetLRmove( $key )] = 0;
 						}
 					}
-					if( ( $depth == 0 && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
+					if( ( $ply == 0 && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
 						$moves2[ $key ] = $item;
 					}
 				}
@@ -1031,7 +1102,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, 
 					if( $isbest ) {
 						array_push( $pv, $key );
 					}
-					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $depth + 1, $enumlimit, $isbest, false, $pv );
+					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $ply + 1, $enumlimit, $isbest, false, $depth, $pv );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
@@ -1075,7 +1146,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $depth, $enumlimit, $isbest, 
 						updateQueue( $row, $key, true );
 					}
 				}
-				if( $depth == 0 ) {
+				if( $ply == 0 ) {
 					$memcache_obj = new Memcache();
 					$memcache_obj->pconnect('localhost', 11211);
 					if( !$memcache_obj )
@@ -1809,7 +1880,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -1850,7 +1921,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -1890,7 +1961,7 @@ try{
 						else if( $action == 'queryall' ) {
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, $learn );
+							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
 								$oldscores = setOverrides( $row, $statmoves );
 								arsort( $statmoves );
@@ -1973,7 +2044,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -2014,7 +2085,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn );
+							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
@@ -2060,7 +2131,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, $pv );
+							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, 0, $pv );
 							if( count( $statmoves ) > 0 ) {
 								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}
@@ -2070,7 +2141,7 @@ try{
 						else if( $action == 'queryscore' ) {
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, true );
+							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, true, 0 );
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
@@ -2085,7 +2156,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);
-							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 100, true, true );
+							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 100, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								echo 'ok';
 							}
