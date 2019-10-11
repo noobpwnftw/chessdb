@@ -484,9 +484,9 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$moves2 = array();
 
-	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	if( isset($moves1['ply']) )
 	{
-		if( $depth > 0 && $moves1['ply'] > $depth )
+		if( $depth > 0 && ( $moves1['ply'] < 0 || $moves1['ply'] > $depth ) )
 		{
 			updatePly( $redis, $row, $depth );
 			$depth++;
@@ -494,7 +494,7 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 		else
 			$depth = $moves1['ply'] + 1;
 	}
-	else if( $depth > 0 )
+	else if( count( $moves1 ) > 0 && $depth > 0 )
 	{
 		updatePly( $redis, $row, $depth );
 		$depth++;
@@ -625,9 +625,9 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 	if( $hasLRmirror )
 		$LRBWfen = ccbgetLRfen( $BWfen );
 
-	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	if( isset($moves1['ply']) )
 	{
-		if( $depth > 0 && $moves1['ply'] > $depth )
+		if( $depth > 0 && ( $moves1['ply'] < 0 || $moves1['ply'] > $depth ) )
 		{
 			updatePly( $redis, $row, $depth );
 			$depth++;
@@ -635,7 +635,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 		else
 			$depth = $moves1['ply'] + 1;
 	}
-	else if( $depth > 0 )
+	else if( count( $moves1 ) > 0 && $depth > 0 )
 	{
 		updatePly( $redis, $row, $depth );
 		$depth++;
@@ -983,9 +983,9 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 	if( $hasLRmirror )
 		$LRBWfen = ccbgetLRfen( $BWfen );
 
-	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	if( isset($moves1['ply']) )
 	{
-		if( $depth > 0 && $moves1['ply'] > $depth )
+		if( $depth > 0 && ( $moves1['ply'] < 0 || $moves1['ply'] > $depth ) )
 		{
 			updatePly( $redis, $row, $depth );
 			$depth++;
@@ -993,7 +993,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 		else
 			$depth = $moves1['ply'] + 1;
 	}
-	else if( $depth > 0 )
+	else if( count( $moves1 ) > 0 && $depth > 0 )
 	{
 		updatePly( $redis, $row, $depth );
 		$depth++;

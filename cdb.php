@@ -259,9 +259,9 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$moves2 = array();
 
-	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	if( isset($moves1['ply']) )
 	{
-		if( $depth > 0 && $moves1['ply'] > $depth )
+		if( $depth > 0 && ( $moves1['ply'] < 0 || $moves1['ply'] > $depth ) )
 		{
 			updatePly( $redis, $row, $depth );
 			$depth++;
@@ -269,7 +269,7 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 		else
 			$depth = $moves1['ply'] + 1;
 	}
-	else if( $depth > 0 )
+	else if( count( $moves1 ) > 0 && $depth > 0 )
 	{
 		updatePly( $redis, $row, $depth );
 		$depth++;
@@ -377,9 +377,9 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 
-	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	if( isset($moves1['ply']) )
 	{
-		if( $depth > 0 && $moves1['ply'] > $depth )
+		if( $depth > 0 && ( $moves1['ply'] < 0 || $moves1['ply'] > $depth ) )
 		{
 			updatePly( $redis, $row, $depth );
 			$depth++;
@@ -387,7 +387,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 		else
 			$depth = $moves1['ply'] + 1;
 	}
-	else if( $depth > 0 )
+	else if( count( $moves1 ) > 0 && $depth > 0 )
 	{
 		updatePly( $redis, $row, $depth );
 		$depth++;
@@ -628,9 +628,9 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 
-	if( isset($moves1['ply']) && $moves1['ply'] >= 0 )
+	if( isset($moves1['ply']) )
 	{
-		if( $depth > 0 && $moves1['ply'] > $depth )
+		if( $depth > 0 && ( $moves1['ply'] < 0 || $moves1['ply'] > $depth ) )
 		{
 			updatePly( $redis, $row, $depth );
 			$depth++;
@@ -638,7 +638,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 		else
 			$depth = $moves1['ply'] + 1;
 	}
-	else if( $depth > 0 )
+	else if( count( $moves1 ) > 0 && $depth > 0 )
 	{
 		updatePly( $redis, $row, $depth );
 		$depth++;

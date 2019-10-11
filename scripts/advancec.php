@@ -179,7 +179,12 @@ function getMoves( $redis, $row, $depth ) {
 	$current_hash_bw = abs( xxhash64( $BWfen ) );
 
 	$recurse = false;
-	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] > $depth )
+	if( isset($moves1['ply']) )
+	{
+		if( $moves1['ply'] < 0 || $moves1['ply'] > $depth )
+			updatePly( $redis, $row, $depth );
+	}
+	else if( count( $moves1 ) > 0 )
 		updatePly( $redis, $row, $depth );
 
 	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] >= $depth )
