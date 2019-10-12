@@ -548,7 +548,15 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 					$updatemoves[ $key ] = $nextscore;
 				}
 			}
-			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 && count( ccbmovegen( $nextfen ) ) > 0 )
+			else if( count( ccbmovegen( $nextfen ) ) == 0 )
+			{
+				$nextscore = -30000;
+				if( $item != -$nextscore ) {
+					$moves1[ $key ] = -$nextscore;
+					$updatemoves[ $key ] = $nextscore;
+				}
+			}
+			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
 			{
 				updateQueue( $row, $key, true );
 			}
@@ -794,7 +802,15 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 && count( ccbmovegen( $nextfen ) ) > 0 )
+					else if( count( ccbmovegen( $nextfen ) ) == 0 )
+					{
+						$nextscore = -30000;
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
+						}
+					}
+					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1141,7 +1157,15 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 && count( ccbmovegen( $nextfen ) ) > 0 )
+					else if( count( ccbmovegen( $nextfen ) ) == 0 )
+					{
+						$nextscore = -30000;
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
+						}
+					}
+					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1552,8 +1576,6 @@ try{
 									$score = $score - 1;
 								else if( $score > 0 && $score < 30000 )
 									$score = $score + 1;
-								else
-									$score = 0;
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888);

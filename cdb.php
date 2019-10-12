@@ -320,7 +320,15 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 					$updatemoves[ $key ] = $nextscore;
 				}
 			}
-			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 && count( cbmovegen( $nextfen ) ) > 0 )
+			else if( count( cbmovegen( $nextfen ) ) == 0 )
+			{
+				$nextscore = 0;
+				if( $item != -$nextscore ) {
+					$moves1[ $key ] = -$nextscore;
+					$updatemoves[ $key ] = $nextscore;
+				}
+			}
+			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
 			{
 				updateQueue( $row, $key, true );
 			}
@@ -502,7 +510,15 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 && count( cbmovegen( $nextfen ) ) > 0 )
+					else if( count( cbmovegen( $nextfen ) ) == 0 )
+					{
+						$nextscore = 0;
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
+						}
+					}
+					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -742,7 +758,15 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 && count( cbmovegen( $nextfen ) ) > 0 )
+					else if( count( cbmovegen( $nextfen ) ) == 0 )
+					{
+						$nextscore = 0;
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
+						}
+					}
+					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1021,8 +1045,6 @@ try{
 									$score = $score - 1;
 								else if( $score > 0 && $score < 30000 )
 									$score = $score + 1;
-								else
-									$score = 0;
 							}
 							$redis = new Redis();
 							$redis->pconnect('localhost', 8888);
