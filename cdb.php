@@ -620,7 +620,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 				unset( $GLOBALS['looptt'][$current_hash] );
 				unset( $GLOBALS['looptt'][$current_hash_bw] );
 			}
-			else
+			else if( !$isloop )
 				$GLOBALS['boardtt'][$current_hash] = 1;
 
 			if( count( $updatemoves ) > 0 )
@@ -852,7 +852,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 				unset( $GLOBALS['looptt'][$current_hash] );
 				unset( $GLOBALS['looptt'][$current_hash_bw] );
 			}
-			else
+			else if( !$isloop )
 				$GLOBALS['boardtt'][$current_hash] = 1;
 
 			if( count( $updatemoves ) > 0 )
@@ -1872,7 +1872,7 @@ try{
 					echo $queueout;
 				}
 				else {
-					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
 					if( !empty( $doc ) && isset( $doc['data'] ) ) {
 						echo $doc['data'];
 					}
@@ -1931,7 +1931,7 @@ try{
 					echo $selout;
 				}
 				else {
-					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
 					if( !empty( $doc ) && isset( $doc['data'] ) ) {
 						echo $doc['data'];
 					}

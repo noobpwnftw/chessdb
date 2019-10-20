@@ -200,7 +200,7 @@ function getMoves( $redis, $row, $depth ) {
 
 			unset( $GLOBALS['looptt'][$current_hash] );
 			unset( $GLOBALS['looptt'][$current_hash_bw] );
-		} else {
+		} else if( !$isloop ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
 			echo $row . "\n";
