@@ -61,7 +61,6 @@ class MyRWLock {
 }
 
 $readwrite_queue = new MyRWLock( "ChessDBLockQueue2" );
-$readwrite_sel = new MyRWLock( "ChessDBLockSel2" );
 
 function count_pieces( $fen ) {
 	@list( $board, $color ) = explode( " ", $fen );
@@ -173,21 +172,6 @@ function updateQueue( $row, $key, $priority ) {
 		$readwrite_queue->writeunlock();
 	}
 }
-function updateSel( $row, $priority ) {
-	global $readwrite_sel;
-	$m = new MongoClient('mongodb://localhost');
-	$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
-	$BWfen = cbgetBWfen( $row );
-	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
-	if( $priority ) {
-		$doc = array( '$set' => array( 'p' => 1 ) );
-	} else {
-		$doc = array();
-	}
-	$readwrite_sel->writelock();
-	$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), $doc, array( 'upsert' => true ) );
-	$readwrite_sel->writeunlock();
-}
 function getMoves( $redis, $row, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
@@ -215,7 +199,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
-	if( $recurse && $depth < 30000 )
+	if( $recurse && $depth < 7 )
 	{
 		$updatemoves = array();
 		$isloop = true;
@@ -239,18 +223,19 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
+			$moves1 = cbmovegen( $row );
+			$moves2 = $moves1;
+
 			asort( $moves1 );
 			$throttle = getadvancethrottle( end( $moves1 ) );
 			if( $depth == 0 ) {
 				$throttle = -200;
 			}
-			$knownmoves = array();
 			$moves2 = array();
 			foreach( $moves1 as $key => $item ) {
 				if( $item >= $throttle ) {
 					$moves2[ $key ] = $item;
 				}
-				$knownmoves[$key] = 0;
 			}
 			arsort( $moves2 );
 			foreach( $moves2 as $key => $item ) {
@@ -302,12 +287,6 @@ function getMoves( $redis, $row, $depth ) {
 				else if( count_pieces( $nextfen ) >= 22 && count_attackers( $nextfen ) >= 10 && count( cbmovegen( $nextfen ) ) > 0 )
 				{
 					updateQueue( $row, $key, false );
-				}
-			}
-			$allmoves = cbmovegen( $row );
-			if( count( $allmoves ) > count( $knownmoves ) ) {
-				if( count( $knownmoves ) < 5 ) {
-					updateSel( $row, false );
 				}
 			}
 		}
@@ -369,8 +348,10 @@ function getMoves( $redis, $row, $depth ) {
 				echo $GLOBALS['counter'] . ' ' . $GLOBALS['curmove'] . ' ' . $depth . "\n";
 			}
 		}
+/*
 		if( count( $updatemoves ) > 0 )
 			updateScore( $redis, $row, $updatemoves );
+*/
 	}
 
 	foreach( $moves1 as $key => $entry ) {

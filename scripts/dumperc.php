@@ -100,7 +100,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
-	if( $recurse && $depth < 5 )
+	if( $recurse && $depth < 9 )
 	{
 		$isloop = true;
 		if( !isset( $GLOBALS['historytt'][$current_hash] ) )
@@ -203,7 +203,8 @@ function getMoves( $redis, $row, $depth ) {
 		} else if( !$isloop ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
-			echo $row . "\n";
+			if( $depth == 8 )
+				echo $row . "\n";
 		}
 	}
 	return $moves1;

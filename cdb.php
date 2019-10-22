@@ -1026,9 +1026,7 @@ try{
 									$memcache_obj->set( 'WorkerList2', $activelist, 0, 0 );
 								}
 								$thisminute = date('i');
-								$memcache_obj->add( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'PC_' . $thisminute, 0, 0, 150 );
 								$memcache_obj->add( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, 0, 0, 150 );
-								$memcache_obj->increment( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'PC_' . $thisminute );
 								$memcache_obj->increment( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, $nodes );
 							}
 							$score = intval($_REQUEST['score']);
@@ -1857,6 +1855,9 @@ try{
 							$queueout .= $fen . "\n";
 							foreach( $moves as $move )
 								$queueout .= $fen . ' moves ' . $move . "\n";
+							$thisminute = date('i');
+							$memcache_obj->add( 'QueueCount2::' . $thisminute, 0, 0, 150 );
+							$memcache_obj->increment( 'QueueCount2::' . $thisminute );
 						}
 					}
 					$docs[] = $doc['_id'];
@@ -1917,6 +1918,9 @@ try{
 							$selout .= '!' . $fen . "\n";
 						else
 							$selout .=  $fen . "\n";
+						$thisminute = date('i');
+						$memcache_obj->add( 'SelCount2::' . $thisminute, 0, 0, 150 );
+						$memcache_obj->increment( 'SelCount2::' . $thisminute );
 					}
 					$docs[] = $doc['_id'];
 				}

@@ -114,8 +114,8 @@ try{
 		}
 		$memcache_obj->set( 'EGTBStats2', array( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ), 0, 86400 );
 	}
-	$ppm = 0;
 	$nps = 0;
+	$est = 0;
 	$memcache_obj = new Memcache();
 	$memcache_obj->pconnect('localhost', 11211);
 	if( !$memcache_obj )
@@ -125,28 +125,27 @@ try{
 	if($activelist !== FALSE) {
 		$lastminute = date('i', time() - 60);
 		foreach($activelist as $key => $value) {
-			$ppn = $memcache_obj->get('Worker2::' . $key . 'PC_' . $lastminute);
-			if( $ppn !== FALSE ) {
-				$ppm += $ppn;
-			}
 			$npn = $memcache_obj->get('Worker2::' . $key . 'NC_' . $lastminute);
 			if( $npn !== FALSE ) {
 				$nps += $npn;
 			}
 		}
 		$nps /= 60 * 1000 * 1000;
+		$queue = $memcache_obj->get('QueueCount2::' . $lastminute);
+		$sel = $memcache_obj->get('SelCount2::' . $lastminute);
+		$est = $queue + $sel;
 	}
 	echo '<table class="stats">';
 	if($lang == 0) {
 		echo '<tr><td>局面数量（近似）：</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
 		echo '<tr><td>后台队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>计算速度（局面 / 分钟）：</td><td style="text-align: right;">' . number_format( $ppm ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>计算速度（局面 / 分钟）：</td><td style="text-align: right;">' . number_format( $est ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>残局库数量（ WDL / DTZ ）：</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
 		echo '<tr><td>残局库体积（ WDL / DTZ ）：</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	} else {
 		echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
 		echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>Speed ( Position / Minute ) :</td><td style="text-align: right;">' . number_format( $ppm ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>Speed ( Position / Minute ) :</td><td style="text-align: right;">' . number_format( $est ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>EGTB Count ( WDL / DTZ ) :</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
 		echo '<tr><td>EGTB File Size ( WDL / DTZ ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	}

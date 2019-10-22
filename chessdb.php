@@ -1557,9 +1557,7 @@ try{
 									$memcache_obj->set( 'WorkerList', $activelist, 0, 0 );
 								}
 								$thisminute = date('i');
-								$memcache_obj->add( 'Worker::' . $_SERVER['REMOTE_ADDR'] . 'PC_' . $thisminute, 0, 0, 150 );
 								$memcache_obj->add( 'Worker::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, 0, 0, 150 );
-								$memcache_obj->increment( 'Worker::' . $_SERVER['REMOTE_ADDR'] . 'PC_' . $thisminute );
 								$memcache_obj->increment( 'Worker::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, $nodes );
 							}
 							$score = intval($_REQUEST['score']);
@@ -2263,6 +2261,9 @@ try{
 							$queueout .= $fen . "\n";
 							foreach( $moves as $move )
 								$queueout .= $fen . ' moves ' . $move . "\n";
+							$thisminute = date('i');
+							$memcache_obj->add( 'QueueCount::' . $thisminute, 0, 0, 150 );
+							$memcache_obj->increment( 'QueueCount::' . $thisminute );
 						}
 					}
 					$docs[] = $doc['_id'];
@@ -2319,11 +2320,13 @@ try{
 					$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
 					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
 					{
-
 						if( isset( $doc['p'] ) && $doc['p'] > 0 )
 							$selout .= '!' . $fen . "\n";
 						else
 							$selout .= $fen . "\n";
+						$thisminute = date('i');
+						$memcache_obj->add( 'SelCount::' . $thisminute, 0, 0, 150 );
+						$memcache_obj->increment( 'SelCount::' . $thisminute );
 					}
 					$docs[] = $doc['_id'];
 				}
