@@ -61,6 +61,14 @@ function sizeFilter( $bytes )
 	for( $i = 0; $bytes >= 1024 && $i < ( count( $label ) -1 ); $bytes /= 1024, $i++ );
 	return( number_format( $bytes, 2, '.', '' ) . " " . $label[$i] );
 }
+function secondsToTime($seconds_time)
+{
+	$hours = floor($seconds_time / 3600);
+	$minutes = floor(($seconds_time - $hours * 3600) / 60);
+	$seconds = floor($seconds_time - ($hours * 3600) - ($minutes * 60));
+	return $hours . ':' . str_pad( $minutes, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $seconds, 2, '0', STR_PAD_LEFT );
+}
+
 try{
 	$lang = 0;
 	if( isset( $_REQUEST['lang'] ) ) {
@@ -133,19 +141,19 @@ try{
 		$nps /= 60 * 1000 * 1000;
 		$queue = $memcache_obj->get('QueueCount2::' . $lastminute);
 		$sel = $memcache_obj->get('SelCount2::' . $lastminute);
-		$est = $queue + $sel;
+		$est = ( $count2 + $count3 ) / ( $queue + $sel + 1 );
 	}
 	echo '<table class="stats">';
 	if($lang == 0) {
 		echo '<tr><td>局面数量（近似）：</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
-		echo '<tr><td>后台队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>计算速度（局面 / 分钟）：</td><td style="text-align: right;">' . number_format( $est ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>学习队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
+		echo '<tr><td>后台计算（剩时 / 速度）：</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>残局库数量（ WDL / DTZ ）：</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
 		echo '<tr><td>残局库体积（ WDL / DTZ ）：</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	} else {
 		echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
 		echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>Speed ( Position / Minute ) :</td><td style="text-align: right;">' . number_format( $est ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>Backend ( Duration / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>EGTB Count ( WDL / DTZ ) :</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
 		echo '<tr><td>EGTB File Size ( WDL / DTZ ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	}
