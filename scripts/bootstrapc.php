@@ -348,10 +348,8 @@ function getMoves( $redis, $row, $depth ) {
 				echo $GLOBALS['counter'] . ' ' . $GLOBALS['curmove'] . ' ' . $depth . "\n";
 			}
 		}
-/*
 		if( count( $updatemoves ) > 0 )
 			updateScore( $redis, $row, $updatemoves );
-*/
 	}
 
 	foreach( $moves1 as $key => $entry ) {

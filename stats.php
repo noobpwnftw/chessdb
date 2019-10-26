@@ -63,10 +63,12 @@ function sizeFilter( $bytes )
 }
 function secondsToTime($seconds_time)
 {
+	if($seconds_time > 172800)
+		return '>48:00:00';
 	$hours = floor($seconds_time / 3600);
 	$minutes = floor(($seconds_time - $hours * 3600) / 60);
 	$seconds = floor($seconds_time - ($hours * 3600) - ($minutes * 60));
-	return $hours . ':' . str_pad( $minutes, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $seconds, 2, '0', STR_PAD_LEFT );
+	return str_pad( $hours, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $minutes, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $seconds, 2, '0', STR_PAD_LEFT );
 }
 
 try{
