@@ -1332,7 +1332,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 	return $moves1;
 }
 
-function getEngineMove( $row, $movelist ) {
+function getEngineMove( $row, $movelist, $maxtime ) {
 	$result = '';
 	$descriptorspec = array( 0 => array("pipe", "r"),1 => array("pipe", "w") );
 	$process = proc_open( '/home/apache/engine', $descriptorspec, $pipes, NULL, NULL );
@@ -1354,7 +1354,7 @@ function getEngineMove( $row, $movelist ) {
 					break;
 				}
 			}
-			else if( time() - $startTime >= 5 ) {
+			else if( time() - $startTime >= $maxtime ) {
 				fwrite( $pipes[0], 'stop' . PHP_EOL );
 			}
 			$readfd = array( $pipes[1] );
@@ -2207,7 +2207,10 @@ try{
 									$isvalid = false;
 							}
 							if( $isvalid ) {
-								$result = getEngineMove( $row, $movelist );
+								$memcache_obj->add( 'EngineCount', 0 );
+								$engcount = $memcache_obj->increment( 'EngineCount' );
+								$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
+								$memcache_obj->decrement( 'EngineCount' );
 								if( !empty( $result ) ) {
 									echo 'move:' . $result;
 								}
