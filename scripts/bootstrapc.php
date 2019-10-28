@@ -84,18 +84,6 @@ function getthrottle( $maxscore ) {
 	}
 	return $throttle;
 }
-function getadvancethrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
-	}
-	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
-	}
-	else {
-		$throttle = -75;
-	}
-	return $throttle;
-}
 function getHexFenStorage( $hexfenarr ) {
 	asort( $hexfenarr );
 	$minhexfen = reset( $hexfenarr );
@@ -223,19 +211,10 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			$moves1 = cbmovegen( $row );
-			$moves2 = $moves1;
-
 			asort( $moves1 );
-			$throttle = getadvancethrottle( end( $moves1 ) );
-			if( $depth == 0 ) {
-				$throttle = -200;
-			}
-			$moves2 = array();
+			$moves2 = cbmovegen( $row );
 			foreach( $moves1 as $key => $item ) {
-				if( $item >= $throttle ) {
-					$moves2[ $key ] = $item;
-				}
+				$moves2[ $key ] = $item;
 			}
 			arsort( $moves2 );
 			foreach( $moves2 as $key => $item ) {
@@ -286,7 +265,9 @@ function getMoves( $redis, $row, $depth ) {
 				}
 				else if( count_pieces( $nextfen ) >= 22 && count_attackers( $nextfen ) >= 10 && count( cbmovegen( $nextfen ) ) > 0 )
 				{
-					updateQueue( $row, $key, false );
+					echo 'error:' . $row . "\n";
+					exit(0);
+					//updateQueue( $row, $key, false );
 				}
 			}
 		}
