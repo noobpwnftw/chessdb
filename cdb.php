@@ -322,7 +322,10 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 			}
 			else if( count( cbmovegen( $nextfen ) ) == 0 )
 			{
-				$nextscore = 0;
+				if( cbincheck( $nextfen ) )
+					$nextscore = -30000;
+				else
+					$nextscore = 0;
 				if( $item != -$nextscore ) {
 					$moves1[ $key ] = -$nextscore;
 					$updatemoves[ $key ] = $nextscore;
@@ -512,7 +515,10 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					}
 					else if( count( cbmovegen( $nextfen ) ) == 0 )
 					{
-						$nextscore = 0;
+						if( cbincheck( $nextfen ) )
+							$nextscore = -30000;
+						else
+							$nextscore = 0;
 						if( $item != -$nextscore ) {
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
@@ -760,7 +766,10 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					}
 					else if( count( cbmovegen( $nextfen ) ) == 0 )
 					{
-						$nextscore = 0;
+						if( cbincheck( $nextfen ) )
+							$nextscore = -30000;
+						else
+							$nextscore = 0;
 						if( $item != -$nextscore ) {
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
@@ -1030,14 +1039,7 @@ try{
 								$memcache_obj->increment( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, $nodes );
 							}
 							$score = intval($_REQUEST['score']);
-							if( $score == 0 )
-							{
-								if( count( cbmovegen( cbmovemake( $row, $move ) ) ) == 0 )
-								{
-									$score = 0;
-								}
-							}
-							else if( abs( $score ) > 10000 )
+							if( abs( $score ) > 10000 )
 							{
 								if( $score < 0 && $score > -30000 )
 									$score = $score - 1;
