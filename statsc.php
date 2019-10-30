@@ -2,6 +2,7 @@
 ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
+header("Access-Control-Allow-Origin: *");
 
 if (!function_exists('http_response_code')) {
 	function http_response_code($code = NULL) {
@@ -77,7 +78,7 @@ try{
 		$lang = intval($_REQUEST['lang']);
 	}
 	$redis = new Redis();
-	$redis->pconnect('localhost', 8888);
+	$redis->pconnect('192.168.1.2', 8888);
 	$count1 = $redis->dbsize();
 
 	$m = new MongoClient();

@@ -2,6 +2,7 @@
 ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
+header("Access-Control-Allow-Origin: *");
 
 $MASTER_PASSWORD = '123456';
 
@@ -96,7 +97,7 @@ function count_attackers( $fen ) {
 }
 function getthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -108,7 +109,7 @@ function getthrottle( $maxscore ) {
 }
 function getbestthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
@@ -120,7 +121,7 @@ function getbestthrottle( $maxscore ) {
 }
 function getlearnthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -134,7 +135,7 @@ function setOverrides( $row, &$moves ) {
 	$oldscores = array();
 	if( $row == 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -' )
 	{
-		$overrides = array( 'e2e4' => 15, 'd2d4' => 15, 'g1f3' => 15, 'c2c4' => 10, 'g2g3' => 10 );
+		$overrides = array( 'e2e4' => 15, 'd2d4' => 15, 'g1f3' => 15, 'c2c4' => 10 );
 		foreach( $overrides as $key => $value ) {
 			if( isset( $moves[$key] ) ) {
 				$oldscores[$key] = $moves[$key];
@@ -144,7 +145,7 @@ function setOverrides( $row, &$moves ) {
 	}
 	else if( $row == 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq -' )
 	{
-		$overrides = array( 'e7e5' => 15, 'd7d5' => 15, 'g8f6' => 15, 'c7c5' => 10, 'g7g6' => 10 );
+		$overrides = array( 'e7e5' => 15, 'd7d5' => 15, 'g8f6' => 15, 'c7c5' => 10 );
 		foreach( $overrides as $key => $value ) {
 			if( isset( $moves[$key] ) ) {
 				$oldscores[$key] = $moves[$key];
@@ -1025,15 +1026,6 @@ try{
 								$memcache_obj->pconnect('localhost', 11211);
 								if( !$memcache_obj )
 									throw new Exception( 'Memcache error.' );
-								$activelist = $memcache_obj->get( 'WorkerList2' );
-								if( $activelist === FALSE ) {
-									$activelist = array();
-									$memcache_obj->add( 'WorkerList2', $activelist, 0, 0 );
-								}
-								if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
-									$activelist[$_SERVER['REMOTE_ADDR']] = 1;
-									$memcache_obj->set( 'WorkerList2', $activelist, 0, 0 );
-								}
 								$thisminute = date('i');
 								$memcache_obj->add( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, 0, 0, 150 );
 								$memcache_obj->increment( 'Worker2::' . $_SERVER['REMOTE_ADDR'] . 'NC_' . $thisminute, $nodes );
@@ -1047,7 +1039,7 @@ try{
 									$score = $score + 1;
 							}
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							if( !scoreExists( $redis, $row, $move ) ) {
 								updateScore( $redis, $row, array( $move => $score ) );
 								echo 'ok';
@@ -1067,7 +1059,7 @@ try{
 								$priority = true;
 							}
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							if( !scoreExists( $redis, $row, $move ) ) {
 								updateQueue( $row, $move, $priority );
 								echo 'ok';
@@ -1090,15 +1082,21 @@ try{
 						$memcache_obj->increment( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
 					}
 					if( count_pieces( $row ) <= 7 && $action != 'queue' ) {
-						$result = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $row ) ), TRUE );
+						$egtbresult = $memcache_obj->get( 'EGTB_DTZ::' . $row );
+						if( $egtbresult === FALSE ) {
+							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $row ) ), TRUE );
+							if( $egtbresult !== FALSE ) {
+								$memcache_obj->add( 'EGTB_DTZ::' . $row, $egtbresult, 0, 30 );
+							}
+						}
 						if( $action == 'queryall' ) {
-							if( $result['checkmate'] ) {
+							if( $egtbresult['checkmate'] ) {
 								if( $isJson )
 									echo '"status":"checkmate"';
 								else
 									echo 'checkmate';
 							}
-							else if( $result['stalemate'] ) {
+							else if( $egtbresult['stalemate'] ) {
 								if( $isJson )
 									echo '"status":"stalemate"';
 								else
@@ -1108,9 +1106,9 @@ try{
 							{
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
-								$bestmove = reset( $result['moves'] );
+								$bestmove = reset( $egtbresult['moves'] );
 								$isfirst = true;
-								foreach( $result['moves'] as $move ) {
+								foreach( $egtbresult['moves'] as $move ) {
 									if( !$isfirst ) {
 										if( $move['wdl'] < 0 ) {
 											$step = -$move['dtz'];
@@ -1231,18 +1229,18 @@ try{
 						}
 						else if( $action == 'query' || $action == 'querybest' || $action == 'querylearn' || $action == 'querysearch' )
 						{
-							if( $result['checkmate'] || $result['stalemate'] ) {
+							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] ) {
 								if( $isJson )
 									echo '"status":"nobestmove"';
 								else
 									echo 'nobestmove';
 							}
 							else {
-								$bestmove = reset( $result['moves'] );
+								$bestmove = reset( $egtbresult['moves'] );
 								if( $bestmove['wdl'] != 0 ) {
 									$finals = array();
 									$finalcount = 0;
-									foreach( $result['moves'] as $move ) {
+									foreach( $egtbresult['moves'] as $move ) {
 										if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] )
 											$finals[$finalcount++] = $move['uci'];
 										else
@@ -1259,7 +1257,7 @@ try{
 									if( $isJson )
 										echo '"status":"ok","search_moves":[{';
 									$isfirst = true;
-									foreach( $result['moves'] as $move ) {
+									foreach( $egtbresult['moves'] as $move ) {
 										if( $move['wdl'] == 0 ) {
 											if( !$isfirst ) {
 												if( $isJson )
@@ -1296,14 +1294,14 @@ try{
 								echo 'unknown';
 						}
 						else if( $action == 'queryscore' ) {
-							if( $result['checkmate'] || $result['stalemate'] ) {
+							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] ) {
 								if( $isJson )
 									echo '"status":"unknown"';
 								else
 									echo 'unknown';
 							}
 							else {
-								$bestmove = reset( $result['moves'] );
+								$bestmove = reset( $egtbresult['moves'] );
 								if( $bestmove['wdl'] < 0 ) {
 									$step = -$bestmove['dtz'];
 									if( $bestmove['wdl'] == -1 )
@@ -1333,7 +1331,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
@@ -1389,7 +1387,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
@@ -1444,7 +1442,7 @@ try{
 						}
 						else if( $action == 'queryall' ) {
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
@@ -1594,7 +1592,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
@@ -1650,7 +1648,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								setOverrides( $row, $statmoves );
@@ -1718,7 +1716,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getAnalysisPath( $redis, $row, 0, 50, true, $learn, 0, $pv );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
@@ -1735,7 +1733,7 @@ try{
 						}
 						else if( $action == 'queryscore' ) {
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, true, true, 0 );
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
@@ -1756,7 +1754,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('localhost', 8888);
+							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 100, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								if( $isJson )
@@ -1773,40 +1771,45 @@ try{
 							}
 						}
 						else if( $action == 'queryengine' ) {
-							$movelist = array();
-							$isvalid = true;
-							if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
-								$movelist = explode( "|", $_REQUEST['movelist'] );
-								$nextfen = $row;
-								$movecount = count( $movelist );
-								if( $movecount > 0 && $movecount < 2047 ) {
-									foreach( $movelist as $entry ) {
-										$validmoves = cbmovegen( $nextfen );
-										if( isset( $validmoves[$entry] ) )
-											$nextfen = cbmovemake( $nextfen, $entry );
-										else {
-											$isvalid = false;
-											break;
+							if( isset( $_REQUEST['token'] ) && !empty( $_REQUEST['token'] ) && substr( md5( $_REQUEST['board'] . $_REQUEST['token'] ), 0, 2 ) == '00' ) {
+								$movelist = array();
+								$isvalid = true;
+								if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
+									$movelist = explode( "|", $_REQUEST['movelist'] );
+									$nextfen = $row;
+									$movecount = count( $movelist );
+									if( $movecount > 0 && $movecount < 2047 ) {
+										foreach( $movelist as $entry ) {
+											$validmoves = cbmovegen( $nextfen );
+											if( isset( $validmoves[$entry] ) )
+												$nextfen = cbmovemake( $nextfen, $entry );
+											else {
+												$isvalid = false;
+												break;
+											}
 										}
+									}
+									else
+										$isvalid = false;
+								}
+								if( $isvalid ) {
+									$memcache_obj->add( 'EngineCount2', 0 );
+									$engcount = $memcache_obj->increment( 'EngineCount2' );
+									$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
+									$memcache_obj->decrement( 'EngineCount2' );
+									if( !empty( $result ) ) {
+										echo 'move:' . $result;
+									}
+									else {
+										echo 'nobestmove';
 									}
 								}
 								else
-									$isvalid = false;
+									echo 'invalid movelist';
 							}
-							if( $isvalid ) {
-								$memcache_obj->add( 'EngineCount2', 0 );
-								$engcount = $memcache_obj->increment( 'EngineCount2' );
-								$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
-								$memcache_obj->decrement( 'EngineCount2' );
-								if( !empty( $result ) ) {
-									echo 'move:' . $result;
-								}
-								else {
-									echo 'nobestmove';
-								}
+							else {
+								echo 'invalid parameters';
 							}
-							else
-								echo 'invalid movelist';
 						}
 					}
 				}
@@ -1832,57 +1835,66 @@ try{
 	}
 	else if( $action == 'getqueue' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
-			$memcache_obj = new Memcache();
-			$memcache_obj->pconnect('localhost', 11211);
-			if( !$memcache_obj )
-				throw new Exception( 'Memcache error.' );
 			if( $readwrite_queue->trywritelock() )
 			{
 				//$readwrite_queue->writelock();
-				$docs = array();
-				$queueout = '';
+				$memcache_obj = new Memcache();
+				$memcache_obj->pconnect('localhost', 11211);
+				if( !$memcache_obj )
+					throw new Exception( 'Memcache error.' );
+				$activelist = $memcache_obj->get( 'WorkerList2' );
+				if( $activelist === FALSE ) {
+					$activelist = array();
+					$memcache_obj->add( 'WorkerList2', $activelist, 0, 0 );
+				}
+				if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
+					$activelist[$_SERVER['REMOTE_ADDR']] = 1;
+					$memcache_obj->set( 'WorkerList2', $activelist, 0, 0 );
+				}
 				$m = new MongoClient('mongodb://localhost');
-				$collection = $m->selectDB('cdbqueue')->selectCollection('queuedb');
-				$cursor = $collection->find()->sort( array( 'p' => -1 ) )->limit(20);
-				foreach( $cursor as $doc ) {
-					$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
-					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 ) {
-						$moves = array();
-						foreach( $doc as $key => $item ) {
-							if( $key == '_id' )
-								continue;
-							else if( $key == 'p' )
-								continue;
-							else if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
-								$moves[] = $key;
-						}
-						if( count( $moves ) > 0 ) {
-							$queueout .= $fen . "\n";
-							foreach( $moves as $move )
-								$queueout .= $fen . ' moves ' . $move . "\n";
-							$thisminute = date('i');
-							$memcache_obj->add( 'QueueCount2::' . $thisminute, 0, 0, 150 );
-							$memcache_obj->increment( 'QueueCount2::' . $thisminute );
-						}
-					}
-					$docs[] = $doc['_id'];
-				}
-				$cursor->reset();
-				if( count( $docs ) > 0 ) {
-					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
-				}
-				$readwrite_queue->writeunlock();
-				$collection2 = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
-				if( strlen($queueout) > 0 ) {
-					$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
-					echo $queueout;
+				$collection = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
+				$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+				if( !empty( $doc ) && isset( $doc['data'] ) ) {
+					echo $doc['data'];
 				}
 				else {
-					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
-					if( !empty( $doc ) && isset( $doc['data'] ) ) {
-						echo $doc['data'];
+					$collection2 = $m->selectDB('cdbqueue')->selectCollection('queuedb');
+					$cursor = $collection2->find()->sort( array( 'p' => -1 ) )->limit(20);
+					$docs = array();
+					$queueout = '';
+					foreach( $cursor as $doc ) {
+						$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
+						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 ) {
+							$moves = array();
+							foreach( $doc as $key => $item ) {
+								if( $key == '_id' )
+									continue;
+								else if( $key == 'p' )
+									continue;
+								else if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
+									$moves[] = $key;
+							}
+							if( count( $moves ) > 0 ) {
+								$queueout .= $fen . "\n";
+								foreach( $moves as $move )
+									$queueout .= $fen . ' moves ' . $move . "\n";
+								$thisminute = date('i');
+								$memcache_obj->add( 'QueueCount2::' . $thisminute, 0, 0, 150 );
+								$memcache_obj->increment( 'QueueCount2::' . $thisminute );
+							}
+						}
+						$docs[] = $doc['_id'];
+					}
+					$cursor->reset();
+					if( count( $docs ) > 0 ) {
+						$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
+					}
+					if( strlen($queueout) > 0 ) {
+						$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+						echo $queueout;
 					}
 				}
+				$readwrite_queue->writeunlock();
 			}
 		}
 		else {
@@ -1903,48 +1915,48 @@ try{
 	}
 	else if( $action == 'getsel' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
-			$memcache_obj = new Memcache();
-			$memcache_obj->pconnect('localhost', 11211);
-			if( !$memcache_obj )
-				throw new Exception( 'Memcache error.' );
 			if( $readwrite_sel->trywritelock() )
 			{
 				//$readwrite_sel->writelock();
+				$memcache_obj = new Memcache();
+				$memcache_obj->pconnect('localhost', 11211);
+				if( !$memcache_obj )
+					throw new Exception( 'Memcache error.' );
 				$m = new MongoClient('mongodb://localhost');
-				$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
-				$cursor = $collection->find()->sort( array( 'p' => -1 ) )->limit(20);
-				$docs = array();
-				$selout = '';
-				foreach( $cursor as $doc ) {
-					$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
-					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 && $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
-					{
-						if( isset( $doc['p'] ) && $doc['p'] > 0 )
-							$selout .= '!' . $fen . "\n";
-						else
-							$selout .=  $fen . "\n";
-						$thisminute = date('i');
-						$memcache_obj->add( 'SelCount2::' . $thisminute, 0, 0, 150 );
-						$memcache_obj->increment( 'SelCount2::' . $thisminute );
-					}
-					$docs[] = $doc['_id'];
-				}
-				$cursor->reset();
-				if( count( $docs ) > 0 ) {
-					$collection->remove( array( '_id' => array( '$in' => $docs ) ) );
-				}
-				$readwrite_sel->writeunlock();
-				$collection2 = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
-				if( strlen($selout) > 0 ) {
-					$collection2->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
-					echo $selout;
+				$collection = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
+				$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+				if( !empty( $doc ) && isset( $doc['data'] ) ) {
+					echo $doc['data'];
 				}
 				else {
-					$doc = $collection2->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 86400 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
-					if( !empty( $doc ) && isset( $doc['data'] ) ) {
-						echo $doc['data'];
+					$collection2 = $m->selectDB('cdbsel')->selectCollection('seldb');
+					$cursor = $collection2->find()->sort( array( 'p' => -1 ) )->limit(20);
+					$docs = array();
+					$selout = '';
+					foreach( $cursor as $doc ) {
+						$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
+						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 && $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
+						{
+							if( isset( $doc['p'] ) && $doc['p'] > 0 )
+								$selout .= '!' . $fen . "\n";
+							else
+								$selout .=  $fen . "\n";
+							$thisminute = date('i');
+							$memcache_obj->add( 'SelCount2::' . $thisminute, 0, 0, 150 );
+							$memcache_obj->increment( 'SelCount2::' . $thisminute );
+						}
+						$docs[] = $doc['_id'];
+					}
+					$cursor->reset();
+					if( count( $docs ) > 0 ) {
+						$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
+					}
+					if( strlen($selout) > 0 ) {
+						$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+						echo $selout;
 					}
 				}
+				$readwrite_sel->writeunlock();
 			}
 		}
 		else {

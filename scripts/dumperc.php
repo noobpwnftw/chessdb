@@ -2,33 +2,9 @@
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 
-function getthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
-	}
-	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
-	}
-	else {
-		$throttle = -50;
-	}
-	return $throttle;
-}
-function getbestthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
-	}
-	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
-	}
-	else {
-		$throttle = $maxscore;
-	}
-	return $throttle;
-}
 function getadvancethrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -100,7 +76,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
-	if( $recurse && $depth < 9 )
+	if( $recurse && $depth < 30000 )
 	{
 		$isloop = true;
 		if( !isset( $GLOBALS['historytt'][$current_hash] ) )

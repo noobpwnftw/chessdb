@@ -75,7 +75,7 @@ function count_attackers( $fen ) {
 }
 function getthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -87,7 +87,7 @@ function getthrottle( $maxscore ) {
 }
 function getadvancethrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -387,7 +387,7 @@ function getMoves( $redis, $row, $depth ) {
 	else if( count( $moves1 ) > 0 )
 		updatePly( $redis, $row, $depth );
 
-	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] >= $depth )
+	//if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] >= $depth )
 	{	
 		if( !isset( $GLOBALS['boardtt'][$current_hash] ) )
 		{
@@ -412,7 +412,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 	
-	if( $recurse && $depth < 15 )
+	if( $recurse && $depth < 30000 )
 	{
 		$updatemoves = array();
 		$isloop = true;
@@ -459,78 +459,81 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			asort( $moves1 );
-			$throttle = getadvancethrottle( end( $moves1 ) );
-			if( $depth == 0 ) {
-				$throttle = -200;
-			}
-			$knownmoves = array();
-			$moves2 = array();
-			foreach( $moves1 as $key => $item ) {
-				if( $item >= $throttle ) {
-					$moves2[ $key ] = $item;
+			if( $depth < 20 )
+			{
+				asort( $moves1 );
+				$throttle = getadvancethrottle( end( $moves1 ) );
+				if( $depth == 0 ) {
+					$throttle = -200;
 				}
-				$knownmoves[$key] = 0;
-				if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
-					$knownmoves[ccbgetLRmove( $key )] = 0;
+				$knownmoves = array();
+				$moves2 = array();
+				foreach( $moves1 as $key => $item ) {
+					if( $item >= $throttle ) {
+						$moves2[ $key ] = $item;
+					}
+					$knownmoves[$key] = 0;
+					if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
+						$knownmoves[ccbgetLRmove( $key )] = 0;
+					}
 				}
-			}
-			arsort( $moves2 );
-			foreach( $moves2 as $key => $item ) {
+				arsort( $moves2 );
+				foreach( $moves2 as $key => $item ) {
 
-				if( $depth == 0 )
-					$GLOBALS['curmove'] = $key;
+					if( $depth == 0 )
+						$GLOBALS['curmove'] = $key;
 
-				$nextfen = ccbmovemake( $row, $key );
-				$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-				$GLOBALS['historytt'][$current_hash]['move'] = $key;
-				$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
-				unset( $GLOBALS['historytt'][$current_hash] );
-				if( isset( $GLOBALS['loopcheck'] ) ) {
-					$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
-					unset( $GLOBALS['loopcheck'] );
-				}
-				if( count( $nextmoves ) > 0 ) {
-					arsort( $nextmoves );
-					$nextscore = reset( $nextmoves );
-					$throttle = getthrottle( $nextscore );
-					$nextsum = 0;
-					$nextcount = 0;
-					$totalvalue = 0;
-					foreach( $nextmoves as $record => $score ) {
-						if( $score >= $throttle ) {
-							$nextcount++;
-							$nextsum = $nextsum + $score;
-							$totalvalue = $totalvalue + $nextsum;
-						}
-						else
-							break;
+					$nextfen = ccbmovemake( $row, $key );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
+					$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
+					unset( $GLOBALS['historytt'][$current_hash] );
+					if( isset( $GLOBALS['loopcheck'] ) ) {
+						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
+						unset( $GLOBALS['loopcheck'] );
 					}
-					if( $nextcount > 1 )
-						$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-					else if( $nextcount == 1 ) {
-						if( count( $nextmoves ) > 1 ) {
-							if( $nextscore >= -50 )
-								$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+					if( count( $nextmoves ) > 0 ) {
+						arsort( $nextmoves );
+						$nextscore = reset( $nextmoves );
+						$throttle = getthrottle( $nextscore );
+						$nextsum = 0;
+						$nextcount = 0;
+						$totalvalue = 0;
+						foreach( $nextmoves as $record => $score ) {
+							if( $score >= $throttle ) {
+								$nextcount++;
+								$nextsum = $nextsum + $score;
+								$totalvalue = $totalvalue + $nextsum;
+							}
+							else
+								break;
 						}
-						else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-							$nextscore = ( int )( $nextscore * 9 / 10 );
+						if( $nextcount > 1 )
+							$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+						else if( $nextcount == 1 ) {
+							if( count( $nextmoves ) > 1 ) {
+								if( $nextscore >= -50 )
+									$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+							}
+							else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
+								$nextscore = ( int )( $nextscore * 9 / 10 );
+							}
+						}
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					if( $item != -$nextscore ) {
-						$moves1[ $key ] = -$nextscore;
-						$updatemoves[ $key ] = $nextscore;
+					else if( count_pieces( $nextfen ) >= 22 && count_attackers( $nextfen ) >= 10 && count( ccbmovegen( $nextfen ) ) > 0 )
+					{
+						updateQueue( $row, $key, false );
 					}
 				}
-				else if( count_pieces( $nextfen ) >= 22 && count_attackers( $nextfen ) >= 10 && count( ccbmovegen( $nextfen ) ) > 0 )
-				{
-					updateQueue( $row, $key, false );
-				}
-			}
-			$allmoves = ccbmovegen( $row );
-			if( count( $allmoves ) > count( $knownmoves ) ) {
-				if( count( $knownmoves ) < 5 ) {
-					updateSel( $row, false );
+				$allmoves = ccbmovegen( $row );
+				if( count( $allmoves ) > count( $knownmoves ) ) {
+					if( count( $knownmoves ) < 5 ) {
+						updateSel( $row, false );
+					}
 				}
 			}
 		}

@@ -2,6 +2,7 @@
 ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
+header("Access-Control-Allow-Origin: *");
 
 if (!function_exists('http_response_code')) {
 	function http_response_code($code = NULL) {
@@ -77,7 +78,7 @@ try{
 		$lang = intval($_REQUEST['lang']);
 	}
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8888);
+	$redis->pconnect('192.168.1.2', 8889);
 	$count1 = $redis->dbsize();
 
 	$m = new MongoClient();
@@ -106,7 +107,7 @@ try{
 		$egtb_count_dtm = $egtbstats[2];
 		$egtb_size_dtm = $egtbstats[3];
 	} else {
-		$egtb_dirs_dtc = array( '/home/apache/EGTB1/', '/home/apache/EGTB2/', '/home/apache/EGTB3/', '/home/apache/EGTB4/', '/home/apache/EGTB5/' );
+		$egtb_dirs_dtc = array( '/home/apache/EGTB/' );
 		foreach( $egtb_dirs_dtc as $dir ) {
 			$dir_iter = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
 			foreach( $dir_iter as $file ) {
@@ -116,7 +117,7 @@ try{
 		}
 		$egtb_count_dtc /= 2;
 
-		$egtb_dirs_dtm = array( '/home/apache/EGTB_DTM1/', '/home/apache/EGTB_DTM2/', '/home/apache/EGTB_DTM3/', '/home/apache/EGTB_DTM4/', '/home/apache/EGTB_DTM5/' );
+		$egtb_dirs_dtm = array( '/home/apache/EGTB_DTM/' );
 		foreach( $egtb_dirs_dtm as $dir ) {
 			$dir_iter = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
 			foreach( $dir_iter as $file ) {

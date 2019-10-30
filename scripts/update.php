@@ -5,7 +5,7 @@ ini_set("memory_limit", "-1");
 
 function getthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -325,51 +325,54 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			shuffle_assoc( $moves1 );
-			foreach( $moves1 as $key => $item ) {
+			if( $depth < 5 )
+			{
+				shuffle_assoc( $moves1 );
+				foreach( $moves1 as $key => $item ) {
 
-				if( $depth == 0 )
-					$GLOBALS['curmove'] = $key;
+					if( $depth == 0 )
+						$GLOBALS['curmove'] = $key;
 
-				$nextfen = ccbmovemake( $row, $key );
-				$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-				$GLOBALS['historytt'][$current_hash]['move'] = $key;
-				$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
-				unset( $GLOBALS['historytt'][$current_hash] );
-				if( isset( $GLOBALS['loopcheck'] ) ) {
-					$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
-					unset( $GLOBALS['loopcheck'] );
-				}
-				if( count( $nextmoves ) > 0 ) {
-					arsort( $nextmoves );
-					$nextscore = reset( $nextmoves );
-					$throttle = getthrottle( $nextscore );
-					$nextsum = 0;
-					$nextcount = 0;
-					$totalvalue = 0;
-					foreach( $nextmoves as $record => $score ) {
-						if( $score >= $throttle ) {
-							$nextcount++;
-							$nextsum = $nextsum + $score;
-							$totalvalue = $totalvalue + $nextsum;
-						}
-						else
-							break;
+					$nextfen = ccbmovemake( $row, $key );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
+					$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
+					unset( $GLOBALS['historytt'][$current_hash] );
+					if( isset( $GLOBALS['loopcheck'] ) ) {
+						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
+						unset( $GLOBALS['loopcheck'] );
 					}
-					if( $nextcount > 1 )
-						$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-					else if( $nextcount == 1 ) {
-						if( count( $nextmoves ) > 1 ) {
-							if( $nextscore >= -50 )
-								$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+					if( count( $nextmoves ) > 0 ) {
+						arsort( $nextmoves );
+						$nextscore = reset( $nextmoves );
+						$throttle = getthrottle( $nextscore );
+						$nextsum = 0;
+						$nextcount = 0;
+						$totalvalue = 0;
+						foreach( $nextmoves as $record => $score ) {
+							if( $score >= $throttle ) {
+								$nextcount++;
+								$nextsum = $nextsum + $score;
+								$totalvalue = $totalvalue + $nextsum;
+							}
+							else
+								break;
 						}
-						else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-							$nextscore = ( int )( $nextscore * 9 / 10 );
+						if( $nextcount > 1 )
+							$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+						else if( $nextcount == 1 ) {
+							if( count( $nextmoves ) > 1 ) {
+								if( $nextscore >= -50 )
+									$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+							}
+							else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
+								$nextscore = ( int )( $nextscore * 9 / 10 );
+							}
 						}
-					}
-					if( $item != -$nextscore ) {
-						$moves1[ $key ] = -$nextscore;
-						$updatemoves[ $key ] = $nextscore;
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
+						}
 					}
 				}
 			}

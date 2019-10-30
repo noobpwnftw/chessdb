@@ -2,89 +2,9 @@
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 
-class MyRWLock {
-	private $handle;
-	private $locked;
-	private $iswrite;
-
-	public function __construct( $name ) {
-		$this->handle = fopen( sys_get_temp_dir() . '/' . $name . '.lock', 'c' );
-	}
-
-	public function readlock () {
-		if( $this->locked )
-			throw new Exception( 'Read lock error.' );
-
-		if( !flock( $this->handle, LOCK_SH ) )
-			throw new Exception( 'Lock operation failed.' );
-
-		$this->iswrite = false;
-		$this->locked = true;
-	}
-
-	public function writelock () {
-		if( $this->locked )
-			throw new Exception( 'Write lock error.' );
-
-		if( !flock( $this->handle, LOCK_EX ) )
-			throw new Exception( 'Lock operation failed.' );
-
-		$this->iswrite = true;
-		$this->locked = true;
-	}
-
-	public function readunlock () {
-		if( !$this->locked || $this->iswrite )
-			throw new Exception( 'Read unlock error.' );
-
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-
-		$this->iswrite = false;
-		$this->locked = false;
-	}
-
-	public function writeunlock () {
-		if( !$this->locked || !$this->iswrite )
-			throw new Exception( 'Write unlock error.' );
-
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-		
-		$this->iswrite = false;
-		$this->locked = false;
-	}
-
-	public function __destruct () {
-		fclose( $this->handle );
-	}
-}
-
-function count_pieces( $fen ) {
-	@list( $board, $color ) = explode( " ", $fen );
-	$pieces = 'rnckabp';
-	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
-}
-function count_attackers( $fen ) {
-	@list( $board, $color ) = explode( " ", $fen );
-	$pieces = 'rnc';
-	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
-}
-function getthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
-	}
-	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
-	}
-	else {
-		$throttle = -50;
-	}
-	return $throttle;
-}
 function getadvancethrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
-		$throttle = $maxscore;
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -213,7 +133,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 	
-	if( $recurse && $depth < 9 )
+	if( $recurse && $depth < 30000 )
 	{
 		$updatemoves = array();
 		$isloop = true;
