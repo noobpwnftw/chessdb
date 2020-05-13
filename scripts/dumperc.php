@@ -76,7 +76,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
-	if( $recurse && $depth < 30000 )
+	if( $recurse && $depth < 7 )
 	{
 		$isloop = true;
 		if( !isset( $GLOBALS['historytt'][$current_hash] ) )
@@ -179,8 +179,15 @@ function getMoves( $redis, $row, $depth ) {
 		} else if( !$isloop ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
-			if( $depth == 8 )
-				echo $row . "\n";
+			if( $depth == 6 ) {
+				$score = end( $moves1 );
+				if( $score > 10000 ) {
+					$score--;
+				} else if( $score < -10000 ) {
+					$score++;
+				}
+				echo $row . " cp " . $score . "\n";
+			}
 		}
 	}
 	return $moves1;
@@ -188,7 +195,7 @@ function getMoves( $redis, $row, $depth ) {
 
 try{
 	$redis = new Redis();
-	$redis->pconnect('localhost', 8888);
+	$redis->pconnect('192.168.1.2', 8888);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
 	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );

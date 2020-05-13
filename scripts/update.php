@@ -325,7 +325,7 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			if( $depth < 5 )
+			//if( $depth < 20 )
 			{
 				shuffle_assoc( $moves1 );
 				foreach( $moves1 as $key => $item ) {
@@ -486,7 +486,7 @@ function getMoves( $redis, $row, $depth ) {
 		} else if( !$isloop ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;
-			if( $GLOBALS['counter'] % 10000 == 0) {
+			if( $GLOBALS['counter'] % 10000 == 0 ) {
 				gc_collect_cycles();
 				echo implode(' ', array( $GLOBALS['counter'], $GLOBALS['counter_dup'], $GLOBALS['counter_update'], $GLOBALS['counter_ply'], $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_update'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ), count( $GLOBALS['looptt'] ), $GLOBALS['boardtt']->memoryUsage() ) ) . "\n";
 				$GLOBALS['last_counter'] = $GLOBALS['counter'] + $GLOBALS['counter_update'];
@@ -514,7 +514,7 @@ function getMoves( $redis, $row, $depth ) {
 
 try{
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8888);
+	$redis->pconnect('192.168.1.2', 8889);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['counter_dup'] = 0;
 	$GLOBALS['counter_update'] = 0;

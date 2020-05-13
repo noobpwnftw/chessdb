@@ -218,22 +218,22 @@ function updateQueue( $row, $key, $priority ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	if( $minindex == 0 ) {
-		$readwrite_queue->writelock();
+		$readwrite_queue->readlock();
 		if( $priority ) {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
 		} else {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
 		}
-		$readwrite_queue->writeunlock();
+		$readwrite_queue->readunlock();
 	}
 	else if( $minindex == 1 ) {
-		$readwrite_queue->writelock();
+		$readwrite_queue->readlock();
 		if( $priority ) {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 		} else {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 		}
-		$readwrite_queue->writeunlock();
+		$readwrite_queue->readunlock();
 	}
 }
 function updateSel( $row, $priority ) {
@@ -247,9 +247,9 @@ function updateSel( $row, $priority ) {
 	} else {
 		$doc = array();
 	}
-	$readwrite_sel->writelock();
+	$readwrite_sel->readlock();
 	$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), $doc, array( 'upsert' => true ) );
-	$readwrite_sel->writeunlock();
+	$readwrite_sel->readunlock();
 }
 function updatePly( $redis, $row, $ply ) {
 	$BWfen = cbgetBWfen( $row );
@@ -1918,10 +1918,6 @@ try{
 			if( $readwrite_sel->trywritelock() )
 			{
 				//$readwrite_sel->writelock();
-				$memcache_obj = new Memcache();
-				$memcache_obj->pconnect('localhost', 11211);
-				if( !$memcache_obj )
-					throw new Exception( 'Memcache error.' );
 				$m = new MongoClient('mongodb://localhost');
 				$collection = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
 				$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
@@ -1929,6 +1925,10 @@ try{
 					echo $doc['data'];
 				}
 				else {
+					$memcache_obj = new Memcache();
+					$memcache_obj->pconnect('localhost', 11211);
+					if( !$memcache_obj )
+						throw new Exception( 'Memcache error.' );
 					$collection2 = $m->selectDB('cdbsel')->selectCollection('seldb');
 					$cursor = $collection2->find()->sort( array( 'p' => -1 ) )->limit(20);
 					$docs = array();

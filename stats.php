@@ -64,8 +64,8 @@ function sizeFilter( $bytes )
 }
 function secondsToTime($seconds_time)
 {
-	if($seconds_time > 172800)
-		return '>48:00:00';
+	if($seconds_time > 345600)
+		return '>96:00:00';
 	$hours = floor($seconds_time / 3600);
 	$minutes = floor(($seconds_time - $hours * 3600) / 60);
 	$seconds = floor($seconds_time - ($hours * 3600) - ($minutes * 60));
@@ -142,7 +142,7 @@ try{
 		$nps /= 60 * 1000 * 1000;
 		$queue = $memcache_obj->get('QueueCount::' . $lastminute);
 		$sel = $memcache_obj->get('SelCount::' . $lastminute);
-		$est = ( $count2 + $count3 ) / ( $queue + $sel + 1 );
+		$est = ( $count2 + $count3 ) / ( $queue + $sel + 1 ) + $count3 / ( $queue + 1 );
 	}
 	echo '<table class="stats">';
 	if($lang == 0) {

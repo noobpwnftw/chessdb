@@ -331,7 +331,7 @@ function getMoves( $redis, $row, $depth ) {
 
 try{
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8888);
+	$redis->pconnect('192.168.1.2', 8889);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
 	getMoves( $redis, 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w', 0 );

@@ -238,82 +238,82 @@ function updateQueue( $row, $key, $priority ) {
 		$LRBWfen = ccbgetLRfen( $BWfen );
 		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen), ccbfen2hexfen($LRfen), ccbfen2hexfen($LRBWfen) ) );
 		if( $minindex == 0 ) {
-			$readwrite_queue->writelock();
+			$readwrite_queue->readlock();
 			if( $priority ) {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
 			} else {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
 			}
-			$readwrite_queue->writeunlock();
+			$readwrite_queue->readunlock();
 		}
 		else if( $minindex == 1 ) {
-			$readwrite_queue->writelock();
+			$readwrite_queue->readlock();
 			if( $priority ) {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, ccbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 			} else {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( ccbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 			}
-			$readwrite_queue->writeunlock();
+			$readwrite_queue->readunlock();
 		}
 		else if( $minindex == 2 ) {
-			$readwrite_queue->writelock();
+			$readwrite_queue->readlock();
 			if( $priority ) {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, ccbgetLRmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 			} else {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( ccbgetLRmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 			}
-			$readwrite_queue->writeunlock();
+			$readwrite_queue->readunlock();
 		}
 		else {
-			$readwrite_queue->writelock();
+			$readwrite_queue->readlock();
 			if( $priority ) {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, ccbgetLRBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 			} else {
 				$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( ccbgetLRBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 			}
-			$readwrite_queue->writeunlock();
+			$readwrite_queue->readunlock();
 		}
 	}
 	else {
 		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
 		if( $minindex == 0 ) {
 			if( $key != ccbgetLRmove( $key ) ) {
-				$readwrite_queue->writelock();
+				$readwrite_queue->readlock();
 				if( $priority ) {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$unset' => array( ccbgetLRmove( $key ) => 0 ), '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
 				} else {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$unset' => array( ccbgetLRmove( $key ) => 0 ), '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
 				}
-				$readwrite_queue->writeunlock();
+				$readwrite_queue->readunlock();
 			}
 			else {
-				$readwrite_queue->writelock();
+				$readwrite_queue->readlock();
 				if( $priority ) {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
 				} else {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
 				}
-				$readwrite_queue->writeunlock();
+				$readwrite_queue->readunlock();
 			}
 		}
 		else if( $minindex == 1 ) {
 			if( $key != ccbgetLRmove( $key ) ) {
-				$readwrite_queue->writelock();
+				$readwrite_queue->readlock();
 				if( $priority ) {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$unset' => array( ccbgetLRBWmove( $key ) => 0 ), '$set' => array( 'p' => 1, ccbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 				} else {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$unset' => array( ccbgetLRBWmove( $key ) => 0 ), '$set' => array( ccbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 				}
-				$readwrite_queue->writeunlock();
+				$readwrite_queue->readunlock();
 			}
 			else {
-				$readwrite_queue->writelock();
+				$readwrite_queue->readlock();
 				if( $priority ) {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, ccbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 				} else {
 					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( ccbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 				}
-				$readwrite_queue->writeunlock();
+				$readwrite_queue->readunlock();
 			}
 		}
 	}
@@ -607,7 +607,7 @@ function getMoves( $redis, $row, $depth ) {
 
 try{
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8888);
+	$redis->pconnect('192.168.1.2', 8889);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
 	getMoves( $redis, 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w', 0 );

@@ -142,22 +142,22 @@ function updateQueue( $row, $key, $priority ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	if( $minindex == 0 ) {
-		$readwrite_queue->writelock();
+		$readwrite_queue->readlock();
 		if( $priority ) {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
 		} else {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
 		}
-		$readwrite_queue->writeunlock();
+		$readwrite_queue->readunlock();
 	}
 	else if( $minindex == 1 ) {
-		$readwrite_queue->writelock();
+		$readwrite_queue->readlock();
 		if( $priority ) {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 		} else {
 			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
 		}
-		$readwrite_queue->writeunlock();
+		$readwrite_queue->readunlock();
 	}
 }
 function getMoves( $redis, $row, $depth ) {
@@ -349,7 +349,7 @@ function getMoves( $redis, $row, $depth ) {
 
 try{
 	$redis = new Redis();
-	$redis->pconnect('localhost', 8888);
+	$redis->pconnect('192.168.1.2', 8888);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
 	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
