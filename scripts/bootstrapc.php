@@ -143,20 +143,36 @@ function updateQueue( $row, $key, $priority ) {
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	if( $minindex == 0 ) {
 		$readwrite_queue->readlock();
-		if( $priority ) {
-			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
-		} else {
-			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
-		}
+		do {
+			try {
+				$tryAgain = false;
+				if( $priority ) {
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
+				} else {
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
+				}
+			}
+			catch( MongoDuplicateKeyException $e ) {
+				$tryAgain = true;
+			}
+		} while($tryAgain);
 		$readwrite_queue->readunlock();
 	}
 	else if( $minindex == 1 ) {
 		$readwrite_queue->readlock();
-		if( $priority ) {
-			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
-		} else {
-			$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
-		}
+		do {
+			try {
+				$tryAgain = false;
+				if( $priority ) {
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
+				} else {
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
+				}
+			}
+			catch( MongoDuplicateKeyException $e ) {
+				$tryAgain = true;
+			}
+		} while($tryAgain);
 		$readwrite_queue->readunlock();
 	}
 }
