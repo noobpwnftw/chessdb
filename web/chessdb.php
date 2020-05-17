@@ -140,8 +140,8 @@ function setOverrides( $row, &$moves ) {
 	$oldscores = array();
 	if( $row == 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w' )
 	{
-		$overrides = array( 'b2e2' => 15, 'h2e2' => 15, 'c3c4' => 15, 'g3g4' => 15, 'c0e2' => 15, 'g0e2' => 15,
-					'b2d2' => 10, 'h2f2' => 10, 'b2f2' => 10, 'h2d2' => 10, 'b0c2' => 10, 'h0g2' => 10 );
+		$overrides = array( 'b2e2' => 16, 'h2e2' => 16, 'c3c4' => 16, 'g3g4' => 16, 'c0e2' => 16, 'g0e2' => 16,
+					'b2d2' => 12, 'h2f2' => 12, 'b2f2' => 12, 'h2d2' => 12, 'b0c2' => 12, 'h0g2' => 12 );
 		foreach( $overrides as $key => $value ) {
 			if( isset( $moves[$key] ) ) {
 				$oldscores[$key] = $moves[$key];
@@ -151,8 +151,8 @@ function setOverrides( $row, &$moves ) {
 	}
 	else if( $row == 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR b' )
 	{
-		$overrides = array( 'b7e7' => 15, 'h7e7' => 15, 'c6c5' => 15, 'g6g5' => 15, 'c9e7' => 15, 'g9e7' => 15,
-					'b7d7' => 10, 'h7f7' => 10, 'b7f7' => 10, 'h7d7' => 10, 'b9c7' => 10, 'h9g7' => 10 );
+		$overrides = array( 'b7e7' => 16, 'h7e7' => 16, 'c6c5' => 16, 'g6g5' => 16, 'c9e7' => 16, 'g9e7' => 16,
+					'b7d7' => 12, 'h7f7' => 12, 'b7f7' => 12, 'h7d7' => 12, 'b9c7' => 12, 'h9g7' => 12 );
 		foreach( $overrides as $key => $value ) {
 			if( isset( $moves[$key] ) ) {
 				$oldscores[$key] = $moves[$key];
