@@ -117,7 +117,7 @@ function getbestthrottle( $maxscore ) {
 		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
+		$throttle = (int)( $maxscore - 5 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
 	}
 	else {
 		$throttle = $maxscore;
