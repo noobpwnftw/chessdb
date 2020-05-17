@@ -1,0 +1,110 @@
+﻿@charset "utf-8";
+* {
+	margin: 0px; padding: 0em; position: relative; z-index: 4;
+}
+a {
+	text-decoration:none;
+}
+hr {
+	margin-top: 5px;
+	border-right : 0;
+	border-left: 0;
+}
+br {
+	line-height: 12px;
+}
+body {
+	background: rgb(250, 250, 200); margin: 10px 20px 20px; font: normal 14px/1.2 Tahoma, Pingfang SC, SimSun;
+	line-height: 16px;
+}
+p {
+	margin-left: 20px;
+	line-height: 20px;
+}
+.transperenttext {
+	color: rgb(250, 250, 200);
+}
+div.chess {
+	z-index: 6;
+}
+.button {
+	border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(222, 184, 135); min-width: 80px; height: 20px;
+}
+.button:hover {
+	border-width: 2px 1px 1px; border-color: black white white black; color: white; background-color: rgb(100, 0, 0);
+}
+.mbutton {
+	border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(222, 184, 135); min-width: 58px!important; height: 20px;
+}
+.mbutton:hover {
+	border-width: 2px 1px 1px; border-color: black white white black; color: white; background-color: rgb(100, 0, 0);
+}
+.hovon {
+	 height: 20px;
+}
+.movelist tbody tr {
+	cursor: pointer;
+}
+.movelist div {
+	display: inline-block;
+	min-width: 60px;
+}
+#cur {
+	font-weight: bold;
+}
+.hovon td + td {
+	color: white; white-space: nowrap; background-color: rgb(100, 0, 0);
+}
+.hovon td {
+	color: red; white-space: nowrap; background-color: rgb(100, 0, 0);
+}
+.hovon td span {
+	color: lime; white-space: nowrap; background-color: rgb(100, 0, 0);
+}
+.hovoff {
+	white-space: nowrap; background-color: rgb(250, 250, 200); height: 20px;
+}
+.framed {
+	border: 2px solid blue; border-image: none;
+}
+.selpiece {
+	background-color: rgb(0, 150, 250);
+	line-height: 13px;
+}
+.unselpiece {
+	background-color: rgb(250, 250, 200);
+	line-height: 13px;
+}
+table {
+	border-style:none;
+}
+.movelist thead,
+.movelist tbody {
+	display: block;
+}
+.movelist tbody {
+	height: 640px;
+	overflow-y: auto;
+}
+.movelist td {
+	min-width: 80px;
+}
+.stats {
+	min-width: 363px;
+}
+.stats tr {
+	height: 20px;
+}
+label {
+	vertical-align:middle;
+}
+input {
+	vertical-align:middle;
+}
+.desk {
+	height: 403px;
+	margin-bottom: 3px;
+}
+.deskc {
+	height: 360px;
+}

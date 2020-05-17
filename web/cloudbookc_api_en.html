@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<link href="file/style.css" rel="stylesheet" type="text/css">
+	<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+	<meta name="keywords" content="Chess database,opening book,endgame tablebase" />
+	<meta name="description" content="A massive chess knowledge database, including an opening book and endgame tablebases." />
+	<title>Chess Cloud Database API Documentation</title>
+</head>
+
+<body style="margin: 20px;">
+<h1>Chess Cloud Database API Documentation</h1>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><strong>Brief</strong></h2>
+<p>&nbsp;</p>
+<p>Chess Cloud Database(aka. "CDB") API has two parts, first is to probe the database, which can be achieved by reqesting CDB's HTTP-based RESTful API.</p>
+<p>Then, as an extension to the existing UCI engine protocol, a few new options can be added so that the GUI and the engine can work better when handling results from CDB.</p>
+<p>&nbsp;</p>
+<h2><strong>RESTful API Interface</strong></h2>
+<p>&nbsp;</p>
+<p>CDB's API access point is: http://www.chessdb.cn/cdb.php?action=[<i>ACTION</i>]{&[<i>OPTION1</i>]=[<i>VALUE1</i>]...&[<i>OPTIONn</i>]=[<i>VALUEn</i>]}</p>
+<p>&nbsp;</p>
+<p>In which the fields are defined as:</p>
+<p>&nbsp;</p>
+<p>ACTION: Action type, for example, query all known moves (queryall), suggest a move (query / querybest), request analysis (queue), etc.</p>
+<p>&nbsp;</p>
+<p>OPTION & VALUE: Options, for example, position to query (board) and automatic learning (learn), etc.</p>
+<p>&nbsp;</p>
+<h3>Query All Known Moves (queryall)</h3>
+<p>&nbsp;</p>
+<p>Mandatory: board, set to the FEN format encoding of the position to query, e.g. &board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>Optional: showall, set to false if unknown moves should be omitted, e.g. &showall=0 or &showall=1, default is 0, only return known moves</p>
+<p>&nbsp;</p>
+<p>Optional: egtbmetric, set to desired EGTB metric, e.g. &egtbmetric=dtz or &egtbmetric=dtm, default is dtz, using DTZ tablebases</p>
+<p>&nbsp;</p>
+<p>Optional: learn, set to whether automatic learning should be enabled, e.g. &learn=0 or &learn=1, default is 1, enabling automatic learning</p>
+<p>&nbsp;</p>
+<p>Return: move data separated by "|", of which each field is separated by ",", fields may contain "move", "score", "rank", "winrate" and "note"</p>
+<p>&nbsp;</p>
+<p>If the position is invalid, "invalid board" is returned, if the position is unknown, "unknown" is returned, if the position is a checkmate or stalemate, "checkmate" or "stalemate" is returned</p>
+<p>&nbsp;</p>
+<h3>Suggest Best, Random or Candidate Moves (querybest/query/querysearch)</h3>
+<p>&nbsp;</p>
+<p>Mandatory: board, set to the FEN format encoding of the position to query, e.g. &board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>Optional: endgame, set to whether only EGTB data should be returned, e.g. &endgame=0 or &endgame=1, default is 0, all data are returned</p>
+<p>&nbsp;</p>
+<p>Optional: egtbmetric, set to desired EGTB metric, e.g. &egtbmetric=dtz or &egtbmetric=dtm, default is dtz, using DTZ tablebases</p>
+<p>&nbsp;</p>
+<p>Optional: learn, set to whether automatic learning should be enabled, e.g. &learn=0 or &learn=1, default is 1, enabling automatic learning</p>
+<p>&nbsp;</p>
+<p>Return: move data separated by "|", of which a normal move are returned as move:[<i>MOVE</i>], an EGTB move is returned as egtb:[<i>MOVE</i>], a candidate move is returned as search:[<i>MOVE</i>]</p>
+<p>&nbsp;</p>
+<p>Candidate moves are a list of moves that may require further processing, such as sending them as "searchmoves" to an engine</p>
+<p>&nbsp;</p>
+<p>If the position is invalid, "invalid board" is returned, if no satisfing move is found, "nobestmove" is returned</p>
+<p>&nbsp;</p>
+<h3>Query Evaluation Scores (queryscore)</h3>
+<p>&nbsp;</p>
+<p>Mandatory: board, set to the FEN format encoding of the position to query, e.g. &board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>Optional: egtbmetric, set to desired EGTB metric, e.g. &egtbmetric=dtz or &egtbmetric=dtm, default is dtz, using DTZ tablebases</p>
+<p>&nbsp;</p>
+<p>Optional: learn, set to whether automatic learning should be enabled, e.g. &learn=0 or &learn=1, default is 1, enabling automatic learning</p>
+<p>&nbsp;</p>
+<p>Return: CDB's evaluation score of the position, as in eval:[<i>SCORE</i>]</p>
+<p>&nbsp;</p>
+<p>If the position is invalid, "invalid board" is returned, if the position is unknown, "unknown" is returned</p>
+<p>&nbsp;</p>
+<h3>Query Analysis Lines (querypv)</h3>
+<p>&nbsp;</p>
+<p>Mandatory: board, set to the FEN format encoding of the position to query, e.g. &board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>Optional: egtbmetric, set to desired EGTB metric, e.g. &egtbmetric=dtz or &egtbmetric=dtm, default is dtz, using DTZ tablebases</p>
+<p>&nbsp;</p>
+<p>Optional: learn, set to whether automatic learning should be enabled, e.g. &learn=0 or &learn=1, default is 1, enabling automatic learning</p>
+<p>&nbsp;</p>
+<p>Return: CDB's analysis line of the position, as in score:[<i>SCORE</i>],depth:[<i>DEPTH</i>],pv:[<i>MOVE1</i>]{...|[<i>MOVEn</i>]}</p>
+<p>&nbsp;</p>
+<p>If the position is invalid, "invalid board" is returned, if the position is unknown, "unknown" is returned</p>
+<p>&nbsp;</p>
+<h3>Request for Analysis (queue)</h3>
+<p>&nbsp;</p>
+<p>Mandatory: board, set to the FEN format encoding of the position to query, e.g. &board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>Return: ok means success</p>
+<p>&nbsp;</p>
+<p>If the position is invalid, "invalid board" is returned, if the position is trivial, nothing is returned</p>
+<p>&nbsp;</p>
+<h3>Request for Analysis of a Particular Move&nbsp;(store)</h3>
+<p>&nbsp;</p>
+<p>Mandatory: board, set to the FEN format encoding of the position to query, e.g. &board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>Mandatory: move, set to the desired move for analysis, e.g. &move=move:c3c4</p>
+<p>&nbsp;</p>
+<p>Return: ok means success</p>
+<p>&nbsp;</p>
+<p>If the position is invalid, "invalid board" is returned, if the position is trivial, nothing is returned</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><strong>UCI Extensions</strong></h2>
+<p>&nbsp;</p>
+<p>Usually, only GUIs should send API queries to CDB, engines do not need to make any network queries.</p>
+<p>Preferably GUIs can inform the engines about the information returned from CDB via UCI, for example:</p>
+<p>&nbsp;</p>
+<h3>Opening Move Suggestion (bookmove)</h3>
+<p>&nbsp;</p>
+<p>While sending "go" commands to engines, append "bookmove [<i>MOVE</i>]" to suggest a move from opening book, engines can decide whether to immediately return "bestmove [<i>MOVE</i>]" or start their own search ignoring the suggestions.</p>
+<p>&nbsp;</p>
+<p>This option is ignored in analysis mode (go infinite) or pondering (go ponder) and must be placed before "searchmoves"</p>
+<p>&nbsp;</p>
+<h3>Principal Variation Hints (hint)</h3>
+<p>&nbsp;</p>
+<p>During searches, sending "hint score [<i>SCORE</i>] depth [<i>DEPTH</i>] pv [<i>MOVE1</i>]{... [<i>MOVEn</i>]}" to inform engines about known principal variations.</p>
+<p>&nbsp;</p>
+<h3>EGTB Move Suggestion (egtbmove)</h3>
+<p>&nbsp;</p>
+<p>While sending "go" commands to engines, append "egtbmove [<i>MOVE</i>]" to suggest a move from EGTB, engines can decide whether to immediately return "bestmove [<i>MOVE</i>]" or start their own search ignoring the suggestions.</p>
+<p>&nbsp;</p>
+<p>This option is ignored in analysis mode (go infinite) or pondering (go ponder) and must be placed before "searchmoves"</p>
+<p>&nbsp;</p>
+</body>
+
+</html>

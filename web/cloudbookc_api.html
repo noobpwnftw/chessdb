@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<link href="file/style.css" rel="stylesheet" type="text/css">
+	<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+	<meta name="keywords" content="国际象棋数据库,开局库,残局库" />
+	<meta name="description" content="国际象棋云库是一个基于分布式计算和存储的中国象棋数据库，包含开局库和残局库。" />
+	<title>国际象棋云库API接口说明</title>
+</head>
+
+<body style="margin: 20px;">
+<h1>国际象棋云库API接口说明</h1>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><strong>概述</strong></h2>
+<p>&nbsp;</p>
+<p>国际象棋云库（简称"云库"）&nbsp;API&nbsp;接口分为两部分，访问云库，可以直接通过基于&nbsp;HTTP&nbsp;的&nbsp;RESTful API&nbsp;实现。</p>
+<p>此外，在原有的&nbsp;UCI&nbsp;引擎通讯协议上扩展了云库相关的指令，云库、界面及引擎各自分工，更加清晰便捷地处理开局库、思考细节和残局库数据。</p>
+<p>&nbsp;</p>
+<h2><strong>RESTful API&nbsp;接口</strong></h2>
+<p>&nbsp;</p>
+<p>云库&nbsp;API&nbsp;接口访问格式为：http://www.chessdb.cn/cdb.php?action=[<i>ACTION</i>]{&[<i>OPTION1</i>]=[<i>VALUE1</i>]...&[<i>OPTIONn</i>]=[<i>VALUEn</i>]}</p>
+<p>&nbsp;</p>
+<p>其中各项定义为：</p>
+<p>&nbsp;</p>
+<p>ACTION：操作类型，例如查询所有着法信息&nbsp;(queryall)、自动出步&nbsp;(query&nbsp;/&nbsp;querybest)、提交后台计算&nbsp;(queue)&nbsp;等</p>
+<p>&nbsp;</p>
+<p>OPTION&nbsp;&&nbsp;VALUE：设置参数，例如设置局面&nbsp;(board)&nbsp;、设置是否自动学习&nbsp;(learn)&nbsp;等</p>
+<p>&nbsp;</p>
+<h3>查询所有着法信息&nbsp;(queryall)</h3>
+<p>&nbsp;</p>
+<p>必须参数：board，设置为&nbsp;FEN&nbsp;格式的局面代码，例如&nbsp;&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>可选参数：showall，设置为是否只返回未知着法，例如&nbsp;&showall=0&nbsp;或&nbsp;&showall=1&nbsp;，默认为0，只返回已知着法数据</p>
+<p>&nbsp;</p>
+<p>可选参数：egtbmetric，设置为残局库类型，例如&nbsp;&egtbmetric=dtz&nbsp;或&nbsp;&egtbmetric=dtm&nbsp;，默认为&nbsp;dtz&nbsp;，使用&nbsp;DTZ&nbsp;残局库</p>
+<p>&nbsp;</p>
+<p>可选参数：learn，设置为是否自动学习该局面的相关着法，例如&nbsp;&learn=0&nbsp;或&nbsp;&learn=1&nbsp;，默认为1，自动学习与该局面有关的着法</p>
+<p>&nbsp;</p>
+<p>返回结果：以&nbsp;|&nbsp;号分隔的着法信息，每项包含以&nbsp;,&nbsp;号分隔的着法&nbsp;(move)、分值&nbsp;(score)、排序&nbsp;(rank)、胜率&nbsp;(winrate)&nbsp;及备注&nbsp;(note)</p>
+<p>&nbsp;</p>
+<p>若局面代码错误，返回&nbsp;invalid board&nbsp;，若所查询的局面没有已知着法，返回&nbsp;unknown&nbsp;，若走棋方被将死或困毙，返回&nbsp;checkmate&nbsp;/&nbsp;stalemate</p>
+<p>&nbsp;</p>
+<h3>查询最佳、随机或候选着法&nbsp;(querybest/query/querysearch)</h3>
+<p>&nbsp;</p>
+<p>必须参数：board，设置为&nbsp;FEN&nbsp;格式的局面代码，例如&nbsp;&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>可选参数：endgame，设置为是否只返回残局库数据，例如&nbsp;&endgame=0&nbsp;或&nbsp;&endgame=1&nbsp;，默认为0，返回所有数据</p>
+<p>&nbsp;</p>
+<p>可选参数：egtbmetric，设置为残局库类型，例如&nbsp;&egtbmetric=dtz&nbsp;或&nbsp;&egtbmetric=dtm&nbsp;，默认为&nbsp;dtz&nbsp;，使用&nbsp;DTZ&nbsp;残局库</p>
+<p>&nbsp;</p>
+<p>可选参数：learn，设置为是否自动学习该局面的相关着法，例如&nbsp;&learn=0&nbsp;或&nbsp;&learn=1&nbsp;，默认为1，自动学习与该局面有关的着法</p>
+<p>&nbsp;</p>
+<p>返回结果：以&nbsp;|&nbsp;号分隔的着法信息，常规着法为&nbsp;move:[<i>MOVE</i>]&nbsp;，残局库着法为&nbsp;egtb:[<i>MOVE</i>]&nbsp;，候选着法为&nbsp;search:[<i>MOVE</i>]&nbsp;</p>
+<p>&nbsp;</p>
+<p>候选着法需引擎进一步计算，此时可将这些着法以&nbsp;searchmoves&nbsp;的形式发送给引擎</p>
+<p>&nbsp;</p>
+<p>若局面代码错误，返回&nbsp;invalid board&nbsp;，若所查询的局面没有符合自动出步规则的着法，返回&nbsp;nobestmove</p>
+<p>&nbsp;</p>
+<h3>查询评估分值&nbsp;(queryscore)</h3>
+<p>&nbsp;</p>
+<p>必须参数：board，设置为&nbsp;FEN&nbsp;格式的局面代码，例如&nbsp;&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>可选参数：egtbmetric，设置为残局库类型，例如&nbsp;&egtbmetric=dtz&nbsp;或&nbsp;&egtbmetric=dtm&nbsp;，默认为&nbsp;dtz&nbsp;，使用&nbsp;DTZ&nbsp;残局库</p>
+<p>&nbsp;</p>
+<p>可选参数：learn，设置为是否自动学习该局面的相关着法，例如&nbsp;&learn=0&nbsp;或&nbsp;&learn=1&nbsp;，默认为1，自动学习与该局面有关的着法</p>
+<p>&nbsp;</p>
+<p>返回结果：云库对该局面的评估分值，格式为&nbsp;eval:[<i>SCORE</i>]</p>
+<p>&nbsp;</p>
+<p>若局面代码错误，返回&nbsp;invalid board&nbsp;，若所查询的局面没有已知评估数据，返回&nbsp;unknown</p>
+<p>&nbsp;</p>
+<h3>查询思考细节&nbsp;(querypv)</h3>
+<p>&nbsp;</p>
+<p>必须参数：board，设置为&nbsp;FEN&nbsp;格式的局面代码，例如&nbsp;&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>可选参数：egtbmetric，设置为残局库类型，例如&nbsp;&egtbmetric=dtz&nbsp;或&nbsp;&egtbmetric=dtm&nbsp;，默认为&nbsp;dtz&nbsp;，使用&nbsp;DTZ&nbsp;残局库</p>
+<p>&nbsp;</p>
+<p>可选参数：learn，设置为是否自动学习该局面的相关着法，例如&nbsp;&learn=0&nbsp;或&nbsp;&learn=1&nbsp;，默认为1，自动学习与该局面有关的着法</p>
+<p>&nbsp;</p>
+<p>返回结果：云库对该局面的思考细节，格式为&nbsp;score:[<i>SCORE</i>],depth:[<i>DEPTH</i>],pv:[<i>MOVE1</i>]{...|[<i>MOVEn</i>]}</p>
+<p>&nbsp;</p>
+<p>若局面代码错误，返回&nbsp;invalid board&nbsp;，若所查询的局面没有已知思考细节，返回&nbsp;unknown</p>
+<p>&nbsp;</p>
+<h3>提交后台计算&nbsp;(queue)</h3>
+<p>&nbsp;</p>
+<p>必须参数：board，设置为&nbsp;FEN&nbsp;格式的局面代码，例如&nbsp;&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>返回结果：ok&nbsp;表示成功</p>
+<p>&nbsp;</p>
+<p>若局面代码错误，返回&nbsp;invalid board&nbsp;，若所提交的的内容被云库筛选策略过滤，返回空</p>
+<p>&nbsp;</p>
+<h3>提交学习局面着法&nbsp;(store)</h3>
+<p>&nbsp;</p>
+<p>必须参数：board，设置为&nbsp;FEN&nbsp;格式的局面代码，例如&nbsp;&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</p>
+<p>&nbsp;</p>
+<p>必须参数：move，设置为需要提交学习的着法，例如&nbsp;&move=move:c3c4</p>
+<p>&nbsp;</p>
+<p>返回结果：ok&nbsp;表示成功</p>
+<p>&nbsp;</p>
+<p>若局面代码错误，返回&nbsp;invalid board&nbsp;，若所提交的的内容被云库筛选策略过滤，返回空</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><strong>UCI&nbsp;协议扩展</strong></h2>
+<p>&nbsp;</p>
+<p>通常情况下，应由界面实现以上的云库访问操作，引擎无需与云库直接通讯。</p>
+<p>界面可以通过扩展&nbsp;UCI&nbsp;协议，将更多信息告知引擎，引擎可以借助云库的思考细节加速计算，并更加灵活地控制开局库、残局库的使用。</p>
+<p>&nbsp;</p>
+<h3>开局库着法提示&nbsp;(bookmove)</h3>
+<p>&nbsp;</p>
+<p>向引擎发送&nbsp;go&nbsp;命令时，附加&nbsp;bookmove [<i>MOVE</i>]&nbsp;，告知引擎开局库着法，引擎自行判断是否采纳，可以立即返回&nbsp;bestmove [<i>MOVE</i>]&nbsp;或开始计算</p>
+<p>&nbsp;</p>
+<p>此项在分析模式&nbsp;(go infinite)&nbsp;或后台思考&nbsp;(go ponder)&nbsp;时无效，并位于&nbsp;searchmoves&nbsp;之前</p>
+<p>&nbsp;</p>
+<h3>思考细节提示&nbsp;(hint)</h3>
+<p>&nbsp;</p>
+<p>在引擎计算过程中，向引擎发送&nbsp;hint score [<i>SCORE</i>] depth [<i>DEPTH</i>] pv [<i>MOVE1</i>]{... [<i>MOVEn</i>]}&nbsp;，告知引擎思考细节</p>
+<p>&nbsp;</p>
+<h3>残局库着法提示&nbsp;(egtbmove)</h3>
+<p>&nbsp;</p>
+<p>向引擎发送&nbsp;go&nbsp;命令时，附加&nbsp;egtbmove [<i>MOVE</i>]&nbsp;，告知引擎残局库着法，引擎自行判断是否采纳，可以立即返回&nbsp;bestmove [<i>MOVE</i>]&nbsp;或开始计算</p>
+<p>&nbsp;</p>
+<p>此项在分析模式&nbsp;(go infinite)&nbsp;或后台思考&nbsp;(go ponder)&nbsp;时无效，并位于&nbsp;searchmoves&nbsp;之前</p>
+<p>&nbsp;</p>
+</body>
+
+</html>

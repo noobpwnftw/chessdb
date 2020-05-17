@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<link href="file/style.css" rel="stylesheet" type="text/css">
+	<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+	<meta name="keywords" content="Chess database,opening book,endgame tablebase" />
+	<meta name="description" content="A massive chess knowledge database, including an opening book and endgame tablebases." />
+	<title>Information about Chess Cloud Database</title>
+</head>
+
+<body style="margin: 20px;">
+<h1>Information about Chess Cloud Database</h1>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><strong>Description</strong></h2>
+<p>&nbsp;</p>
+<p>Chess Cloud Database(aka. "CDB") is a massive chess knowledge database, including an opening book and endgame tablebases.</p>
+<p>In contrast to traditional opening book building from game results, CDB is built entirely from analyzing individual moves using chess engines while overcoming their problems such as aggressive pruning and blind spots.</p>
+<p>CDB attempts to explore and define new chess opening theories, currently it includes most of the popular opening lines and yet still refining the results.</p>
+<p>&nbsp;</p>
+<h2><strong>Usage</strong></h2>
+<p>&nbsp;</p>
+<p>Generally, please use the web-based query interface, which provides some basic board operations and FEN import/export functions.</p>
+<p>&nbsp;</p>
+<p>The format of query results are as follows:</p>
+<p>&nbsp;</p>
+<p>Normal: Move Rank Score Notes (Known replies - Good replies)</p>
+<p>EGTB: Move Rank Score Notes (Outcome - [ M - ] Step)</p>
+<p>&nbsp;</p>
+<p></p>
+<p>Notes: ! Best (2), * Good (1), ? Bad (0), moves that have a score of ?? is unknown.</p>
+<p>Outcome: W Win, D Draw, L Loss.</p>
+<p>&nbsp;</p>
+<p>A positive score means the playing side has an advantage, higher the score the larger the advantage.</p>
+<p>&nbsp;</p>
+<h2><strong>Analysis Queue</strong></h2>
+<p>&nbsp;</p>
+<p>New moves from queries and automated explorations must go through the analysis queue before showing up in the query results.</p>
+<p>This process is done by a large distributed compute cluster, depending on load, it may take several minutes or even hours to complete.</p>
+<p>&nbsp;</p>
+<h2><strong>Live AI</strong></h2>
+<p>&nbsp;</p>
+<p>When there is no existing data or there are too few pieces on the board, CDB can still recommend a move, those moves are provided by Stockfish (http://www.stockfishchess.org).</p>
+<p>&nbsp;</p>
+<h2><strong>EGTB</strong></h2>
+<p>&nbsp;</p>
+<p>CDB integrates Syzygy DTZ50 tablebase probing with unified score conversion and move ordering.</p>
+<p>&nbsp;</p>
+<h2><strong>FAQ</strong></h2>
+<p>&nbsp;</p>
+<h4><p>1. Rules</p></h4>
+<p>&nbsp;</p>
+<p>During the automated score optimization process, CDB will try to eliminate some move loops, this may cause some reptition draws not to be scored as expected.</p>
+<p>EGTB and analysis engines follow AXF rules, while CDB will try to prevent suggesting moves leading to passive draws as much as possible.</p>
+<p>&nbsp;</p>
+<h4><p>2. Unknown Moves</p></h4>
+<p>&nbsp;</p>
+<p>Click "Request for analysis" button or manually make the moves, CDB will add them to analysis queue and should provide analysis data soon.</p>
+<p>&nbsp;</p>
+<h4><p>3. Inaccurate Scores</p></h4>
+<p>&nbsp;</p>
+<p>Explore the follow-up positions of moves that have inaccurate scores, either by clicking "Request for analysis" button or manually, CDB will add them to analysis queue and should refine its analysis soon.</p>
+<p>&nbsp;</p>
+<h4><p>4. EGTB Move Ordering</p></h4>
+<p>&nbsp;</p>
+<p>Moves are ordered corresponding to their EGTB metrics.</p>
+<p>&nbsp;</p>
+<p>DTC Ordering Rules:</p>
+<p>&nbsp;</p>
+<p>For winning positions, prefer moves to the nearest captures or reduce the number of possibe repetitions; for drawing positions, prefer shuffling; for losing positions, prefer longest captures and repetitions if possible.</p>
+<p>&nbsp;</p>
+<p>DTM Ordering Rules:</p>
+<p>&nbsp;</p>
+<p>For winning positions with the same distance to mate, prefer capturing moves; for drawing positions, prefer shuffling; for losing positions with the same distance to mate, prefer non-capturing moves.</p>
+<p>&nbsp;</p>
+<p>All EGTB moves shown in the query results are also ordered using the rules above.</p>
+<p>&nbsp;</p>
+</body>
+
+</html>

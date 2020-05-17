@@ -1,0 +1,207 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<link href="/file/style.css" rel="stylesheet" type="text/css">
+	<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+	<meta name="keywords" content="中国象棋数据库,开局库,残局库,象棋残局" />
+	<meta name="description" content="一个基于分布式计算和存储的中国象棋数据库、开局库和残局库。" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<title>中国象棋云库查询</title>
+</head>
+
+<body style="width:1060px;">
+	<table width="100%">
+		<tr style="vertical-align:middle;">
+			<td>
+				<H2>中国象棋云库查询</H2>
+			</td>
+			<td align="right" style="width:60px;">
+				<a href="/queryc/">国际象棋</a>
+			</td>
+			<td align="right" style="width:60px;">
+				<a href="/query_en/">English</a>
+			</td>
+		</tr>
+	</table>
+	<hr>
+	<table style="padding-top:10px;">
+		<tr>
+			<td style="vertical-align:top;min-width:96px;padding-top:16px;">
+				<table>
+					<tr>
+						<td id='inpf' class='button' onclick='InputFen()'>输入FEN</td>
+					</tr>
+					<tr>
+						<td id='copyfen' class='button' onclick='CopyFen()'>复制FEN</td>
+					</tr>
+					<tr>
+						<td id='setaddr' class='button' onclick='SetAddr()'>设置URL</td>
+					</tr>
+					<tr>
+						<td id='resetfen' class='button' onclick='ResetFen("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w")'>初始局面</td>
+					</tr>
+					<tr>
+						<td id='emptyfen' class='button' onclick='ResetFen("9/9/9/9/9/9/9/9/9/9 w")'>空白局面</td>
+					</tr>
+					<tr>
+						<td id='flpbrd' class='button' onclick='Flip(1)'>翻转棋盘</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<div style="height: 18px;"><input type="radio" name="turn" id="bmm" onclick="ChangeMoveOrder(1)" /><label for="bmm">&nbsp;黑方走棋</label></div>
+							<div style="height: 18px;"><input type="radio" name="turn" id="wmm" onclick="ChangeMoveOrder(0)" checked="checked" /><label for="wmm">&nbsp;红方走棋</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<div style="height: 17px;"><input type="checkbox" name="rulecheck" id="rulecheck" onclick="RefreshAll()" checked="checked" /><label for="rulecheck">&nbsp;棋规裁定</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 17px;"><input type="checkbox" name="hidescore" id="hidescore" onclick="RefreshInner()" /><label for="hidescore">&nbsp;隐藏结果</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<div style="height: 17px;"><input type="checkbox" name="bauto" id="bauto" onclick="RefreshInner()" /><label for="bauto">&nbsp;自动走黑</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 17px;"><input type="checkbox" name="wauto" id="wauto" onclick="RefreshInner()" /><label for="wauto">&nbsp;自动走红</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<span>自动走棋策略</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 18px;"><input type="radio" name="policy" id="pbest" checked="checked" /><label for="pbest">&nbsp;最佳着法</label></div>
+							<div style="height: 18px;"><input type="radio" name="policy" id="prandom" /><label for="prandom">&nbsp;合理着法</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 17px;"><input type="checkbox" name="localengine" id="localengine" onclick="RefreshInner()" checked="checked" /><label for="localengine">&nbsp;在线计算</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<span>残局库类型</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 18px;"><input type="radio" name="tb" id="dtctb" onclick="RefreshAll()" /><label for="dtctb">&nbsp;DTC</label></div>
+							<div style="height: 18px;"><input type="radio" name="tb" id="dtmtb" onclick="RefreshAll()" checked="checked" /><label for="dtmtb">&nbsp;DTM</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td><br><a href="/cloudbook_info.html" target="_blank">云库说明</a></td>
+					</tr>
+					<tr>
+						<td><a href="/cloudbook_api.html" target="_blank">云库API接口</a></td>
+					</tr>
+					<tr>
+						<td><br>残局库统计</td>
+					</tr>
+					<tr>
+						<td><a href="/egtb_info.html" target="_blank">DTC</a>&nbsp;/&nbsp;<a href="/egtb_info_dtm.html" target="_blank">DTM</a></td>
+					</tr>
+					<tr>
+						<td><br>相关工具</td>
+					</tr>
+					<tr>
+						<td><a href="/downloads/discover.zip">自动学习工具</a></td>
+					</tr>
+					<tr>
+						<td><a href="/bh/bhsim.zip">兵河界面下载</a></td>
+					</tr>
+				</table>
+			</td>
+
+			<td style="vertical-align:top;">
+				<table cellspacing="0" style="margin-left:5px;">
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td style="text-align:center;">
+										<div style="height:15px;" id="numbar1"></div>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<div class="desk" id="desk"><noscript>本页面需要JavaScript支持！</noscript></div>
+									</td>
+									<td style="vertical-align:top;">
+										<div id="dotframe1" style="position:relative;top:8px;"><img alt="" id="bturn" src="/file/ooo.gif" style="height:24px;width:24px"></div>
+										<div style="position:relative;top:120px;"><img alt="" title="提交后台计算" id="queuebtn" src="/file/queue.png" style="height:24px;width:24px;cursor:pointer;" onclick='RequestQueue()'></div>
+										<div style="position:relative;top:120px;"><img alt="" title="刷新查询结果" id="refreshbtn" src="/file/refresh.png" style="height:24px;width:24px;cursor:pointer;" onclick='RefreshInner()'></div>
+										<div style="position:relative;top:120px;"><img alt="" title="自动走棋" id="autobtn" src="/file/auto.png" style="height:24px;width:24px;cursor:pointer;" onclick='AutoMove()'></div>
+										<div style="position:relative;top:120px;"><img alt="" title="棋盘截图" id="screenshotbtn" src="/file/camera.png" style="height:24px;width:24px;cursor:pointer;" onclick='ScreenShot()'></div>
+										<div id="dotframe2" style="position:relative;top:234px;"><img alt="" id="wturn" src="/file/wturn.png" style="height:24px;width:24px"></div>
+									</td>
+								</tr>
+								<tr>
+									<td style="text-align:center;">
+										<div style="height:15px;" id="numbar2"></div>
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<table style="margin-top:5px;" cellspacing="5">
+								<tr id="tt1">
+									<td class="unselpiece" id="bkt"><img alt="" onclick="SelectFigure('bk')" src="/file/bk.png"></td>
+									<td class="unselpiece" id="bat"><img alt="" onclick="SelectFigure('ba')" src="/file/ba.png"></td>
+									<td class="unselpiece" id="bbt"><img alt="" onclick="SelectFigure('bb')" src="/file/bb.png"></td>
+									<td class="unselpiece" id="brt"><img alt="" onclick="SelectFigure('br')" src="/file/br.png"></td>
+									<td class="unselpiece" id="bnt"><img alt="" onclick="SelectFigure('bn')" src="/file/bn.png"></td>
+									<td class="unselpiece" id="bct"><img alt="" onclick="SelectFigure('bc')" src="/file/bc.png"></td>
+									<td class="unselpiece" id="bpt"><img alt="" onclick="SelectFigure('bp')" src="/file/bp.png"></td>
+									<td class="unselpiece" id="movet"><img alt="" onclick="SelectFigure('move')" src="/file/move.gif"></td>
+								</tr>
+								<tr id="tt2">
+									<td class="unselpiece" id="wKt"><img alt="" onclick="SelectFigure('wK')" src="/file/wk.png"></td>
+									<td class="unselpiece" id="wAt"><img alt="" onclick="SelectFigure('wA')" src="/file/wa.png"></td>
+									<td class="unselpiece" id="wBt"><img alt="" onclick="SelectFigure('wB')" src="/file/wb.png"></td>
+									<td class="unselpiece" id="wRt"><img alt="" onclick="SelectFigure('wR')" src="/file/wr.png"></td>
+									<td class="unselpiece" id="wNt"><img alt="" onclick="SelectFigure('wN')" src="/file/wn.png"></td>
+									<td class="unselpiece" id="wCt"><img alt="" onclick="SelectFigure('wC')" src="/file/wc.png"></td>
+									<td class="unselpiece" id="wPt"><img alt="" onclick="SelectFigure('wP')" src="/file/wp.png"></td>
+									<td class="unselpiece" id="delt"><img alt="" onclick="SelectFigure('del')" src="/file/del.gif"></td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td id="stats" style="padding-top:9px;"></td>
+					</tr>
+				</table>
+			</td>
+			<td style="vertical-align:top;user-select:none;">
+				<div id="out"></div>
+			</td>
+			<td style="vertical-align:top;min-width:180px;">
+				<div id="out2"></div>
+			</td>
+		</tr>
+	</table>
+	<a id="img_link" style="display:none"></a>
+	<script src='https://libs.jshub.com/es6-promise/4.1.1/es6-promise.min.js'></script>
+	<script src='https://libs.jshub.com/html2canvas/0.5.0-beta4/html2canvas.min.js'></script>
+	<script type="text/javascript" src="file/xiangqi.js"></script>
+</body>
+</html>

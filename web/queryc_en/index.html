@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<link href="/file/style.css" rel="stylesheet" type="text/css">
+	<meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+	<meta name="keywords" content="Chess database,opening book,endgame tablebase" />
+	<meta name="description" content="A massive Chess knowledge database, including an opening book and endgame tablebases." />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<title>Chess Cloud Database Query Interface</title>
+</head>
+
+<body style="width:1060px;">
+	<table width="100%">
+		<tr style="vertical-align:middle;">
+			<td>
+				<H2>Chess Cloud Database Query Interface</H2>
+			</td>
+			<td align="right" style="width:60px;">
+				<a href="/query_en/">Xiangqi</a>
+			</td>
+			<td align="right" style="width:60px;">
+				<a href="/queryc/">中文版</a>
+			</td>
+		</tr>
+	</table>
+	<hr>
+	<table style="padding-top:10px;">
+		<tr>
+			<td style="vertical-align:top;min-width:96px;padding-top:16px;">
+				<table>
+					<tr>
+						<td id='inpf' class='button' onclick='InputFen()'>Input FEN</td>
+					</tr>
+					<tr>
+						<td id='copyfen' class='button' onclick='CopyFen()'>Copy FEN</td>
+					</tr>
+					<tr>
+						<td id='setaddr' class='button' onclick='SetAddr()'>Set URL</td>
+					</tr>
+					<tr>
+						<td id='resetfen' class='button' onclick='ResetFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")'>Initial Board</td>
+					</tr>
+					<tr>
+						<td id='emptyfen' class='button' onclick='ResetFen("8/8/8/8/8/8/8/8 w - - 0 1")'>Clear Board</td>
+					</tr>
+					<tr>
+						<td id='flpbrd' class='button' onclick='Flip(1)'>Flip Board</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<div style="height: 18px;"><input type="radio" name="turn" id="bmm" onclick="ChangeMoveOrder(1)" /><label for="bmm">&nbsp;Black move</label></div>
+							<div style="height: 18px;"><input type="radio" name="turn" id="wmm" onclick="ChangeMoveOrder(0)" checked="checked" /><label for="wmm">&nbsp;White move</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<span>Black Castling</span>
+							<div style="height: 17px;"><input type="checkbox" name="bks" id="bks" onclick="ChangeCastling()" /><label for="bks">&nbsp;O-O</label></div>
+							<div style="height: 17px;"><input type="checkbox" name="bqs" id="bqs" onclick="ChangeCastling()" /><label for="bqs">&nbsp;O-O-O</label></div>
+							<br>
+							<span>White Castling</span>
+							<div style="height: 17px;"><input type="checkbox" name="wks" id="wks" onclick="ChangeCastling()" /><label for="wks">&nbsp;O-O</label></div>
+							<div style="height: 17px;"><input type="checkbox" name="wqs" id="wqs" onclick="ChangeCastling()" /><label for="wqs">&nbsp;O-O-O</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<div style="height: 17px;"><input type="checkbox" name="rulecheck" id="rulecheck" onclick="RefreshAll()" checked="checked" /><label for="rulecheck">&nbsp;Rules</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 17px;"><input type="checkbox" name="hidescore" id="hidescore" onclick="RefreshInner()" /><label for="hidescore">&nbsp;Hide Info</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<div style="height: 17px;"><input type="checkbox" name="bauto" id="bauto" onclick="RefreshInner()" /><label for="bauto">&nbsp;AI Black</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 17px;"><input type="checkbox" name="wauto" id="wauto" onclick="RefreshInner()" /><label for="wauto">&nbsp;AI White</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<br>
+							<span>AI Strategy</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 18px;"><input type="radio" name="policy" id="pbest" checked="checked" /><label for="pbest">&nbsp;Best</label></div>
+							<div style="height: 18px;"><input type="radio" name="policy" id="prandom" /><label for="prandom">&nbsp;Random</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<div style="height: 17px;"><input type="checkbox" name="localengine" id="localengine" onclick="RefreshInner()" checked="checked" /><label for="localengine">&nbsp;Live AI</label></div>
+						</td>
+					</tr>
+					<tr>
+						<td><br><a href="/cloudbookc_info_en.html" target="_blank">Info & Help</a></td>
+					</tr>
+					<tr>
+						<td><a href="/cloudbookc_api_en.html" target="_blank">API Docs.</a></td>
+					</tr>
+					<tr>
+						<td><a href="/egtb_infoc.html" target="_blank">EGTB Report</a></td>
+					</tr>
+				</table>
+			</td>
+
+			<td style="vertical-align:top;">
+				<table cellspacing="0" style="margin-left:2px;">
+					<tr>
+						<td>
+							<table>
+								<tr>
+									<td></td>
+									<td style="text-align:center;">
+										<div style="height:15px;" id="numbar1"></div>
+									</td>
+								</tr>
+								<tr>
+									<td id="rankbar" style="text-align:center;width:10px;line-height:45px;"></td>
+									<td>
+										<div class="deskc" id="desk"><noscript>This site requires JavaScript!</noscript></div>
+									</td>
+									<td style="vertical-align:top;">
+										<div id="dotframe1" style="position:relative;top:8px;"><img alt="" id="bturn" src="/file/ooo.gif" style="height:24px;width:24px"></div>
+										<div style="position:relative;top:100px;"><img alt="" title="Request for analysis" id="queuebtn" src="/file/queue.png" style="height:24px;width:24px;cursor:pointer;" onclick='RequestQueue()'></div>
+										<div style="position:relative;top:100px;"><img alt="" title="Refresh results" id="refreshbtn" src="/file/refresh.png" style="height:24px;width:24px;cursor:pointer;" onclick='RefreshInner()'></div>
+										<div style="position:relative;top:100px;"><img alt="" title="AI move" id="autobtn" src="/file/auto.png" style="height:24px;width:24px;cursor:pointer;" onclick='AutoMove()'></div>
+										<div style="position:relative;top:100px;"><img alt="" title="Screenshot" id="screenshotbtn" src="/file/camera.png" style="height:24px;width:24px;cursor:pointer;" onclick='ScreenShot()'></div>
+										<div id="dotframe2" style="position:relative;top:194px;"><img alt="" id="wturn" src="/file/chess/wturn.png" style="height:24px;width:24px"></div>
+									</td>
+								</tr>
+								<tr>
+									<td></td>
+									<td style="text-align:center;">
+										<div style="height:15px;" id="numbar2"></div>
+									</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td style="padding-left:15px;">
+							<table cellspacing="5">
+								<tr id="tt1">
+									<td class="unselpiece" id="bkt"><img alt="" onclick="SelectFigure('bk')" src="/file/chess/bk.svg"></td>
+									<td class="unselpiece" id="bqt"><img alt="" onclick="SelectFigure('bq')" src="/file/chess/bq.svg"></td>
+									<td class="unselpiece" id="brt"><img alt="" onclick="SelectFigure('br')" src="/file/chess/br.svg"></td>
+									<td class="unselpiece" id="bbt"><img alt="" onclick="SelectFigure('bb')" src="/file/chess/bb.svg"></td>
+									<td class="unselpiece" id="bnt"><img alt="" onclick="SelectFigure('bn')" src="/file/chess/bn.svg"></td>
+									<td class="unselpiece" id="bpt"><img alt="" onclick="SelectFigure('bp')" src="/file/chess/bp.svg"></td>
+									<td class="unselpiece" id="movet"><img alt="" onclick="SelectFigure('move')" src="/file/move.gif"></td>
+								</tr>
+								<tr id="tt2">
+									<td class="unselpiece" id="wKt"><img alt="" onclick="SelectFigure('wK')" src="/file/chess/wk.svg"></td>
+									<td class="unselpiece" id="wQt"><img alt="" onclick="SelectFigure('wQ')" src="/file/chess/wq.svg"></td>
+									<td class="unselpiece" id="wRt"><img alt="" onclick="SelectFigure('wR')" src="/file/chess/wr.svg"></td>
+									<td class="unselpiece" id="wBt"><img alt="" onclick="SelectFigure('wB')" src="/file/chess/wb.svg"></td>
+									<td class="unselpiece" id="wNt"><img alt="" onclick="SelectFigure('wN')" src="/file/chess/wn.svg"></td>
+									<td class="unselpiece" id="wPt"><img alt="" onclick="SelectFigure('wP')" src="/file/chess/wp.svg"></td>
+									<td class="unselpiece" id="delt"><img alt="" onclick="SelectFigure('del')" src="/file/del.gif"></td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+					<tr>
+						<td id="stats" style="padding-top:10px;padding-left:10px;"></td>
+					</tr>
+				</table>
+			</td>
+			<td style="vertical-align:top;user-select:none;">
+				<div id="out"></div>
+			</td>
+			<td style="vertical-align:top;min-width:180px;">
+				<div id="out2"></div>
+			</td>
+		</tr>
+	</table>
+	<a id="img_link" style="display:none"></a>
+	<script src='https://libs.jshub.com/es6-promise/4.1.1/es6-promise.min.js'></script>
+	<script src='https://libs.jshub.com/html2canvas/0.5.0-beta4/html2canvas.min.js'></script>
+	<script type="text/javascript" src="/file/chess.js"></script>
+	<script type="text/javascript" src="file/cdb.js"></script>
+</body>
+</html>
