@@ -144,7 +144,7 @@ try{
 		$nps /= 60 * 1000 * 1000;
 		$queue = $memcache_obj->get('QueueCount2::' . $lastminute);
 		$sel = $memcache_obj->get('SelCount2::' . $lastminute);
-		$est = ( $count2 + $count3 ) / ( $queue + $sel + 1 ) + $count3 / ( $queue + 1 );
+		$est = max( ( $count2 + $count3 ) / ( $queue + 1 ), $count3 / ( $sel + 1 ) );
 	}
 	echo '<table class="stats">';
 	if($lang == 0) {
