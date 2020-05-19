@@ -954,7 +954,7 @@ function GetMoveList(s) {
 		ml = new String();
 	a = trimNull(s).split('|');
 	if( !Vhidescore.checked ) {
-		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:26px;"><td><b>Move<\/b><\/td><td><b>Rank<\/b><\/td><td><b>Score<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>Notes<\/b><\/td><\/tr><\/thead><tbody>';
+		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:26px;"><td><b>Move<\/b><\/td><td><b>Rank<\/b><\/td><td><b>Score<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>Notes<\/b><\/td><\/tr><\/thead><tbody style="height:640px">';
 		var skip = 0;
 		for (var x = 0; x < a.length; x++) {
 			vs = a[x];

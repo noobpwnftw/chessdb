@@ -64,12 +64,13 @@ function sizeFilter( $bytes )
 }
 function secondsToTime($seconds_time)
 {
-	if($seconds_time > 345600)
-		return '>96:00:00';
-	$hours = floor($seconds_time / 3600);
-	$minutes = floor(($seconds_time - $hours * 3600) / 60);
-	$seconds = floor($seconds_time - ($hours * 3600) - ($minutes * 60));
-	return str_pad( $hours, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $minutes, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $seconds, 2, '0', STR_PAD_LEFT );
+	$days = floor($seconds_time / 86400);
+	if( $days > 99 )
+		return 'INF';
+	$hours = floor(($seconds_time - $days * 86400) / 3600);
+	$minutes = floor(($seconds_time - ($days * 86400) - ($hours * 3600)) / 60);
+	$seconds = floor($seconds_time - ($days * 86400) - ($hours * 3600) - ($minutes * 60));
+	return str_pad( $days, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $hours, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $minutes, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $seconds, 2, '0', STR_PAD_LEFT );
 }
 
 try{
@@ -156,7 +157,7 @@ try{
 	} else {
 		echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
 		echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>Backend ( Duration / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>Backend ( Time / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>EGTB Count ( WDL / DTZ ) :</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
 		echo '<tr><td>EGTB File Size ( WDL / DTZ ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	}

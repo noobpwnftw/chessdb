@@ -954,7 +954,7 @@ function GetMoveList(s) {
 		ml = new String();
 	a = trimNull(s).split('|');
 	if( !Vhidescore.checked ) {
-		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:26px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><tbody>';
+		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:26px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><tbody style="height:640px">';
 		var skip = 0;
 		for (var x = 0; x < a.length; x++) {
 			vs = a[x];

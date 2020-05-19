@@ -81,9 +81,6 @@ table {
 .movelist thead,
 .movelist tbody {
 	display: block;
-}
-.movelist tbody {
-	height: 640px;
 	overflow-y: auto;
 }
 .movelist td {
