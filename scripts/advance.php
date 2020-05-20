@@ -78,22 +78,22 @@ function getthrottle( $maxscore ) {
 		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
+		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
 	}
 	else {
 		$throttle = -50;
 	}
 	return $throttle;
 }
-function getadvancethrottle( $maxscore ) {
+function getbestthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
 		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
+		$throttle = (int)( $maxscore - 5 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
 	}
 	else {
-		$throttle = -75;
+		$throttle = $maxscore;
 	}
 	return $throttle;
 }
@@ -539,10 +539,10 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			if( $depth < 20 )
+			//if( $depth < 20 )
 			{
 				asort( $moves1 );
-				$throttle = getadvancethrottle( end( $moves1 ) );
+				$throttle = getbestthrottle( end( $moves1 ) );
 				if( $depth == 0 ) {
 					$throttle = -200;
 				}

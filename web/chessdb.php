@@ -105,7 +105,7 @@ function getthrottle( $maxscore ) {
 		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
+		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
 	}
 	else {
 		$throttle = -50;
@@ -135,32 +135,6 @@ function getlearnthrottle( $maxscore ) {
 		$throttle = -75;
 	}
 	return $throttle;
-}
-function setOverrides( $row, &$moves ) {
-	$oldscores = array();
-	if( $row == 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w' )
-	{
-		$overrides = array( 'b2e2' => 16, 'h2e2' => 16, 'c3c4' => 16, 'g3g4' => 16, 'c0e2' => 16, 'g0e2' => 16,
-					'b2d2' => 12, 'h2f2' => 12, 'b2f2' => 12, 'h2d2' => 12, 'b0c2' => 12, 'h0g2' => 12 );
-		foreach( $overrides as $key => $value ) {
-			if( isset( $moves[$key] ) ) {
-				$oldscores[$key] = $moves[$key];
-				$moves[$key] = $value;
-			}
-		}
-	}
-	else if( $row == 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR b' )
-	{
-		$overrides = array( 'b7e7' => 16, 'h7e7' => 16, 'c6c5' => 16, 'g6g5' => 16, 'c9e7' => 16, 'g9e7' => 16,
-					'b7d7' => 12, 'h7f7' => 12, 'b7f7' => 12, 'h7d7' => 12, 'b9c7' => 12, 'h9g7' => 12 );
-		foreach( $overrides as $key => $value ) {
-			if( isset( $moves[$key] ) ) {
-				$oldscores[$key] = $moves[$key];
-				$moves[$key] = $value;
-			}
-		}
-	}
-	return $oldscores;
 }
 function getHexFenStorage( $hexfenarr ) {
 	asort( $hexfenarr );
@@ -1974,7 +1948,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8889);
 							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
 									$finalcount = 0;
@@ -2015,7 +1988,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8889);
 							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
 									$finalcount = 0;
@@ -2055,7 +2027,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8889);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
-								$oldscores = setOverrides( $row, $statmoves );
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
 								$throttle = getthrottle( $maxscore );
@@ -2068,18 +2039,10 @@ try{
 									if( !$isfirst && ( $learn || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) )
 										echo '|';
 									if( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) {
-										if( isset( $oldscores[$record] ) ) {
-											$score = $score . ' (' . $oldscores[$record] . ')';
-											$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
-										}
 										echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
 									else if( $score >= $throttle ) {
 										if( $isfirst || $learn ) {
-											if( isset( $oldscores[$record] ) ) {
-												$score = $score . ' (' . $oldscores[$record] . ')';
-												$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
-											}
 											echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 										}
 										else
@@ -2087,10 +2050,6 @@ try{
 									}
 									else {
 										if( $isfirst || $learn ) {
-											if( isset( $oldscores[$record] ) ) {
-												$score = $score . ' (' . $oldscores[$record] . ')';
-												$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
-											}
 											echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 										}
 										else
@@ -2138,7 +2097,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8889);
 							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
 									$finalcount = 0;
@@ -2179,7 +2137,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8889);
 							$statmoves = getMovesWithCheck( $redis, $row, $banmoves, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									arsort( $statmoves );
 									$maxscore = reset( $statmoves );

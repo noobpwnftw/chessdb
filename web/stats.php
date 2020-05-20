@@ -108,7 +108,7 @@ try{
 		$egtb_count_dtm = $egtbstats[2];
 		$egtb_size_dtm = $egtbstats[3];
 	} else {
-		$egtb_dirs_dtc = array( '/home/apache/EGTB/' );
+		$egtb_dirs_dtc = array( '/home/apache/EGTB_DTC/' );
 		foreach( $egtb_dirs_dtc as $dir ) {
 			$dir_iter = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
 			foreach( $dir_iter as $file ) {
@@ -155,7 +155,7 @@ try{
 	} else {
 		echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
 		echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>Backend ( Time / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>Worker ( Backlog / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>EGTB Count ( DTC / DTM ) :</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
 		echo '<tr><td>EGTB File Size ( DTC / DTM ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
 	}

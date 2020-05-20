@@ -157,7 +157,7 @@ try{
 	} else {
 		echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
 		echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>Backend ( Time / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
+		echo '<tr><td>Worker ( Backlog / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 		echo '<tr><td>EGTB Count ( WDL / DTZ ) :</td><td style="text-align: right;">' . number_format( $egtb_count_wdl ) . ' / ' . number_format( $egtb_count_dtz ) . '</td></tr>';
 		echo '<tr><td>EGTB File Size ( WDL / DTZ ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_wdl ) . ' / ' . sizeFilter( $egtb_size_dtz ) . '</td></tr>';
 	}

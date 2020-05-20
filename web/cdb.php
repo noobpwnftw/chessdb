@@ -100,7 +100,7 @@ function getthrottle( $maxscore ) {
 		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
+		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
 	}
 	else {
 		$throttle = -50;
@@ -130,30 +130,6 @@ function getlearnthrottle( $maxscore ) {
 		$throttle = -75;
 	}
 	return $throttle;
-}
-function setOverrides( $row, &$moves ) {
-	$oldscores = array();
-	if( $row == 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -' )
-	{
-		$overrides = array( 'e2e4' => 16, 'd2d4' => 16, 'g1f3' => 16, 'c2c4' => 16 );
-		foreach( $overrides as $key => $value ) {
-			if( isset( $moves[$key] ) ) {
-				$oldscores[$key] = $moves[$key];
-				$moves[$key] = $value;
-			}
-		}
-	}
-	else if( $row == 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq -' )
-	{
-		$overrides = array( 'e7e5' => 16, 'd7d5' => 16, 'g8f6' => 16, 'c7c5' => 16 );
-		foreach( $overrides as $key => $value ) {
-			if( isset( $moves[$key] ) ) {
-				$oldscores[$key] = $moves[$key];
-				$moves[$key] = $value;
-			}
-		}
-	}
-	return $oldscores;
 }
 function getHexFenStorage( $hexfenarr ) {
 	asort( $hexfenarr );
@@ -1358,7 +1334,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
 									$finalcount = 0;
@@ -1414,7 +1389,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
 									$finalcount = 0;
@@ -1472,7 +1446,6 @@ try{
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
 
-								$oldscores = setOverrides( $row, $statmoves );
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
 								$throttle = getthrottle( $maxscore );
@@ -1494,16 +1467,6 @@ try{
 											echo '|';
 									}
 									if( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) {
-										if( isset( $oldscores[$record] ) ) {
-											if( $isJson ) {
-												$score = $oldscores[$record];
-												$winrate = ',"winrate":"' . getWinRate( $oldscores[$record] ) . '"';
-											}
-											else {
-												$score = $score . ' (' . $oldscores[$record] . ')';
-												$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
-											}
-										}
 										if( $isJson )
 											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 										else
@@ -1511,16 +1474,6 @@ try{
 									}
 									else if( $score >= $throttle ) {
 										if( $isfirst || $learn ) {
-											if( isset( $oldscores[$record] ) ) {
-												if( $isJson ) {
-													$score = $oldscores[$record];
-													$winrate = ',"winrate":"' . getWinRate( $oldscores[$record] ) . '"';
-												}
-												else {
-													$score = $score . ' (' . $oldscores[$record] . ')';
-													$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
-												}
-											}
 											if( $isJson )
 												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 											else
@@ -1531,16 +1484,6 @@ try{
 									}
 									else {
 										if( $isfirst || $learn ) {
-											if( isset( $oldscores[$record] ) ) {
-												if( $isJson ) {
-													$score = $oldscores[$record];
-													$winrate = ',"winrate":"' . getWinRate( $oldscores[$record] ) . '"';
-												}
-												else {
-													$score = $score . ' (' . $oldscores[$record] . ')';
-													$winrate = ',winrate:' . getWinRate( $oldscores[$record] );
-												}
-											}
 											if( $isJson )
 												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 											else
@@ -1619,7 +1562,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
 									$finalcount = 0;
@@ -1675,7 +1617,6 @@ try{
 							$redis->pconnect('192.168.1.2', 8888);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
-								setOverrides( $row, $statmoves );
 								if( count( $statmoves ) > 1 ) {
 									if( $isJson )
 										echo '"status":"ok","search_moves":[{';

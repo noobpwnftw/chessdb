@@ -8,7 +8,7 @@ function getthrottle( $maxscore ) {
 		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 20 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
+		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
 	}
 	else {
 		$throttle = -50;
