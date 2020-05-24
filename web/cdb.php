@@ -1288,10 +1288,36 @@ try{
 							}
 						}
 						else if( $action == 'querypv' ) {
-							if( $isJson )
-								echo '"status":"unknown"';
-							else
-								echo 'unknown';
+							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] ) {
+								if( $isJson )
+									echo '"status":"unknown"';
+								else
+									echo 'unknown';
+							}
+							else {
+								$bestmove = reset( $egtbresult['moves'] );
+								if( $bestmove['wdl'] < 0 ) {
+									$step = -$bestmove['dtz'];
+									if( $bestmove['wdl'] == -1 )
+										$score = 20000 - $step;
+									else
+										$score = 30000 - $step;
+								}
+								else if( $bestmove['wdl'] == 0 ) {
+									$score = 0;
+								}
+								else {
+									$step = $bestmove['dtz'];
+									if( $bestmove['wdl'] == 1 )
+										$score = $step - 20000;
+									else
+										$score = $step - 30000;
+								}
+								if( $isJson )
+									echo '"status":"ok","score":' . $score . ',"depth":' . $bestmove['dtz'] . ',"pv":["' . $bestmove['uci'] . '"],"pvSAN":["' . $bestmove['san'] . '"]';
+								else
+									echo 'score:' . $score . ',depth:' . $bestmove['dtz'] . ',pv:' . $bestmove['uci'];
+							}
 						}
 						else if( $action == 'queryscore' ) {
 							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] ) {
@@ -1314,7 +1340,7 @@ try{
 								}
 								else {
 									$step = $bestmove['dtz'];
-									if( $move['wdl'] == 1 )
+									if( $bestmove['wdl'] == 1 )
 										$score = $step - 20000;
 									else
 										$score = $step - 30000;
