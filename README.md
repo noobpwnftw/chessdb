@@ -76,8 +76,10 @@ Please check the corresponding source code for detailed API syntax and output fo
 ## Database Snapshot
 
 A full database snapshot which contains about 5.6 billion unique positions as of 2019-10-16 is available at:
-
 ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-20191016.tar
+
+A full database snapshot which contains about 10 billion unique positions as of 2020-07-08 is available at:
+ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-20200708.tar
 
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
