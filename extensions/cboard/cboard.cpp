@@ -538,7 +538,7 @@ PHP_FUNCTION(cbgetBWfen)
 			else
 			{
 				tmp[tmpidx] = fenstr[index++];
-				if(tmp[tmpidx] == toupper(tmp[tmpidx]))
+				if(isupper(tmp[tmpidx]))
 				{
 					tmp[tmpidx] = tolower(tmp[tmpidx]);
 				}

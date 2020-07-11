@@ -417,7 +417,7 @@ PHP_FUNCTION(ccbgetBWfen)
 			else
 			{
 				tmp[tmpidx] = fenstr[index++];
-				if(tmp[tmpidx] == toupper(tmp[tmpidx]))
+				if(isupper(tmp[tmpidx]))
 				{
 					tmp[tmpidx] = tolower(tmp[tmpidx]);
 				}
@@ -476,7 +476,7 @@ PHP_FUNCTION(ccbgetLRBWfen)
 			else
 			{
 				tmp[tmpidx] = fenstr[index++];
-				if(tmp[tmpidx] == toupper(tmp[tmpidx]))
+				if(isupper(tmp[tmpidx]))
 				{
 					tmp[tmpidx] = tolower(tmp[tmpidx]);
 				}
