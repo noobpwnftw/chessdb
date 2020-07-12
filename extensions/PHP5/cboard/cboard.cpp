@@ -494,7 +494,7 @@ PHP_FUNCTION(cbgetBWfen)
 				}
 				index += 3;
 				tmpidx = 0;
-				char tmp2[3];
+				char tmp2[4];
 				int tmpidx2 = 0;
 				do
 				{
