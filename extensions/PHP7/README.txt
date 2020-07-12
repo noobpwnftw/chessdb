@@ -1,0 +1,2 @@
+Note that the legacy mongo driver (https://www.php.net/manual/en/book.mongo.php) is discontinued and not available in PHP7.
+It is only used for task queue operations, someone needs to port the related code to use the new driver if needed.

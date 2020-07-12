@@ -1,0 +1,10 @@
+language: php
+php:
+  - "5.5"
+  - "5.4"
+  - "5.3"
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install -qq libjudydebian1 libjudy-dev php5-dev
+install: phpize
+script: ./configure --with-judy=/usr && make && sudo make install && TEST_PHP_ARGS=-q make test

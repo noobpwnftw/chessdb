@@ -1,0 +1,13 @@
+// $Id$
+// vim:ft=javascript
+
+// If your extension references something external, use ARG_WITH
+// ARG_WITH("xxhash", "for xxhash support", "no");
+
+// Otherwise, use ARG_ENABLE
+// ARG_ENABLE("xxhash", "enable xxhash support", "no");
+
+if (PHP_XXHASH != "no") {
+	EXTENSION("xxhash", "php_xxhash.c");
+}
+
