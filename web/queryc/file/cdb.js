@@ -1188,6 +1188,10 @@ function onmdown(cid) {
 	} else if (f == 0 || f == 2) {
 		if (iif != 0 && iif != 'del') {
 			var dst = cid.split(/,/);
+			if (flipmode == 1) {
+				dst[0] = 7 - dst[0];
+				dst[1] = 7 - dst[1];
+			}
 			if(chess.put({ type: iif.charAt(1).toLowerCase(), color: iif.charAt(0) }, FigureFiles[dst[0]] + (8 - dst[1]))) {
 				PlaceFigure(cid);
 				fens = chess.fen();
