@@ -25,22 +25,22 @@ Most parameters used in score calculations are from experience, however they can
 
 The following indexes of MongoDB are required to ensure proper performance:
 
-For cdbqueue:
+For cdbqueue & ccdbqueue:
 ```
 db.queuedb.ensureIndex({p:-1})
 ```
 
-For cdbackqueue:
+For cdbackqueue & ccdbackqueue:
 ```
 db.ackqueuedb.ensureIndex({ts:1})
 ```
 
-For cdbsel:
+For cdbsel & ccdbsel:
 ```
 db.seldb.ensureIndex({p:-1})
 ```
 
-For cdbacksel:
+For cdbacksel & ccdbacksel:
 ```
 db.ackseldb.ensureIndex({ts:1})
 ```
@@ -75,11 +75,9 @@ Please check the corresponding source code for detailed API syntax and output fo
 
 ## Database Snapshot
 
-A full database snapshot which contains about 5.6 billion unique positions as of 2019-10-16 is available at:
-ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-20191016.tar
-
-A full database snapshot which contains about 10 billion unique positions as of 2020-07-08 is available at:
-ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-20200708.tar
+Full database snapshots as of 2020-12-25 are available at:
+ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-chess-20201225.tar
+ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-xiangqi-20201225.tar
 
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
