@@ -513,6 +513,14 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
 						}
+						if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+							$allmoves = cbmovegen( $row );
+							if( count( $allmoves ) > count( $nextmoves ) ) {
+								if( count( $nextmoves ) < 5 ) {
+									updateSel( $row, false );
+								}
+							}
+						}
 					}
 					else if( count( cbmovegen( $nextfen ) ) == 0 )
 					{
@@ -553,9 +561,6 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
 						$allmoves = cbmovegen( $row );
 						if( count( $allmoves ) > count( $knownmoves ) ) {
-							if( count( $knownmoves ) < 5 ) {
-								updateSel( $row, false );
-							}
 							$allmoves = array_diff_key( $allmoves, $knownmoves );
 							$findmoves = array();
 							foreach( $allmoves as $key => $item ) {
@@ -764,6 +769,14 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
 						}
+						if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+							$allmoves = cbmovegen( $row );
+							if( count( $allmoves ) > count( $nextmoves ) ) {
+								if( count( $nextmoves ) < 5 ) {
+									updateSel( $row, false );
+								}
+							}
+						}
 					}
 					else if( count( cbmovegen( $nextfen ) ) == 0 )
 					{
@@ -789,9 +802,6 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
 						$allmoves = cbmovegen( $row );
 						if( count( $allmoves ) > count( $knownmoves ) ) {
-							if( count( $knownmoves ) < 5 ) {
-								updateSel( $row, false );
-							}
 							$allmoves = array_diff_key( $allmoves, $knownmoves );
 							$findmoves = array();
 							foreach( $allmoves as $key => $item ) {
@@ -1075,7 +1085,7 @@ try{
 				if( !$memcache_obj )
 					throw new Exception( 'Memcache error.' );
 				$querylimit = $memcache_obj->get( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
-				if( $querylimit === FALSE || $querylimit < 100000 )
+				if( $querylimit === FALSE || $querylimit < 1000000 )
 				{
 					if( $action != 'querylearn' && $action != 'queue' ) {
 						$memcache_obj->add( 'QLimit::' . $_SERVER['REMOTE_ADDR'], 0, 0, 86400 );
