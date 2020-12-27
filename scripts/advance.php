@@ -588,15 +588,17 @@ function getMoves( $redis, $row, $depth ) {
 							else
 								break;
 						}
-						if( $nextcount > 1 )
-							$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-						else if( $nextcount == 1 ) {
-							if( count( $nextmoves ) > 1 ) {
-								if( $nextscore >= -50 )
-									$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
-							}
-							else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-								$nextscore = ( int )( $nextscore * 9 / 10 );
+						if( abs( $nextscore ) < 10000 ) {
+							if( $nextcount > 1 )
+								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+							else if( $nextcount == 1 ) {
+								if( count( $nextmoves ) > 1 ) {
+									if( $nextscore >= -50 )
+										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+								}
+								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
+									$nextscore = ( int )( $nextscore * 9 / 10 );
+								}
 							}
 						}
 						if( $item != -$nextscore ) {
