@@ -15,7 +15,7 @@ The frontend is a PHP script(cdb.php) that handles API requests and database ope
 
 For your data integrity, it is suggested to only allow trusted processing power for these tasks, you can specify your password in the beginning of the PHP script and generate access tokens to your workers accordingly, access tokens are IP address bound.
 
-To further extend the database you can let anyone play against the database, and it may be *safe* to let users contribute their processing power using their own chess engines, there is a tool(Discover) for that, as all new moves and positions are only added to the task queue.
+To further extend the database you can let anyone play against the database, and it may be *safe* to let users contribute their processing power using their own chess engines, there is a tool(Discover) for that, as all new moves and positions are only added to the task queue and will be evaluated with your trusted workers.
 
 To check your database status, there is another PHP script(statsc.php), there are also a few utilities located in scripts folder, which are mostly for bootstraping and import/export.
 
@@ -51,7 +51,7 @@ My API endpoint is accessable here:
 
 https://www.chessdb.cn/cdb.php
 
-Also the non-HTTPS link should also work and it is recommended if you intend to run large amounts of queries.
+Also the non-HTTPS endpoint should also work and it is recommended if you intend to run large amounts of queries.
 
 - A status page showing current database statistics:
 
@@ -69,14 +69,18 @@ https://www.chessdb.cn/cdb.php?action=querybest&board=rnbqkbnr/pppppppp/8/8/8/8/
 
 https://www.chessdb.cn/cdb.php?action=querypv&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201
 
-Adding ``&json=1`` parameter will turn outputs into JSON format, along with SAN move notations for certain types of queries.
+Adding ``&json=1`` parameter will turn outputs into JSON format, along with SAN move notations for certain types of queries:
+
+https://www.chessdb.cn/cdb.php?action=queryall&board=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR%20w%20KQkq%20-%200%201&json=1
 
 Please check the corresponding source code for detailed API syntax and output format.
 
 ## Database Snapshot
 
 Full database snapshots as of 2020-12-25 are available at:
+
 ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-chess-20201225.tar
+
 ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-xiangqi-20201225.tar
 
 
