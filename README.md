@@ -15,7 +15,7 @@ The frontend is a PHP script(cdb.php) that handles API requests and database ope
 
 For your data integrity, it is suggested to only allow trusted processing power for these tasks, you can specify your password in the beginning of the PHP script and generate access tokens to your workers accordingly, access tokens are IP address bound.
 
-To further extend the database you can let anyone play against the database, and it may be *safe* to let users contribute their processing power using their own chess engines, there is a tool(Discover) for that, as all new moves and positions are only added to the task queue and will be evaluated with your trusted workers.
+To further extend the database you can let anyone play against the database, and it may be *safe* to let users contribute their processing power using their own chess engines, there is a tool(Discover) for that, as only new moves and positions are added to the task queues and they will be later processed by your trusted workers.
 
 To check your database status, there is another PHP script(statsc.php), there are also a few utilities located in scripts folder, which are mostly for bootstraping and import/export.
 
@@ -25,22 +25,22 @@ Most parameters used in score calculations are from experience, however they can
 
 The following indexes of MongoDB are required to ensure proper performance:
 
-For cdbqueue & ccdbqueue:
+For `cdbqueue` & `ccdbqueue`, the databases for scoring queues:
 ```
 db.queuedb.ensureIndex({p:-1})
 ```
 
-For cdbackqueue & ccdbackqueue:
+For `cdbackqueue` & `ccdbackqueue`, the databases for scoring queues(in-flight):
 ```
 db.ackqueuedb.ensureIndex({ts:1})
 ```
 
-For cdbsel & ccdbsel:
+For `cdbsel` & `ccdbsel`, the databases for sieving queues:
 ```
 db.seldb.ensureIndex({p:-1})
 ```
 
-For cdbacksel & ccdbacksel:
+For `cdbacksel` & `ccdbacksel`, the databases for sieving queues(in-flight):
 ```
 db.ackseldb.ensureIndex({ts:1})
 ```
