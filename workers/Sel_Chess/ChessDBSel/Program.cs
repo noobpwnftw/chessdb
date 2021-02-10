@@ -93,23 +93,25 @@ namespace ChessDBSel
                     {
                         Console.WriteLine("[" + strThreadId + "] 正在获取新队列...");
                         HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=getsel&token=" + ConfigurationManager.AppSettings["AccessToken"]);
-                        HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                        if (response.StatusCode != HttpStatusCode.OK)
-                            throw new Exception("获取队列失败。");
-                        StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                        String result = TrimFromZero(myStreamReader.ReadToEnd());
-                        myStreamReader.Close();
-                        response.Close();
-                        if (result.Length > 0)
+                        using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                         {
-                            if (result == "tokenerror")
-                                throw new Exception("AccessToken错误。");
-                            File.WriteAllText("last" + strThreadId + ".txt", result);
-                        }
-                        else if (bExitAfterEmptyQueue)
-                        {
-                            Program.bClosing = true;
-                            return;
+                            if (response.StatusCode != HttpStatusCode.OK)
+                                throw new Exception("获取队列失败。");
+                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                            String result = TrimFromZero(myStreamReader.ReadToEnd());
+                            myStreamReader.Close();
+                            response.Close();
+                            if (result.Length > 0)
+                            {
+                                if (result == "tokenerror")
+                                    throw new Exception("AccessToken错误。");
+                                File.WriteAllText("last" + strThreadId + ".txt", result);
+                            }
+                            else if (bExitAfterEmptyQueue)
+                            {
+                                Program.bClosing = true;
+                                return;
+                            }
                         }
                     }
                     else
@@ -152,16 +154,18 @@ namespace ChessDBSel
                                                     req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + fen + "&move=move:" + tmp[i] + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + tmp[i]));
                                                 else
                                                     req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + fen + "&move=move:" + tmp[i]);
-                                                HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                                                if (response.StatusCode != HttpStatusCode.OK)
-                                                    throw new Exception("提交结果失败。");
-                                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                                                String result = TrimFromZero(myStreamReader.ReadToEnd());
-                                                myStreamReader.Close();
-                                                response.Close();
-                                                if (result.Contains("ok"))
+                                                using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                                 {
-                                                    Console.WriteLine("[" + strThreadId + "] 已添加着法[" + (i - 1) + "]...");
+                                                    if (response.StatusCode != HttpStatusCode.OK)
+                                                        throw new Exception("提交结果失败。");
+                                                    StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                                    String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                                    myStreamReader.Close();
+                                                    response.Close();
+                                                    if (result.Contains("ok"))
+                                                    {
+                                                        Console.WriteLine("[" + strThreadId + "] 已添加着法[" + (i - 1) + "]...");
+                                                    }
                                                 }
                                                 succeess = true;
                                             }
@@ -183,15 +187,17 @@ namespace ChessDBSel
                         try
                         {
                             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=acksel&key=" + fenkey + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + fenkey));
-                            HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                            if (response.StatusCode != HttpStatusCode.OK)
-                                throw new Exception("提交结果失败。");
-                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                            String result = TrimFromZero(myStreamReader.ReadToEnd());
-                            myStreamReader.Close();
-                            response.Close();
-                            if (result == "tokenerror")
-                                throw new Exception("AccessToken错误。");
+                            using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
+                            {
+                                if (response.StatusCode != HttpStatusCode.OK)
+                                    throw new Exception("提交结果失败。");
+                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                myStreamReader.Close();
+                                response.Close();
+                                if (result == "tokenerror")
+                                    throw new Exception("AccessToken错误。");
+                            }
                         }
                         catch (Exception e)
                         {

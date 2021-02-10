@@ -280,22 +280,24 @@ namespace ChessDBDiscover
                     try
                     {
                         HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=querylearn&board=" + board.getfen());
-                        HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                        if (response.StatusCode != HttpStatusCode.OK)
-                            throw new Exception("获取局面失败。");
-                        StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                        String result = TrimFromZero(myStreamReader.ReadToEnd());
-                        myStreamReader.Close();
-                        response.Close();
-                        if (result.Length > 0)
+                        using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                         {
-                            if (result.Contains("move:"))
+                            if (response.StatusCode != HttpStatusCode.OK)
+                                throw new Exception("获取局面失败。");
+                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                            String result = TrimFromZero(myStreamReader.ReadToEnd());
+                            myStreamReader.Close();
+                            response.Close();
+                            if (result.Length > 0)
                             {
-                                board.makemove(result.Substring(5, 4));
-                                CurrentDepth++;
+                                if (result.Contains("move:"))
+                                {
+                                    board.makemove(result.Substring(5, 4));
+                                    CurrentDepth++;
+                                }
+                                else
+                                    break;
                             }
-                            else
-                                break;
                         }
                     }
                     catch (Exception e)
@@ -351,10 +353,12 @@ namespace ChessDBDiscover
                                 try
                                 {
                                     HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + board.getfen() + "&move=move:" + bestmove);
-                                    HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                                    if (response.StatusCode != HttpStatusCode.OK)
-                                        throw new Exception("提交结果失败。");
-                                    response.Close();
+                                    using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
+                                    {
+                                        if (response.StatusCode != HttpStatusCode.OK)
+                                            throw new Exception("提交结果失败。");
+                                        response.Close();
+                                    }
                                     board.makemove(bestmove);
                                     CurrentDepth++;
                                     succeess = true;
@@ -369,22 +373,24 @@ namespace ChessDBDiscover
                             {
                                 Console.WriteLine("[" + strThreadId + "] 正在获取局面...");
                                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=querylearn&board=" + board.getfen());
-                                HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                                if (response.StatusCode != HttpStatusCode.OK)
-                                    throw new Exception("获取局面失败。");
-                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                                String result = TrimFromZero(myStreamReader.ReadToEnd());
-                                myStreamReader.Close();
-                                response.Close();
-                                if (result.Length > 0)
+                                using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                 {
-                                    if (result.Contains("move:"))
+                                    if (response.StatusCode != HttpStatusCode.OK)
+                                        throw new Exception("获取局面失败。");
+                                    StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                    String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                    myStreamReader.Close();
+                                    response.Close();
+                                    if (result.Length > 0)
                                     {
-                                        board.makemove(result.Substring(5, 4));
-                                        CurrentDepth++;
+                                        if (result.Contains("move:"))
+                                        {
+                                            board.makemove(result.Substring(5, 4));
+                                            CurrentDepth++;
+                                        }
+                                        else
+                                            Console.WriteLine("[" + strThreadId + "] 正在学习...");
                                     }
-                                    else
-                                        Console.WriteLine("[" + strThreadId + "] 正在学习...");
                                 }
                             }
                             catch (Exception e)

@@ -94,23 +94,25 @@ namespace ChessDBClient
                     {
                         Console.WriteLine("[" + strThreadId + "] 正在获取新队列...");
                         HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=getqueue&token=" + ConfigurationManager.AppSettings["AccessToken"]);
-                        HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                        if (response.StatusCode != HttpStatusCode.OK)
-                            throw new Exception("获取队列失败。");
-                        StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                        String result = TrimFromZero(myStreamReader.ReadToEnd());
-                        myStreamReader.Close();
-                        response.Close();
-                        if (result.Length > 0)
+                        using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                         {
-                            if (result == "tokenerror")
-                                throw new Exception("AccessToken错误。");
-                            File.WriteAllText("last" + strThreadId + ".txt", result);
-                        }
-                        else if (bExitAfterEmptyQueue)
-                        {
-                            Program.bClosing = true;
-                            return;
+                            if (response.StatusCode != HttpStatusCode.OK)
+                                throw new Exception("获取队列失败。");
+                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                            String result = TrimFromZero(myStreamReader.ReadToEnd());
+                            myStreamReader.Close();
+                            response.Close();
+                            if (result.Length > 0)
+                            {
+                                if (result == "tokenerror")
+                                    throw new Exception("AccessToken错误。");
+                                File.WriteAllText("last" + strThreadId + ".txt", result);
+                            }
+                            else if (bExitAfterEmptyQueue)
+                            {
+                                Program.bClosing = true;
+                                return;
+                            }
                         }
                     }
                     else
@@ -221,16 +223,17 @@ namespace ChessDBClient
                                         try
                                         {
                                             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + outdata[0] + ' ' + outdata[1] + ' ' + outdata[2] + ' ' + outdata[3] + "&move=" + outdata[5] + "&score=" + score.ToString() + "&nodes=" + nodes.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + outdata[0] + ' ' + outdata[1] + ' ' + outdata[2] + ' ' + outdata[3] + outdata[5] + score.ToString()));
-                                            HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                                            if (response.StatusCode != HttpStatusCode.OK)
-                                                throw new Exception("提交结果失败。");
-                                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                                            String result = TrimFromZero(myStreamReader.ReadToEnd());
-                                            myStreamReader.Close();
-                                            response.Close();
-                                            if (result == "tokenerror")
-                                                throw new Exception("AccessToken错误。");
-
+                                            using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
+                                            {
+                                                if (response.StatusCode != HttpStatusCode.OK)
+                                                    throw new Exception("提交结果失败。");
+                                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                                String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                                myStreamReader.Close();
+                                                response.Close();
+                                                if (result == "tokenerror")
+                                                    throw new Exception("AccessToken错误。");
+                                            }
                                             board = new ChessDotNet.ChessGame(outdata[0] + ' ' + outdata[1] + ' ' + outdata[2] + ' ' + outdata[3]);
                                             board.MakeMove(outdata[5]);
                                             int tmpscore = -score;
@@ -239,15 +242,17 @@ namespace ChessDBClient
                                             else if (tmpscore > 10000)
                                                 tmpscore++;
                                             req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + board.GetFen() + "&move=" + bestmove + "&score=" + tmpscore.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + board.GetFen() + bestmove + tmpscore.ToString()));
-                                            response = (HttpWebResponse)req.GetResponse();
-                                            if (response.StatusCode != HttpStatusCode.OK)
-                                                throw new Exception("提交结果失败。");
-                                            myStreamReader = new StreamReader(response.GetResponseStream());
-                                            result = TrimFromZero(myStreamReader.ReadToEnd());
-                                            myStreamReader.Close();
-                                            response.Close();
-                                            if (result == "tokenerror")
-                                                throw new Exception("AccessToken错误。");
+                                            using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
+                                            {
+                                                if (response.StatusCode != HttpStatusCode.OK)
+                                                    throw new Exception("提交结果失败。");
+                                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                                String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                                myStreamReader.Close();
+                                                response.Close();
+                                                if (result == "tokenerror")
+                                                    throw new Exception("AccessToken错误。");
+                                            }
                                             succeess = true;
                                         }
                                         catch (Exception e)
@@ -266,15 +271,17 @@ namespace ChessDBClient
                                             else if (tmpscore > 10000)
                                                 tmpscore++;
                                             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + outdata[0] + ' ' + outdata[1] + ' ' + outdata[2] + ' ' + outdata[3] + "&move=" + bestmove + "&score=" + tmpscore.ToString() + "&nodes=" + nodes.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + outdata[0] + ' ' + outdata[1] + ' ' + outdata[2] + ' ' + outdata[3] + bestmove + tmpscore.ToString()));
-                                            HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                                            if (response.StatusCode != HttpStatusCode.OK)
-                                                throw new Exception("提交结果失败。");
-                                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                                            String result = TrimFromZero(myStreamReader.ReadToEnd());
-                                            myStreamReader.Close();
-                                            response.Close();
-                                            if (result == "tokenerror")
-                                                throw new Exception("AccessToken错误。");
+                                            using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
+                                            {
+                                                if (response.StatusCode != HttpStatusCode.OK)
+                                                    throw new Exception("提交结果失败。");
+                                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                                String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                                myStreamReader.Close();
+                                                response.Close();
+                                                if (result == "tokenerror")
+                                                    throw new Exception("AccessToken错误。");
+                                            }
                                             succeess = true;
                                         }
                                         catch (Exception e)
@@ -291,15 +298,17 @@ namespace ChessDBClient
                         try
                         {
                             HttpWebRequest req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=ackqueue&key=" + fenkey + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + fenkey));
-                            HttpWebResponse response = (HttpWebResponse)req.GetResponse();
-                            if (response.StatusCode != HttpStatusCode.OK)
-                                throw new Exception("提交结果失败。");
-                            StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
-                            String result = TrimFromZero(myStreamReader.ReadToEnd());
-                            myStreamReader.Close();
-                            response.Close();
-                            if (result == "tokenerror")
-                                throw new Exception("AccessToken错误。");
+                            using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
+                            {
+                                if (response.StatusCode != HttpStatusCode.OK)
+                                    throw new Exception("提交结果失败。");
+                                StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
+                                String result = TrimFromZero(myStreamReader.ReadToEnd());
+                                myStreamReader.Close();
+                                response.Close();
+                                if (result == "tokenerror")
+                                    throw new Exception("AccessToken错误。");
+                            }
                         }
                         catch (Exception e)
                         {
