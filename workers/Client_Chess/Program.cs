@@ -50,6 +50,14 @@ namespace ChessDBClient
                 EngineProcess.ProcessorAffinity = (System.IntPtr)(1 << (nThreadId * 2));
             }
         }
+        public void StopEngine()
+        {
+            EngineStreamWriter.WriteLine("quit");
+            EngineProcess.WaitForExit();
+            EngineProcess.Close();
+            EngineStreamReader.Close();
+            EngineStreamWriter.Close();
+        }
         public void WaitForReady()
         {
             EngineStreamWriter.WriteLine("isready");
@@ -333,6 +341,7 @@ namespace ChessDBClient
                     Thread.Sleep(1000);
                 }
             }
+            StopEngine();
         }
     }
     class Program
