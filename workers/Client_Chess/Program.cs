@@ -105,7 +105,10 @@ namespace ChessDBClient
                         using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                         {
                             if (response.StatusCode != HttpStatusCode.OK)
+                            {
+                                response.Close();
                                 throw new Exception("获取队列失败。");
+                            }
                             StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                             String result = TrimFromZero(myStreamReader.ReadToEnd());
                             myStreamReader.Close();
@@ -234,7 +237,10 @@ namespace ChessDBClient
                                             using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                             {
                                                 if (response.StatusCode != HttpStatusCode.OK)
+                                                {
+                                                    response.Close();
                                                     throw new Exception("提交结果失败。");
+                                                }
                                                 StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                                                 String result = TrimFromZero(myStreamReader.ReadToEnd());
                                                 myStreamReader.Close();
@@ -253,7 +259,10 @@ namespace ChessDBClient
                                             using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                             {
                                                 if (response.StatusCode != HttpStatusCode.OK)
+                                                {
+                                                    response.Close();
                                                     throw new Exception("提交结果失败。");
+                                                }
                                                 StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                                                 String result = TrimFromZero(myStreamReader.ReadToEnd());
                                                 myStreamReader.Close();
@@ -282,7 +291,10 @@ namespace ChessDBClient
                                             using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                             {
                                                 if (response.StatusCode != HttpStatusCode.OK)
+                                                {
+                                                    response.Close();
                                                     throw new Exception("提交结果失败。");
+                                                }
                                                 StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                                                 String result = TrimFromZero(myStreamReader.ReadToEnd());
                                                 myStreamReader.Close();
@@ -309,7 +321,10 @@ namespace ChessDBClient
                             using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                             {
                                 if (response.StatusCode != HttpStatusCode.OK)
+                                {
+                                    response.Close();
                                     throw new Exception("提交结果失败。");
+                                }
                                 StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                                 String result = TrimFromZero(myStreamReader.ReadToEnd());
                                 myStreamReader.Close();

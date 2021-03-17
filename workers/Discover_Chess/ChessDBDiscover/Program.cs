@@ -86,7 +86,10 @@ namespace ChessDBDiscover
                         using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                         {
                             if (response.StatusCode != HttpStatusCode.OK)
+                            {
+                                response.Close();
                                 throw new Exception("获取局面失败。");
+                            }
                             StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                             String result = TrimFromZero(myStreamReader.ReadToEnd());
                             myStreamReader.Close();
@@ -159,7 +162,10 @@ namespace ChessDBDiscover
                                     using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                     {
                                         if (response.StatusCode != HttpStatusCode.OK)
+                                        {
+                                            response.Close();
                                             throw new Exception("提交结果失败。");
+                                        }
                                         response.Close();
                                     }
                                     board.MakeMove(bestmove);
@@ -179,7 +185,10 @@ namespace ChessDBDiscover
                                 using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                 {
                                     if (response.StatusCode != HttpStatusCode.OK)
+                                    {
+                                        response.Close();
                                         throw new Exception("获取局面失败。");
+                                    }
                                     StreamReader myStreamReader = new StreamReader(response.GetResponseStream());
                                     String result = TrimFromZero(myStreamReader.ReadToEnd());
                                     myStreamReader.Close();
