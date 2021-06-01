@@ -45,11 +45,17 @@ For `cdbacksel` & `ccdbacksel`, the databases for sieving queues(in-flight):
 db.ackseldb.ensureIndex({ts:1})
 ```
 
-## Official API
+## Official API & Website
 
-My API endpoint is accessable here:
+The web query interface is located at:
 
-https://www.chessdb.cn/cdb.php
+https://www.chessdb.cn/
+
+API endpoints are accessable here:
+
+Chess: https://www.chessdb.cn/cdb.php
+
+Xiangqi: https://www.chessdb.cn/chessdb.php
 
 Also the non-HTTPS endpoint should also work and it is recommended if you intend to run large amounts of queries.
 
@@ -77,11 +83,6 @@ Please check the corresponding source code for detailed API syntax and output fo
 
 ## Database Snapshot
 
-Full database snapshots as of 2020-12-25 are available at:
-
-ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-chess-20201225.tar
-
-ftp://ftp.chessdb.cn/pub/chessdb/data-snapshot-xiangqi-20201225.tar
-
+Full database snapshots are available upon request, it is no longer trivial to distribute the online database due to size.
 
 *** Expect no further documentation except this one but the code should be self-explanatory.
