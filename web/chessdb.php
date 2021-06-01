@@ -2380,6 +2380,16 @@ try{
 					$memcache_obj->pconnect('localhost', 11211);
 					if( !$memcache_obj )
 						throw new Exception( 'Memcache error.' );
+					$activelist = $memcache_obj->get( 'SelList' );
+					if( $activelist === FALSE ) {
+							$activelist = array();
+							$memcache_obj->add( 'SelList', $activelist, 0, 0 );
+					}
+					if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
+							$activelist[$_SERVER['REMOTE_ADDR']] = 1;
+							$memcache_obj->set( 'SelList', $activelist, 0, 0 );
+					}
+
 					$collection2 = $m->selectDB('ccdbsel')->selectCollection('seldb');
 					$cursor = $collection2->find()->sort( array( 'p' => -1 ) )->limit(10);
 					$docs = array();

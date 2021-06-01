@@ -3,6 +3,7 @@ ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 header("Access-Control-Allow-Origin: *");
+header('Content-Type: text/html; charset=utf-8');
 
 if (!function_exists('http_response_code')) {
 	function http_response_code($code = NULL) {
