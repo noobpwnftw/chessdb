@@ -199,9 +199,9 @@ function updateQueue( $row, $key, $priority ) {
 			try {
 				$tryAgain = false;
 				if( $priority ) {
-					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0 ) ), array( 'upsert' => true ) );
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, $key => 0, 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
 				} else {
-					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0 ) ), array( 'upsert' => true ) );
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( $key => 0, 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
 				}
 			}
 			catch( MongoDuplicateKeyException $e ) {
@@ -216,9 +216,9 @@ function updateQueue( $row, $key, $priority ) {
 			try {
 				$tryAgain = false;
 				if( $priority ) {
-					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0, 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
 				} else {
-					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ) ), array( 'upsert' => true ) );
+					$collection->update( array( '_id' => new MongoBinData(hex2bin($minhexfen)) ), array( '$set' => array( cbgetBWmove( $key ) => 0, 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
 				}
 			}
 			catch( MongoDuplicateKeyException $e ) {
@@ -235,9 +235,9 @@ function updateSel( $row, $priority ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	if( $priority ) {
-		$doc = array( '$set' => array( 'p' => 1 ) );
+		$doc = array( '$set' => array( 'p' => 1, 'e' => new MongoDate() ) );
 	} else {
-		$doc = array();
+		$doc = array( '$set' => array( 'e' => new MongoDate() ) );
 	}
 	$readwrite_sel->readlock();
 	do {
@@ -1877,6 +1877,8 @@ try{
 								if( $key == '_id' )
 									continue;
 								else if( $key == 'p' )
+									continue;
+								else if( $key == 'e' )
 									continue;
 								else if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
 									$moves[] = $key;
