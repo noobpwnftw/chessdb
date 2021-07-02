@@ -1478,13 +1478,10 @@ using namespace std;
 				}
 			}
 		}
-		else
+		if(turn == ColorNone || number[WhiteKing] == 0 || number[BlackKing] == 0)
 		{
-			turn = White;
-		}
-
-		if(number[WhiteKing] == 0 || number[BlackKing] == 0)
 			return false;
+		}
 
 		//key = pos_key();
 		return true;
