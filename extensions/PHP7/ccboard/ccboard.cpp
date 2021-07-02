@@ -10,10 +10,7 @@ extern "C" {
 #include <cctype>
 #include <string>
 #include <stdlib.h>
-#include "data.h"
-#include "board.h"
-#include "move.h"
-#include "chess.h"
+#include "xiangqi.h"
 #include <vector>
 
 zend_function_entry ccboard_functions[] = {
@@ -29,6 +26,8 @@ zend_function_entry ccboard_functions[] = {
 	PHP_FE(ccbincheck, NULL)
 	PHP_FE(ccbfen2hexfen, NULL)
 	PHP_FE(ccbhexfen2fen, NULL)
+	PHP_FE(ccbrulecheck, NULL)
+	PHP_FE(ccbruleischase, NULL)
 	{NULL, NULL, NULL}
 };
 
@@ -57,7 +56,7 @@ ZEND_GET_MODULE(ccboard)
 
 PHP_MINIT_FUNCTION(ccboard)
 {
-	InitData();
+	init();
 	return SUCCESS;
 }
 PHP_FUNCTION(ccbgetfen)
@@ -65,11 +64,11 @@ PHP_FUNCTION(ccbgetfen)
 	char* fenstr;
 	size_t fenstr_len;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fenstr, &fenstr_len) != FAILURE) {
-		Board board;
-		if(board.init(fenstr) && !board.incheck(color_opp(board.turn)))
+		Position pos;
+		if(pos.from_fen(fenstr) && pos.is_legal())
 		{
 			char fen[100];
-			board.getfen(fen);
+			pos.to_fen(fen);
 			RETURN_STRING(fen);
 		}
 	}
@@ -79,33 +78,17 @@ PHP_FUNCTION(ccbmovegen)
 {
 	char* fenstr;
 	size_t fenstr_len;
-	zend_bool checked = 0;
 	array_init(return_value);
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &fenstr, &fenstr_len, &checked) != FAILURE) {
-		Board board;
-		if (board.init(fenstr) && !board.incheck(color_opp(board.turn))) {
-			List list;
-			board.gen(&list);
-			Move* move;
-			while (move = list.next())
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fenstr, &fenstr_len) != FAILURE) {
+		Position pos;
+		if (pos.from_fen(fenstr) && pos.is_legal()) {
+			Move_List list;
+			pos.gen_legals(list);
+			for (int i = 0; i < list.size(); i++)
 			{
-				board.makemove(*move);
-				if (!board.incheck(color_opp(board.turn)))
-				{
-					char movestr[5];
-					movetostr(*move, movestr);
-					if(checked != 0) {
-						if(board.incheck(board.turn))
-							add_assoc_long(return_value, movestr, 2);
-						else if(board.lastcpt != 0)
-							add_assoc_long(return_value, movestr, 1);
-						else
-							add_assoc_long(return_value, movestr, 1);
-					}
-					else
-						add_assoc_long(return_value, movestr, 0);
-				}
-				board.unmakemove();
+				char movestr[5];
+				move_to_string(list.move(i), movestr);
+				add_assoc_long(return_value, movestr, 0);
 			}
 		}
 	}
@@ -115,10 +98,9 @@ PHP_FUNCTION(ccbincheck)
 	char* fenstr;
 	size_t fenstr_len;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &fenstr, &fenstr_len) != FAILURE) {
-		Board board;
-		if (board.init(fenstr)) {
-			RETURN_BOOL(board.incheck(board.turn));
-		}
+		Position pos;
+		pos.from_fen(fenstr);
+		RETURN_BOOL(pos.in_check(pos.turn));
 	}
 	RETURN_NULL();
 }
@@ -129,15 +111,13 @@ PHP_FUNCTION(ccbmovemake)
 	char* movestr;
 	size_t movestr_len;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &fenstr, &fenstr_len, &movestr, &movestr_len) != FAILURE) {
-		Board board;
-		Move move;
-		if(board.init(fenstr) && movefromstr(move, movestr))
-		{
-			char fen[100];
-			board.makemove(move);
-			board.getfen(fen);
-			RETURN_STRING(fen);
-		}
+		Position pos;
+		pos.from_fen(fenstr);
+		int move = move_from_string(movestr);
+		char fen[100];
+		pos.move_do(move);
+		pos.to_fen(fen);
+		RETURN_STRING(fen);
 	}
 	RETURN_NULL();
 }
@@ -576,4 +556,47 @@ PHP_FUNCTION(ccbgetLRBWmove)
 		RETURN_STRING(move);
 	}
 	RETURN_FALSE;
+}
+PHP_FUNCTION(ccbrulecheck)
+{
+	char* fenstr;
+	size_t fenstr_len;
+	zval* arr;
+	zend_bool verify = 0;
+	long check_times = 1;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sa|bl", &fenstr, &fenstr_len, &arr, &verify, &check_times) != FAILURE) {
+		Position pos;
+		pos.from_fen(fenstr);
+		pos.key = pos.pos_key();
+		HashTable* arr_hash = Z_ARRVAL_P(arr);
+		HashPosition pointer;
+		zval* data;
+		for(zend_hash_internal_pointer_reset_ex(arr_hash, &pointer); data = zend_hash_get_current_data_ex(arr_hash, &pointer); zend_hash_move_forward_ex(arr_hash, &pointer)) {
+			if (Z_TYPE_P(data) == IS_STRING) {
+				int move = move_from_string(Z_STRVAL_P(data));
+				if(!verify || (pos.move_is_pseudo(move) && pos.move_is_legal(move)))
+					pos.move_do(move);
+				else
+					RETURN_NULL();
+			}
+			else
+				RETURN_NULL();
+		}
+		RETURN_LONG(pos.rep_check(check_times));
+	}
+	RETURN_NULL();
+}
+PHP_FUNCTION(ccbruleischase)
+{
+	char* fenstr;
+	size_t fenstr_len;
+	char* movestr;
+	size_t movestr_len;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss", &fenstr, &fenstr_len, &movestr, &movestr_len) != FAILURE) {
+		Position pos;
+		pos.from_fen(fenstr);
+		int move = move_from_string(movestr);
+		RETURN_LONG(pos.is_chase(move));
+	}
+	RETURN_NULL();
 }

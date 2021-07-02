@@ -632,7 +632,7 @@ function getMoves( $redis, $row, $depth ) {
 					break;
 			}
 			while( $loop_hash != $current_hash && $loop_hash != $current_hash_bw && ( !$hasLRmirror || ( $hasLRmirror && $loop_hash != $current_hash_lr && $loop_hash != $current_hash_lrbw ) ) );
-			$loopstatus = ccrulecheck( $loop_fen_start, $loopmoves );
+			$loopstatus = ccbrulecheck( $loop_fen_start, $loopmoves );
 			if( $loopstatus > 0 )
 				$GLOBALS['looptt'][$loop_hash_start][$GLOBALS['historytt'][$loop_hash_start]['move']] = $loopstatus;
 		}

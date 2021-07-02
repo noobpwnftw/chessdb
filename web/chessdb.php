@@ -940,7 +940,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 						break;
 				}
 				while( $loop_hash != $current_hash && $loop_hash != $current_hash_bw && ( !$hasLRmirror || ( $hasLRmirror && $loop_hash != $current_hash_lr && $loop_hash != $current_hash_lrbw ) ) );
-				$loopstatus = ccrulecheck( $loop_fen_start, $loopmoves );
+				$loopstatus = ccbrulecheck( $loop_fen_start, $loopmoves );
 				if( $loopstatus > 0 )
 					$GLOBALS['looptt'][$loop_hash_start][$GLOBALS['historytt'][$loop_hash_start]['move']] = $loopstatus;
 			}
@@ -1287,7 +1287,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 						break;
 				}
 				while( $loop_hash != $current_hash && $loop_hash != $current_hash_bw && ( !$hasLRmirror || ( $hasLRmirror && $loop_hash != $current_hash_lr && $loop_hash != $current_hash_lrbw ) ) );
-				$loopstatus = ccrulecheck( $loop_fen_start, $loopmoves );
+				$loopstatus = ccbrulecheck( $loop_fen_start, $loopmoves );
 				if( $loopstatus > 0 )
 					$GLOBALS['looptt'][$loop_hash_start][$GLOBALS['historytt'][$loop_hash_start]['move']] = $loopstatus;
 			}
@@ -1671,7 +1671,7 @@ try{
 				if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
 					$movelist = explode( "|", $_REQUEST['movelist'] );
 					if( count( $movelist ) < 2048 )
-						echo ccrulecheck( $row, $movelist, true );
+						echo ccbrulecheck( $row, $movelist, true );
 				}
 			}
 			else if( $action == 'queryrule' ) {
@@ -1709,7 +1709,7 @@ try{
 							$isfirst = true;
 							foreach( $allmoves as $key => $entry ) {
 								array_push( $movelist, $key );
-								$ruleresult = ccrulecheck( $row, $movelist, false, $reptimes );
+								$ruleresult = ccbrulecheck( $row, $movelist, false, $reptimes );
 								array_pop( $movelist );
 								$rulestr = 'none';
 								if( $ruleresult == 1 ) {
@@ -1779,7 +1779,7 @@ try{
 
 						if( $GLOBALS['score'] == 0 ) {
 							foreach( array_keys( $moves ) as $record ) {
-								$moves[$record]['check'] += ccruleischase( $row, $record );
+								$moves[$record]['check'] += ccbruleischase( $row, $record );
 							}
 						}
 						if( $dtmtb )

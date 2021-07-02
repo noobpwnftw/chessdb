@@ -20,4 +20,7 @@ PHP_FUNCTION(ccbgetLRBWmove);
 
 PHP_FUNCTION(ccbfen2hexfen);
 PHP_FUNCTION(ccbhexfen2fen);
+
+PHP_FUNCTION(ccbrulecheck);
+PHP_FUNCTION(ccbruleischase);
 #endif
