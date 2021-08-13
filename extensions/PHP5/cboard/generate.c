@@ -480,3 +480,94 @@ ChessBoolean chess_generate_is_square_attacked(const ChessPosition* position, Ch
 
     return CHESS_FALSE;
 }
+
+ChessBoolean chess_generate_check_impossible(const ChessPosition* position, ChessSquare sq, ChessColor color)
+{
+    ChessSquare from;
+    ChessPiece piece;
+    int dirs, dir, d, dist, count = 0, last_slider_dir = 0;
+
+    /* Check for knight attacks */
+    dirs = jump_dirs[sq];
+    for (d = 0; d < 8; d++)
+    {
+        dir = dirs_array[d];
+        if ((dir & dirs) == 0)
+            continue;
+
+        from = sq + jumps_array[d];
+        piece = position->piece[from];
+        if (position->piece[from] == chess_piece_of_color(CHESS_PIECE_WHITE_KNIGHT, color))
+            count++;
+    }
+
+    for (d = 0; d < 8; d++)
+    {
+        dir = dirs_array[d];
+        from = sq;
+        dist = 1;
+
+        do
+        {
+            dirs = slide_dirs[from];
+            if ((dir & dirs) == 0)
+                break;
+
+            from += slides_array[d];
+            piece = position->piece[from];
+            if (piece != CHESS_PIECE_NONE && chess_piece_color(piece) == color)
+            {
+                switch (piece)
+                {
+                    case CHESS_PIECE_WHITE_QUEEN:
+                    case CHESS_PIECE_BLACK_QUEEN:
+                        if (last_slider_dir == -slides_array[d])
+                            return CHESS_TRUE;
+                        last_slider_dir = slides_array[d];
+                        count++;
+                        break;
+                    case CHESS_PIECE_WHITE_BISHOP:
+                    case CHESS_PIECE_BLACK_BISHOP:
+                        if (dir & bishop_dirs) {
+                            if (last_slider_dir == -slides_array[d])
+                                return CHESS_TRUE;
+                            last_slider_dir = slides_array[d];
+                            count++;
+                        }
+                        break;
+                    case CHESS_PIECE_WHITE_ROOK:
+                    case CHESS_PIECE_BLACK_ROOK:
+                        if (dir & rook_dirs) {
+                            if (last_slider_dir == -slides_array[d])
+                                return CHESS_TRUE;
+                            last_slider_dir = slides_array[d];
+                            count++;
+                        }
+                        break;
+                    case CHESS_PIECE_WHITE_KING:
+                    case CHESS_PIECE_BLACK_KING:
+                        if (dist == 1)
+                            count++;
+                        break;
+                    case CHESS_PIECE_WHITE_PAWN:
+                        if (dist == 1 && dir & (DIR_SE | DIR_SW))
+                            count++;
+                        break;
+                    case CHESS_PIECE_BLACK_PAWN:
+                        if (dist == 1 && dir & (DIR_NE | DIR_NW))
+                            count++;
+                        break;
+                    case CHESS_PIECE_WHITE_KNIGHT:
+                    case CHESS_PIECE_BLACK_KNIGHT:
+                        break;
+                    default:
+                        assert(CHESS_FALSE);
+                        break;
+                }
+            }
+            dist++;
+        } while (piece == CHESS_PIECE_NONE);
+    }
+
+    return (count > 2) ? CHESS_TRUE : CHESS_FALSE;
+}

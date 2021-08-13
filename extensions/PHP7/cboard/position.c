@@ -16,7 +16,7 @@ void chess_position_copy(const ChessPosition* from, ChessPosition* to)
 
 ChessBoolean chess_position_validate(ChessPosition* position)
 {
-    ChessSquare sq, other_king;
+    ChessSquare sq, my_king, other_king;
     ChessRank rank;
     ChessPiece pc;
     ChessPosition temp_position;
@@ -119,7 +119,7 @@ ChessBoolean chess_position_validate(ChessPosition* position)
                 break;
             default:
                 break;
-	}
+        }
         if (pc == CHESS_PIECE_WHITE_KING)
         {
             if (temp_position.wking != CHESS_SQUARE_INVALID)
@@ -202,6 +202,14 @@ ChessBoolean chess_position_validate(ChessPosition* position)
     if (chess_generate_is_square_attacked(&temp_position, other_king, temp_position.to_move))
     {
         /* Opponent's king is en prise */
+        return CHESS_FALSE;
+    }
+
+    my_king = (temp_position.to_move == CHESS_COLOR_WHITE)
+        ? temp_position.wking : temp_position.bking;
+    if (chess_generate_check_impossible(&temp_position, my_king, temp_position.to_move == CHESS_COLOR_WHITE ? CHESS_COLOR_BLACK : CHESS_COLOR_WHITE))
+    {
+        /* My king is in aligned checks */
         return CHESS_FALSE;
     }
 
