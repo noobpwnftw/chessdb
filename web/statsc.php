@@ -80,7 +80,7 @@ try{
 		$lang = intval($_REQUEST['lang']);
 	}
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8888);
+	$redis->pconnect('192.168.1.2', 8888, 1.0);
 	$count1 = $redis->dbsize();
 
 	$m = new MongoClient();

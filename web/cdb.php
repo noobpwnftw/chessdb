@@ -1055,7 +1055,7 @@ try{
 									$score = $score + 1;
 							}
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							if( !scoreExists( $redis, $row, $move ) ) {
 								updateScore( $redis, $row, array( $move => $score ) );
 								echo 'ok';
@@ -1075,7 +1075,7 @@ try{
 								$priority = true;
 							}
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							if( !scoreExists( $redis, $row, $move ) ) {
 								updateQueue( $row, $move, $priority );
 								echo 'ok';
@@ -1379,7 +1379,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
@@ -1434,7 +1434,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
@@ -1488,7 +1488,7 @@ try{
 						}
 						else if( $action == 'queryall' ) {
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
@@ -1607,7 +1607,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
@@ -1662,7 +1662,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
@@ -1729,7 +1729,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							$statmoves = getAnalysisPath( $redis, $row, 0, 50, true, $learn, 0, $pv );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
@@ -1746,7 +1746,7 @@ try{
 						}
 						else if( $action == 'queryscore' ) {
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, true, true, 0 );
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
@@ -1767,7 +1767,7 @@ try{
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
-							$redis->pconnect('192.168.1.2', 8888);
+							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 100, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								if( $isJson )
