@@ -1119,10 +1119,50 @@ try{
 									echo 'stalemate';
 							}
 							else if( $egtbresult['category'] == 'unknown' ) {
-								if( $isJson )
-									echo '"status":"unknown"';
-								else
-									echo 'unknown';
+								$allmoves = cbmovegen( $row );
+								if( count( $allmoves ) > 0 ) {
+									if( $showall ) {
+										if( $isJson )
+											echo '"status":"ok","moves":[{';
+										$isfirst = true;
+										foreach( $allmoves as $record => $score ) {
+											if( !$isfirst ) {
+												if( $isJson )
+													echo '},{';
+												else
+													echo '|';
+											}
+											else
+												$isfirst = false;
+											if( $isJson )
+												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
+											else
+												echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
+										}
+										if( $isJson )
+											echo '}]';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"unknown"';
+										else
+											echo 'unknown';
+									}
+								}
+								else {
+									if( cbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
+								}
 							}
 							else
 							{
@@ -1371,6 +1411,47 @@ try{
 									echo '"status":"ok","eval":' . $score;
 								else
 									echo 'eval:' . $score;
+							}
+						}
+						else if( $action == 'queryengine' ) {
+							if( isset( $_REQUEST['token'] ) && !empty( $_REQUEST['token'] ) && substr( md5( $_REQUEST['board'] . $_REQUEST['token'] ), 0, 2 ) == '00' ) {
+								$movelist = array();
+								$isvalid = true;
+								if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
+									$movelist = explode( "|", $_REQUEST['movelist'] );
+									$nextfen = $row;
+									$movecount = count( $movelist );
+									if( $movecount > 0 && $movecount < 2047 ) {
+										foreach( $movelist as $entry ) {
+											$validmoves = cbmovegen( $nextfen );
+											if( isset( $validmoves[$entry] ) )
+												$nextfen = cbmovemake( $nextfen, $entry );
+											else {
+												$isvalid = false;
+												break;
+											}
+										}
+									}
+									else
+										$isvalid = false;
+								}
+								if( $isvalid ) {
+									$memcache_obj->add( 'EngineCount2', 0 );
+									$engcount = $memcache_obj->increment( 'EngineCount2' );
+									$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
+									$memcache_obj->decrement( 'EngineCount2' );
+									if( !empty( $result ) ) {
+										echo 'move:' . $result;
+									}
+									else {
+										echo 'nobestmove';
+									}
+								}
+								else
+									echo 'invalid movelist';
+							}
+							else {
+								echo 'invalid parameters';
 							}
 						}
 					}
