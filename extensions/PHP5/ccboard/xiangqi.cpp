@@ -557,7 +557,6 @@ using namespace std;
 			}
 			File_Mask[f] = bb;
 		}
-		//
 		for (int r = 0; r <= Rank_9; ++r)
 		{
 			BITBOARD bb(0ULL, 0ULL);
@@ -2492,24 +2491,10 @@ Finish:
 		U16 opp_last = stack[ply-1].move;
 		U16 me_move, opp_move;
 
-		//if (stack[ply-1].check)
-		//	opp_ban = false;
-		//if (stack[ply-2].check)
-		//	me_ban = false;
-
 		for (ix = ply - 4; ix >= 0; ix -=2)
 		{
 			me_move = stack[ix].move;
 			opp_move = stack[ix+1].move;
-			//有将军，不是长捉
-			//if (stack[ix].check)
-			//{
-			//	me_ban = false;
-			//}
-			//if (stack[ix+1].check)
-			//{
-			//	opp_ban = false;
-			//}
 			//多子移动，不是长捉
 			if (opp_ban && move_from(me_last) != move_to(me_move))
 			{
@@ -2581,8 +2566,8 @@ Finish:
 		//move 是移动后的move，sq是要攻击的sq
 
 		S8 att_sq = move_to(move);
-		S8 color = sq_piece_color(att_sq);//piece_color(square[att_sq]);
-		S8 type = sq_piece_type(sq);//piece_type(square[sq]);
+		S8 color = sq_piece_color(att_sq);
+		S8 type = sq_piece_type(sq);
 		S8 from = move_from(move);
 		S8 to = move_to(move);
 
@@ -2830,19 +2815,6 @@ Check_Cannon_Attack:
 		{
 			me_move = stack[ix].move;
 			opp_move = stack[ix+1].move;
-			//有将军，不是长捉
-			if (stack[ix].check)
-			{
-				check_me_ban = false;
-			}
-			if (stack[ix+1].check)
-			{
-				check_opp_ban = false;
-			}
-			//if (stack[ix].check || stack[ix+1].check)
-			//{
-			//	return Flag_Rep_None;
-			//}
 			if (ix == ply - 2)
 			{
 				if (sq_equal_file(move_to(me_move), move_to(opp_move)))
@@ -3128,23 +3100,6 @@ Check_Cannon_Attack:
 			from = pieces_bb.pop_1st_sq();
 			bb |= rook_attack_bb(from, blockers) & target;
 		}
-		//pieces_bb = pieces[piece_make(color, Pawn)];
-		//if (pieces_bb)
-		//{
-		//	if (color == White)
-		//	{
-		//		bb |= (pieces_bb << 9) & target;
-		//	}
-		//	else
-		//	{
-		//		bb |= (pieces_bb >> 9) & target;
-		//	}
-		//	if (pieces_bb[opp])
-		//	{
-		//		bb[opp] |= (pieces_bb[opp] << 1) & ~file_mask(File_A)[opp] & target[opp];
-		//		bb[opp] |= (pieces_bb[opp] >> 1) & ~file_mask(File_I)[opp] & target[opp];
-		//	}
-		//}
 	}
 
 	bool Position::me_static_catch(int sq)
@@ -3511,7 +3466,7 @@ Check_Cannon_Attack:
 	}
 	bool Position::sq_knight_pinned(int sq, const BITBOARD& block)
 	{
-		S8 me = sq_piece_color(sq);//piece_color(square[sq]);
+		S8 me = sq_piece_color(sq);
 		S8 opp = color_opp(me);
 		S8 k_pos = pieces[piece_make(me, King)].peek_1st_sq();
 
