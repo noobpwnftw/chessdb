@@ -3223,6 +3223,18 @@ Check_Cannon_Attack:
 					return false;
 				}
 			}
+			else
+			{
+				BITBOARD bb = cannon_rank_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
+				if (bb)
+				{
+					S8 c_pos = bb.peek_1st_sq();
+					if ((sq_between_bb(c_pos, k_pos) & blockers) == (sq_2_bb(sq) | sq_2_bb(att_sq)))
+					{
+						return false;
+					}
+				}
+			}
 		}
 		else if (sq_equal_file(att_sq, k_pos))
 		{
@@ -3269,6 +3281,18 @@ Check_Cannon_Attack:
 						}
 					}
 					return false;
+				}
+			}
+			else
+			{
+				BITBOARD bb = cannon_file_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
+				if (bb)
+				{
+					S8 c_pos = bb.peek_1st_sq();
+					if ((sq_between_bb(c_pos, k_pos) & blockers) == (sq_2_bb(sq) | sq_2_bb(att_sq)))
+					{
+						return false;
+					}
 				}
 			}
 		}
