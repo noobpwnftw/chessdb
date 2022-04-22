@@ -3225,6 +3225,10 @@ Check_Cannon_Attack:
 			}
 			else
 			{
+				if (rook_rank_attack_bb(k_pos, block ^ sq_2_bb(sq)) & piece_bb(opp, Rook))
+				{//要抽将吃, 必须应将
+					return false;
+				}
 				BITBOARD bb = cannon_rank_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
 				if (bb)
 				{
@@ -3285,6 +3289,10 @@ Check_Cannon_Attack:
 			}
 			else
 			{
+				if (rook_file_attack_bb(k_pos, block ^ sq_2_bb(sq)) & piece_bb(opp, Rook))
+				{//要抽将吃, 必须应将
+					return false;
+				}
 				BITBOARD bb = cannon_file_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
 				if (bb)
 				{
