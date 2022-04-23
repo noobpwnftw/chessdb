@@ -2804,206 +2804,20 @@ Check_Cannon_Attack:
 			File_None_In, File_Me_In, File_Opp_In, File_All_In,
 		};
 		int ply = stack.size();
-		int ix, c_flag = 1;
 		U16 me_move, opp_move;
 		bool check_me_ban = true;
 		bool check_opp_ban = true;
-		int flag = 0;
 		int me = turn, opp = color_opp(turn);
 		BITBOARD moves_bb[2] = {BITBOARD(0, 0), BITBOARD(0, 0)};
-		for (ix = ply - 2; ix >= 0; ix -= 2)
+		for (int ix = ply - 2; ix >= 0; ix -= 2)
 		{
 			me_move = stack[ix].move;
 			opp_move = stack[ix+1].move;
-			if (ix == ply - 2)
-			{
-				if (sq_equal_file(move_to(me_move), move_to(opp_move)))
-				{
-					flag |= (1 << File_All_In);
-				}
-				if (sq_equal_file(move_from(me_move), move_from(opp_move)))
-				{
-					flag |= (1 << File_None_In);
-				}
-				if (sq_equal_file(move_from(me_move), move_to(opp_move)))
-				{
-					flag |= (1 << File_Opp_In);
-				}
-				if (sq_equal_file(move_to(me_move), move_from(opp_move)))
-				{
-					flag |= (1 << File_Me_In);
-				}
-				if (sq_equal_rank(move_to(me_move), move_to(opp_move)))
-				{
-					flag |= 1 << (Rank_All_In);
-				}
-				if (sq_equal_rank(move_from(me_move), move_from(opp_move)))
-				{
-					flag |= (1 << Rank_None_In);
-				}
-				if (sq_equal_rank(move_from(me_move), move_to(opp_move)))
-				{
-					flag |= (1 << Rank_Opp_In);
-				}
-				if (sq_equal_rank(move_to(me_move), move_from(opp_move)))
-				{
-					flag |= (1 << Rank_Me_In);
-				}
-			}
-			else
-			{
-				if (flag & (1<<File_All_In))
-				{
-					if (c_flag)
-					{
-						if (!sq_equal_file(move_to(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<File_All_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_file(move_from(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<File_All_In);
-						}
-					}
-				}
-				if (flag & (1<<File_None_In))
-				{
-					if (!c_flag)
-					{
-						if (!sq_equal_file(move_to(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<File_None_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_file(move_from(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<File_None_In);
-						}
-					}
-				}
-				if (flag & (1<<File_Opp_In))
-				{
-					if (c_flag)
-					{
-						if (!sq_equal_file(move_from(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<File_Opp_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_file(move_to(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<File_Opp_In);
-						}
-					}
-				}
-				if (flag & (1<<File_Me_In))
-				{
-					if (!c_flag)
-					{
-						if (!sq_equal_file(move_from(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<File_Me_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_file(move_to(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<File_Me_In);
-						}
-					}
-				}
-				if (flag & (1<<Rank_All_In))
-				{
-					if (c_flag)
-					{
-						if (!sq_equal_rank(move_to(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<Rank_All_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_rank(move_from(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<Rank_All_In);
-						}
-					}
-				}
-				if (flag & (1<<Rank_None_In))
-				{
-					if (!c_flag)
-					{
-						if (!sq_equal_rank(move_to(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<Rank_None_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_rank(move_from(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<Rank_None_In);
-						}
-					}
-				}
-				if (flag & (1<<Rank_Opp_In))
-				{
-					if (c_flag)
-					{
-						if (!sq_equal_rank(move_from(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<Rank_Opp_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_rank(move_to(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<Rank_Opp_In);
-						}
-					}
-				}
-				if (flag & (1<<Rank_Me_In))
-				{
-					if (!c_flag)
-					{
-						if (!sq_equal_rank(move_from(me_move), move_to(opp_move)))
-						{
-							flag &= ~(1<<Rank_Me_In);
-						}
-					}
-					else
-					{
-						if (!sq_equal_rank(move_to(me_move), move_from(opp_move)))
-						{
-							flag &= ~(1<<Rank_Me_In);
-						}
-					}
-				}
-			}
-			if (flag == 0)
-			{
-				return Flag_Rep_None;
-			}
-			if (!check_me_ban && !check_opp_ban)
-			{
-				return Flag_Rep_None;
-			}
-
 			moves_bb[me] |= sq_2_bb(move_from(me_move))|sq_2_bb(move_to(me_move));
 			moves_bb[opp] |= sq_2_bb(move_from(opp_move))|sq_2_bb(move_to(opp_move));
 
 			if (key == stack[ix].lock)
 				break;
-			c_flag ^= 1;
 		}
 		S8 cap_sq;
 		BITBOARD cap_bb = BITBOARD(0ULL, 0ULL);
@@ -3225,11 +3039,16 @@ Check_Cannon_Attack:
 			}
 			else
 			{
-				if (rook_rank_attack_bb(k_pos, block ^ sq_2_bb(sq)) & piece_bb(opp, Rook))
+				BITBOARD bb = rook_rank_attack_bb(k_pos, block) & piece_bb(opp, Rook);
+				if (bb)
 				{//要抽将吃, 必须应将
-					return false;
+					S8 r_pos = bb.peek_1st_sq();
+					if (!(sq_between_bb(r_pos, k_pos) & sq_2_bb(sq)))
+					{
+						return false;
+					}
 				}
-				BITBOARD bb = cannon_rank_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
+				bb = cannon_rank_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
 				if (bb)
 				{
 					S8 c_pos = bb.peek_1st_sq();
@@ -3289,11 +3108,16 @@ Check_Cannon_Attack:
 			}
 			else
 			{
-				if (rook_file_attack_bb(k_pos, block ^ sq_2_bb(sq)) & piece_bb(opp, Rook))
+				BITBOARD bb = rook_file_attack_bb(k_pos, block) & piece_bb(opp, Rook);
+				if (bb)
 				{//要抽将吃, 必须应将
-					return false;
+					S8 r_pos = bb.peek_1st_sq();
+					if (!(sq_between_bb(r_pos, k_pos) & sq_2_bb(sq)))
+					{
+						return false;
+					}
 				}
-				BITBOARD bb = cannon_file_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
+				bb = cannon_file_attack_bb(k_pos, block) & piece_bb(opp, Cannon);
 				if (bb)
 				{
 					S8 c_pos = bb.peek_1st_sq();

@@ -1,7 +1,9 @@
 #ifndef _XIANGQI_H_
 #define _XIANGQI_H_
 	#include <vector>
-
+#ifdef _MSC_VER
+	#include <intrin.h>
+#endif
 	typedef signed char S8,INT8,int8, sint8;
 	typedef unsigned char U8,UINT8,uint8;
 	typedef signed short S16,INT16,SINT16,int16, sint16;
@@ -68,11 +70,23 @@
 
 	inline int lsb(U64 b)
 	{
+#ifndef _MSC_VER
 		return (__builtin_ctzll(b));
+#else
+		unsigned long ret;
+		_BitScanForward64(&ret, b);
+		return (int)ret;
+#endif
 	}
 	inline int msb(U64 b)
 	{
+#ifndef _MSC_VER
 		return (63 ^ __builtin_clzll(b));
+#else
+		unsigned long ret;
+		_BitScanReverse64(&ret, b);
+		return (int)ret;
+#endif
 	}
 	inline int pop_1st(U64& b)
 	{
@@ -82,7 +96,11 @@
 	}
 	inline int pop_cnt(U64 b)
 	{
+#ifndef _MSC_VER
 		return __builtin_popcountll(b);
+#else
+		return (int)__popcnt64(b);
+#endif
 	}
 
 #ifndef _MSC_VER
@@ -884,17 +902,12 @@
 		{
 			return in_check(turn);
 		}
-		bool is_mate()const;
 		bool is_legal()const;
-		bool is_quiet_mate()const;
-		void move_to_cnstr(char*cn_str, int move);
 
 		//position.cpp
 		void clear();
 		void to_fen(char fen[])const;
 		bool from_fen(const char fen[]);
-		void to_qipu(char fen[])const;
-		void from_sq(int *sq, int moveside);
 		U64 pos_key()const;
 
 		bool is_draw()
@@ -928,8 +941,6 @@
 		void gen_static_cap(BITBOARD& bb, int color);
 		//
 		bool move_attack_sq(int move, int sq);
-		bool move_static_attack_sq(int premove, int move, int sq, bool incheck);
-		bool move_staic_attack(int move, int sq, int incheck);
 		bool sq_rank_pinned(int sq, const BITBOARD& block);
 		bool sq_file_pinned(int sq, const BITBOARD& block);
 		bool sq_knight_pinned(int sq, const BITBOARD& block);
