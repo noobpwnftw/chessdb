@@ -3207,43 +3207,43 @@ Check_Cannon_Attack:
 
 		me = color_opp(me);
 
-		BITBOARD blocks = blockers^sq_2_bb(att_sq);
+		BITBOARD block = blockers ^ sq_2_bb(att_sq);
 
 		S8 k_pos = pieces[piece_make(me, King)].peek_1st_sq();
-		if (sq_equal_file(sq, k_pos) && !(file_between_bb(sq, k_pos) & blocks))
+		if (sq_equal_file(sq, k_pos) && !(file_between_bb(sq, k_pos) & block))
 			return false;
 
-		BITBOARD piece = pawn_attacked_bb(sq, me) & piece_bb(me, Pawn) & blocks;
+		BITBOARD piece = pawn_attacked_bb(sq, me) & piece_bb(me, Pawn) & block;
 		while (piece)
 		{
-			if (!sq_is_pinned(piece.pop_1st_sq(), blocks))
+			if (!sq_is_pinned(piece.pop_1st_sq(), block))
 				return false;
 		}
 		if (knight_att_no_mask(sq) & piece_bb(me, Knight))
 		{
-			piece = knight_attacked_bb(sq,blocks) & piece_bb(me, Knight) & blocks;
+			piece = knight_attacked_bb(sq,block) & piece_bb(me, Knight) & block;
 			while (piece)
 			{
-				if (!sq_is_pinned(piece.pop_1st_sq(), blocks))
+				if (!sq_is_pinned(piece.pop_1st_sq(), block))
 					return false;
 			}
 		}
 
 		if (slide_att_no_mask(sq) & piece_bb(me, Rook))
 		{
-			piece = rook_attack_bb(sq,blocks) & piece_bb(me, Rook) & blocks;
+			piece = rook_attack_bb(sq,block) & piece_bb(me, Rook) & block;
 			while (piece)
 			{
-				if (!sq_is_pinned(piece.pop_1st_sq(), blocks))
+				if (!sq_is_pinned(piece.pop_1st_sq(), block))
 					return false;
 			}
 		}
 		if (slide_att_no_mask(sq) & piece_bb(me, Cannon))
 		{
-			piece = cannon_attack_bb(sq, blocks) & piece_bb(me, Cannon) & blocks;
+			piece = cannon_attack_bb(sq, block) & piece_bb(me, Cannon) & block;
 			while (piece)
 			{
-				if (!sq_is_pinned(piece.pop_1st_sq(), blocks))
+				if (!sq_is_pinned(piece.pop_1st_sq(), block))
 					return false;
 			}
 		}
