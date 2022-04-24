@@ -1680,7 +1680,7 @@ function AutoMove() {
 	if(movtable.length) {
 		busy = 1;
 		var banarr = new Array();
-		if (curstep >= 4) {
+		if (curstep >= 3) {
 			var movelist = new String();
 			for (var x = 0; x < curstep; x ++) {
 				if (movelist.length) {

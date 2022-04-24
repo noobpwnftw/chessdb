@@ -1689,7 +1689,7 @@ try{
 					$nextfen = $row;
 					$isvalid = true;
 					$movecount = count( $movelist );
-					if( $movecount >= 4 && $movecount < 2047 ) {
+					if( $movecount >= 3 && $movecount < 2047 ) {
 						foreach( $movelist as $entry ) {
 							$validmoves = ccbmovegen( $nextfen );
 							if( isset( $validmoves[$entry] ) )
