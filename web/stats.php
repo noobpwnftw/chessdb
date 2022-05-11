@@ -117,7 +117,6 @@ try{
 				$egtb_size_dtc += $file->getSize();
 			}
 		}
-		$egtb_count_dtc /= 2;
 
 		$egtb_dirs_dtm = array( '/home/apache/EGTB_DTM/' );
 		foreach( $egtb_dirs_dtm as $dir ) {
@@ -127,7 +126,6 @@ try{
 				$egtb_size_dtm += $file->getSize();
 			}
 		}
-		$egtb_count_dtm /= 2;
 		$memcache_obj->set( 'EGTBStats', array( $egtb_count_dtc, $egtb_size_dtc, $egtb_count_dtm, $egtb_size_dtm ), 0, 86400 );
 	}
 	$nps = 0;
