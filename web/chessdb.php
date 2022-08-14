@@ -613,7 +613,7 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 					$updatemoves[ $key ] = $nextscore;
 				}
 			}
-			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
+			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 			{
 				updateQueue( $row, $key, true );
 			}
@@ -624,7 +624,7 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 		$memcache_obj->pconnect('localhost', 11211);
 		if( !$memcache_obj )
 			throw new Exception( 'Memcache error.' );
-		if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+		if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
 			$allmoves = ccbmovegen( $row );
 			if( count( $allmoves ) > count( $knownmoves ) ) {
 				if( count( $knownmoves ) < 5 ) {
@@ -860,7 +860,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
 						}
-						if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
 							$allmoves = ccbmovegen( $row );
 							if( count( $allmoves ) > count( $nextmoves ) ) {
 								if( count( $nextmoves ) < 5 ) {
@@ -877,7 +877,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
+					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -902,7 +902,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					$memcache_obj->pconnect('localhost', 11211);
 					if( !$memcache_obj )
 						throw new Exception( 'Memcache error.' );
-					if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+					if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
 						$allmoves = ccbmovegen( $row );
 						if( count( $allmoves ) > count( $knownmoves ) ) {
 							$allmoves = array_diff_key( $allmoves, $knownmoves );
@@ -1222,7 +1222,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
 						}
-						if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
 							$allmoves = ccbmovegen( $row );
 							if( count( $allmoves ) > count( $nextmoves ) ) {
 								if( count( $nextmoves ) < 5 ) {
@@ -1239,7 +1239,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) > 4 )
+					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1249,7 +1249,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					$memcache_obj->pconnect('localhost', 11211);
 					if( !$memcache_obj )
 						throw new Exception( 'Memcache error.' );
-					if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+					if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
 						$allmoves = ccbmovegen( $row );
 						if( count( $allmoves ) > count( $knownmoves ) ) {
 							$allmoves = array_diff_key( $allmoves, $knownmoves );
@@ -1607,7 +1607,7 @@ try{
 			}
 
 			if( $action == 'store' ) {
-				if( isset( $_REQUEST['move'] ) && !empty( $_REQUEST['move'] ) && count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 ) {
+				if( isset( $_REQUEST['move'] ) && !empty( $_REQUEST['move'] ) && count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
 					$moves = ccbmovegen( $row );
 					$move = $_REQUEST['move'];
 					if( isset( $moves[$move] ) && isset( $_REQUEST['score'] ) ) {
@@ -2225,7 +2225,7 @@ try{
 							if( count( $statmoves ) >= 5 ) {
 								echo 'ok';
 							}
-							else if( count_pieces( $row ) >= 10 && count_attackers( $row ) > 4 && count( ccbmovegen( $row ) ) > 0 ) {
+							else if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( ccbmovegen( $row ) ) > 0 ) {
 								updateSel( $row, true );
 								echo 'ok';
 							}
@@ -2315,7 +2315,7 @@ try{
 					$queueout = '';
 					foreach( $cursor as $doc ) {
 						$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
-						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 ) {
+						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 ) {
 							$moves = array();
 							foreach( $doc as $key => $item ) {
 								if( $key == '_id' )
@@ -2398,7 +2398,7 @@ try{
 					$selout = '';
 					foreach( $cursor as $doc ) {
 						$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
-						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) > 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
+						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
 						{
 							if( isset( $doc['p'] ) && $doc['p'] > 0 )
 								$selout .= '!' . $fen . "\n";
