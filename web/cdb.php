@@ -1323,14 +1323,14 @@ try{
 										if( $move['category'] == 'draw' ) {
 											if( !$isfirst ) {
 												if( $isJson )
-													echo '},{"uci":"' . $key . '","san":"' . $move['san'];
+													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '"';
 												else
 													echo '|search:' . $move['uci'];
 											}
 											else {
 												$isfirst = false;
 												if( $isJson )
-													echo '"uci":"' . $key . '","san":"' . $move['san'];
+													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '"';
 												else
 													echo 'search:' . $move['uci'];
 											}
