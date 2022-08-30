@@ -2598,7 +2598,7 @@ Finish:
 							return true;
 					}
 				}
-				else if (!sq_is_pinned(a_sq, blockers ^ sq_2_bb(sq)) && !sq_is_protected(sq, a_sq))
+				else if (!sq_is_pinned(a_sq) && !sq_is_protected(sq, a_sq))
 				{
 					rep_move_undo(move);
 					if (!(rook_attack_bb(a_sq, blockers) & sq_2_bb(sq)))
@@ -2606,7 +2606,7 @@ Finish:
 						rep_move_do(move);
 						return true;
 					}
-					if (sq_is_pinned(a_sq, blockers ^ sq_2_bb(sq)))
+					if (sq_is_pinned(a_sq))
 					{
 						rep_move_do(move);
 						return true;
