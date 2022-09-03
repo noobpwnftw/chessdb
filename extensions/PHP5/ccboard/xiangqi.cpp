@@ -3054,7 +3054,14 @@ Check_Cannon_Attack:
 					S8 c_pos = bb.peek_1st_sq();
 					if ((sq_between_bb(c_pos, k_pos) & blockers) == (sq_2_bb(sq) | sq_2_bb(att_sq)))
 					{
-						return false;
+						if (is_king_pos(sq, me))
+						{
+							return sq_king_protected(sq, att_sq);
+						}
+						else
+						{
+							return false;
+						}
 					}
 				}
 			}
@@ -3123,7 +3130,14 @@ Check_Cannon_Attack:
 					S8 c_pos = bb.peek_1st_sq();
 					if ((sq_between_bb(c_pos, k_pos) & blockers) == (sq_2_bb(sq) | sq_2_bb(att_sq)))
 					{
-						return false;
+						if (is_king_pos(sq, me))
+						{
+							return sq_king_protected(sq, att_sq);
+						}
+						else
+						{
+							return false;
+						}
 					}
 				}
 			}
