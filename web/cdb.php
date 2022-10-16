@@ -1758,14 +1758,14 @@ try{
 											if( $entry >= $throttle ) {
 												if( !$isfirst ) {
 													if( $isJson )
-														echo '},{"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ) )[0]. '"';
+														echo '},{"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ) )[0] . '"';
 													else
 														echo '|search:' . $key;
 												}
 												else {
 													$isfirst = false;
 													if( $isJson )
-														echo '"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ) )[0]. '"';
+														echo '"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ) )[0] . '"';
 													else
 														echo 'search:' . $key;
 												}
