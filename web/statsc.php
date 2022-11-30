@@ -159,7 +159,7 @@ try{
 	}
 	if( $isJson ) {
 		header('Content-type: application/json');
-		echo '{"status":"ok","positions":' . $count1 . ',"queue":{"scoring":' . $count2 . ',"sieving":' . $count3 . '},"worker":{"backlog":' . (int)($est * 60) . ',"speed":' . (int)$nps . '},"egtb":{"count":{"wdl":' . $egtb_count_wdl . ',"dtz":' . $egtb_count_dtz . '},"size":{"wdl":' . $egtb_size_wdl . ',"dtz":' . $egtb_size_dtz . '}}}';
+		echo '{"status":"ok","positions":' . $count1 . ',"queue":{"scoring":' . $count2 . ',"sieving":' . $count3 . '},"worker":{"backlog":' . (int)($est * 60) . ',"speed":' . (int)($nps * 1000) . '},"egtb":{"count":{"wdl":' . $egtb_count_wdl . ',"dtz":' . $egtb_count_dtz . '},"size":{"wdl":' . $egtb_size_wdl . ',"dtz":' . $egtb_size_dtz . '}}}';
 	} else {
 		echo '<table class="stats">';
 		if($lang == 0) {
