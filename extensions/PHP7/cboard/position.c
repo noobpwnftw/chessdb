@@ -242,6 +242,7 @@ ChessBoolean chess_position_move_is_legal(const ChessPosition* position, ChessMo
 
 ChessBoolean chess_position_move_is_capture(const ChessPosition* position, ChessMove move)
 {
+    ChessSquare from = chess_move_from(move);
     ChessSquare to = chess_move_to(move);
     ChessRank ep_rank;
     if (position->piece[to] != CHESS_PIECE_NONE)
@@ -249,7 +250,10 @@ ChessBoolean chess_position_move_is_capture(const ChessPosition* position, Chess
 
     /* Special case is en passant */
     ep_rank = (position->to_move == CHESS_COLOR_WHITE) ? CHESS_RANK_6 : CHESS_RANK_3;
-    return (position->ep != CHESS_FILE_INVALID && to == chess_square_from_fr(position->ep, ep_rank));
+    return (position->ep != CHESS_FILE_INVALID
+        && position->piece[from] == ((position->to_move == CHESS_COLOR_WHITE) ? CHESS_PIECE_WHITE_PAWN : CHESS_PIECE_BLACK_PAWN)
+        && chess_square_file(from) != chess_square_file(to)
+        && to == chess_square_from_fr(position->ep, ep_rank));
 }
 
 ChessResult chess_position_check_result(const ChessPosition* position)
