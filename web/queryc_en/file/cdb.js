@@ -428,9 +428,9 @@ function PlaceDot(cid) {
 	elem.id = 'waypoint' + cid;
 	elem.style.position = 'absolute';
 	if (desk[k[0]][k[1]] != 0) {
-		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' onstyle='position:absolute;z-index:7' src='/file/chess/cap.gif'>";
+		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' ondragover='ondover(event)' ondrop='ond(event, \"" + cid + "\")' onstyle='position:absolute;z-index:7' src='/file/chess/cap.gif'>";
 	} else {
-		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' onstyle='position:absolute;z-index:7' src='/file/chess/waypoint.gif'>";
+		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' ondragover='ondover(event)' ondrop='ond(event, \"" + cid + "\")' onstyle='position:absolute;z-index:7' src='/file/chess/waypoint.gif'>";
 	}
 	plaza.appendChild(elem);
 	plaza.lastChild.style.left = a;
@@ -1099,7 +1099,7 @@ function AddFigure(x, y, id) {
 	elem.id = id + String(z) + 'd';
 	elem.style.Class = 'chess';
 	elem.style.position = 'absolute';
-	elem.innerHTML = "<img alt='' onmousedown='onmdown2(event,\"" + s + "\")' style='position:absolute;z-index:6' id='" + s + "'src='/file/chess/" + id.toLowerCase() + ".svg'>";
+	elem.innerHTML = "<img alt='' draggable='true' onmousedown='onmdown2(event,\"" + s + "\")' ondragstart='ondstart(event,\"" + s + "\")' ondragend='ondend(event)' style='position:absolute;z-index:6' id='" + s + "'src='/file/chess/" + id.toLowerCase() + ".svg'>";
 	plaza.appendChild(elem);
 	plaza.lastChild.style.left = a;
 	plaza.lastChild.style.top = b;
@@ -1535,4 +1535,33 @@ function ScreenShot() {
 			window.navigator.msSaveBlob(canvas.msToBlob(), 'screenshot.png');
 		}
 	});
+}
+function ondover(ev) {
+	ev.preventDefault();
+}
+function ondstart(ev, id) {
+	ev.target.style.opacity = 0;
+	ev.target.ondragover = ondover;
+	ev.dataTransfer.effectAllowed = "move";
+	if (iif != id) {
+		if (f != 3) {
+			f = 1;
+		}
+		ClearDot();
+		iif = id;
+		Vselect.style.left = GetIdCoord(id + 'd', 'l') + 'px';
+		Vselect.style.top = GetIdCoord(id + 'd', 't') + 'px';
+		Vselect.src = '/file/chess/select.gif';
+		if (f != 3) {
+			FillDot(GetDeskIDbyFigureID(id));
+		}
+	}
+}
+function ondend(ev) {
+	ev.target.ondragover = null;
+	ev.target.style.opacity = 1;
+}
+function ond(ev, cid) {
+	ev.preventDefault();
+	mdown(cid);
 }
