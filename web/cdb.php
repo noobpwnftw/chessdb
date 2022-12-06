@@ -161,6 +161,11 @@ function getAllScores( $redis, $row ) {
 	}
 	return $moves;
 }
+function countAllScores( $redis, $row ) {
+	$BWfen = cbgetBWfen( $row );
+	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+	return $redis->hLen( hex2bin( $minhexfen ) );
+}
 function scoreExists( $redis, $row, $move ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
@@ -537,7 +542,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -795,7 +800,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1056,7 +1061,7 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							if( !scoreExists( $redis, $row, $move ) ) {
+							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, cbmovemake( $row, $move ) ) == 0 ) {
 								updateScore( $redis, $row, array( $move => $score ) );
 								echo 'ok';
 							}
@@ -1076,7 +1081,7 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							if( !scoreExists( $redis, $row, $move ) ) {
+							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, cbmovemake( $row, $move ) ) == 0 ) {
 								updateQueue( $row, $move, $priority );
 								echo 'ok';
 							}

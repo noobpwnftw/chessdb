@@ -209,7 +209,20 @@ function getAllScores( $redis, $row ) {
 	}
 	return $moves;
 }
-
+function countAllScores( $redis, $row ) {
+	$LRfen = ccbgetLRfen( $row );
+	$BWfen = ccbgetBWfen( $row );
+	$hasLRmirror = ( $row == $LRfen ? false : true );
+	if( $hasLRmirror ) {
+		$LRBWfen = ccbgetLRfen( $BWfen );
+		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen), ccbfen2hexfen($LRfen), ccbfen2hexfen($LRBWfen) ) );
+		return $redis->hLen( hex2bin( $minhexfen ) );
+	}
+	else {
+		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
+		return $redis->hLen( hex2bin( $minhexfen ) );
+	}
+}
 function scoreExists( $redis, $row, $move ) {
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
@@ -877,7 +890,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1239,7 +1252,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
 						updateQueue( $row, $key, true );
 					}
@@ -1639,7 +1652,7 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
-							if( !scoreExists( $redis, $row, $move ) ) {
+							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, ccbmovemake( $row, $move ) ) == 0 ) {
 								updateScore( $redis, $row, array( $move => $score ) );
 								echo 'ok';
 							}
@@ -1659,7 +1672,7 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
-							if( !scoreExists( $redis, $row, $move ) ) {
+							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, ccbmovemake( $row, $move ) ) == 0 ) {
 								updateQueue( $row, $move, $priority );
 								echo 'ok';
 							}
