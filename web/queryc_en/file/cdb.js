@@ -369,7 +369,7 @@ function mdown(cid) {
 	b = s.split(/\./);
 	while(prevmove.length > curstep)
 		prevmove.pop();
-	prevmove.push(new Array(fens, b[3], b[4], b[0], b[1]));
+	prevmove.push(new Array(fens, b[5], b[4], b[0], b[1]));
 	curstep++;
 	ClearDesk();
 	fens = b[2];
@@ -473,9 +473,9 @@ function GetFigureMove(s) {
 	if (flipmode == 1) {
 		FlipDesk();
 	}
-	ef = fromx + ',' + fromy + '.' + tox + ',' + toy + '.' + vf + '.' + fn + '.' + s;
+	ef = fromx + ',' + fromy + '.' + tox + ',' + toy + '.' + vf + '.' + fn + '.' + s + '.' + mov.san;
 	movtable.push(ef);
-	return new Array(vf, fn, fromx + ',' + fromy, tox + ',' + toy);
+	return new Array(vf, fn, fromx + ',' + fromy, tox + ',' + toy, mov.san);
 }
 
 function getXmlHttp() {
@@ -738,7 +738,7 @@ function SyncHistory()
 				} else {
 					s2 = s2 + prevmove[x + 1][1];
 				}
-				s2 = s2 + '<\/div>&nbsp;';
+				s2 = s2 + '<\/div>';
 			}
 			s2 = s2 + '<\/td><\/tr>';
 		}
@@ -854,7 +854,7 @@ function GetMoveList(s) {
 			vs = a[x];
 			i = vs.split(',');
 			i[0] = i[0].substr(5, i[0].length - 5);
-			var mov = GetFigureMove(i[0]);
+			GetFigureMove(i[0]);
 		}
 		ClearInner();
 		Vout.innerHTML += '<span style="text-align:center; display:block;">Results are hidden.<\/span>';
@@ -927,7 +927,7 @@ function SetFen(s) {
 	Initialize();
 	for (var i = 0; i < mvl.length; i++) {
 		var mov = GetFigureMove(mvl[i]);
-		prevmove.push(new Array(fens, mov[1], mvl[i], mov[2], mov[3]));
+		prevmove.push(new Array(fens, mov[4], mvl[i], mov[2], mov[3]));
 		curstep++;
 		ClearDesk();
 		fens = mov[0];
@@ -946,7 +946,7 @@ function ChangeFen(id) {
 	Placesecsel(b[1], 1);
 	while(prevmove.length > curstep)
 		prevmove.pop();
-	prevmove.push(new Array(fens, b[3], b[4], b[0], b[1]));
+	prevmove.push(new Array(fens, b[5], b[4], b[0], b[1]));
 	curstep++;
 	SetFen(b[2]);
 	return;

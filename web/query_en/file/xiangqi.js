@@ -875,7 +875,7 @@ function SyncHistory()
 				} else {
 					s2 = s2 + prevmove[x + 1][1];
 				}
-				s2 = s2 + '<\/div>&nbsp;';
+				s2 = s2 + '<\/div>';
 			}
 			s2 = s2 + '<\/td><\/tr>';
 		}
@@ -990,7 +990,7 @@ function GetMoveList(s) {
 			vs = a[x];
 			i = vs.split(',');
 			i[0] = i[0].substr(5, i[0].length - 5);
-			var mov = GetFigureMove(i[0]);
+			GetFigureMove(i[0]);
 		}
 		ClearInner();
 		Vout.innerHTML += '<span style="text-align:center; display:block;">Results are hidden.<\/span>';
