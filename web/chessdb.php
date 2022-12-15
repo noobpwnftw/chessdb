@@ -2056,7 +2056,7 @@ try{
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
-								uksort( $statmoves, function ( $a, $b ) use ( &$statmoves, &$variations ) {
+								uksort( $statmoves, function ( $a, $b ) use ( $statmoves, $variations ) {
 									if( $statmoves[$a] != $statmoves[$b] ) {
 										return $statmoves[$b] - $statmoves[$a];
 									} else {

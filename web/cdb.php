@@ -1580,7 +1580,7 @@ try{
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
 
-								uksort( $statmoves, function ( $a, $b ) use ( &$statmoves, &$variations ) {
+								uksort( $statmoves, function ( $a, $b ) use ( $statmoves, $variations ) {
 									if( $statmoves[$a] != $statmoves[$b] ) {
 										return $statmoves[$b] - $statmoves[$a];
 									} else {
