@@ -1580,7 +1580,13 @@ try{
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
 
-								arsort( $statmoves );
+								uksort( $statmoves, function ( $a, $b ) use ( &$statmoves, &$variations ) {
+									if( $statmoves[$a] != $statmoves[$b] ) {
+										return $statmoves[$b] - $statmoves[$a];
+									} else {
+										return $variations[$a][1] - $variations[$b][1];
+									}
+								} );
 								$maxscore = reset( $statmoves );
 								$throttle = getthrottle( $maxscore );
 								$isfirst = true;
