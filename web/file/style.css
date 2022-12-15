@@ -34,20 +34,25 @@ div.chess {
 	border-width: 2px 1px 1px; border-color: black white white black; color: white; background-color: rgb(100, 0, 0);
 }
 .mbutton {
-	border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(222, 184, 135); min-width: 58px!important; height: 20px;
+	border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(222, 184, 135); min-width: 58px!important; height: 16px;
 }
 .mbutton:hover {
 	border-width: 2px 1px 1px; border-color: black white white black; color: white; background-color: rgb(100, 0, 0);
 }
 .hovon {
-	 height: 20px;
-}
-.movelist tbody tr {
+	height: 20px;
 	cursor: pointer;
 }
 .movelist div {
 	display: inline-block;
-	min-width: 60px;
+	min-width: 70px;
+	cursor: pointer;
+	line-height: 20px;
+	width: max-content;
+}
+.movelist div:hover {
+	background-color: rgb(100, 0, 0);
+	color: white;
 }
 #cur {
 	font-weight: bold;

@@ -593,7 +593,7 @@ function getXmlHttp() {
 	return xmlhttp;
 }
 function ClearInner() {
-	Vout.innerHTML = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:26px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><\/table>';
+	Vout.innerHTML = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:20px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><\/table>';
 }
 
 function RequestQueue() {
@@ -852,28 +852,28 @@ function NavStep(pos) {
 }
 function SyncHistory()
 {
-	var s2 = '<table cellspacing="0" class="movelist" style="width:100%"><thead style="border-spacing: 2px;"><tr><td onClick="NavStep(\'-\')" id="gbck" class="mbutton">&nbsp;<<&nbsp;<\/td><td onClick="NavStep(\'+\')" id="gfwd" class="mbutton">&nbsp;>>&nbsp;<\/td><td onClick="PreviousStep()" id="undo" class="mbutton">&nbsp;撤销&nbsp;<\/td><\/tr><tr style="cursor: pointer;"><td colspan="3"><div style="margin-top:5px;" onClick="NavStep(0)">';
+	var s2 = '<table cellspacing="0" class="movelist" style="width:100%"><thead style="border-spacing: 2px;"><tr><td onClick="NavStep(\'-\')" id="gbck" class="mbutton">&nbsp;<<&nbsp;<\/td><td onClick="NavStep(\'+\')" id="gfwd" class="mbutton">&nbsp;>>&nbsp;<\/td><td onClick="PreviousStep()" id="undo" class="mbutton">&nbsp;<--&nbsp;<\/td><\/tr><tr><td colspan="3"><div style="margin-top:5px;" onClick="NavStep(0)">';
 	if(curstep == 0) {
-		s2 = s2 + '<span id="cur">&nbsp;&nbsp;====&nbsp;历史着法&nbsp;====&nbsp;&nbsp;<\/span>';
+		s2 = s2 + '<span id="cur">&nbsp;=====&nbsp;历史着法&nbsp;=====&nbsp;<\/span>';
 	} else {
-		s2 = s2 + '<b>&nbsp;&nbsp;====&nbsp;历史着法&nbsp;====&nbsp;&nbsp;<\/b>';
+		s2 = s2 + '<b>&nbsp;=====&nbsp;历史着法&nbsp;=====&nbsp;<\/b>';
 	}
 	s2 = s2 + '<\/div><\/td><\/tr><\/thead><tbody id="movehis" style="margin-top:2px;">';
 	if (prevmove.length != 0) {
 		for (var x = 0; x < prevmove.length; x += 2) {
-			s2 = s2 + '<tr style="height: 20px;"><td><span style="cursor: default; display: inline-block; min-width:32px; text-align:right; background-color: inherit;">' + (x / 2 + 1) + '.&nbsp;<\/span><div onClick="NavStep(' + (x + 1) + ')">';
+			s2 = s2 + '<tr style="height: 20px;"><td><span style="display: inline-block; min-width:30px; text-align:right; background-color: inherit;">' + (x / 2 + 1) + '.&nbsp;<\/span><div onClick="NavStep(' + (x + 1) + ')">';
 			if(x + 1 == curstep) {
-				s2 = s2 + '<span id="cur">' + prevmove[x][1] + '<\/span>';
+				s2 = s2 + '<span id="cur" style="margin-left: 5px;">' + prevmove[x][1] + '<\/span>';
 			} else {
-				s2 = s2 + prevmove[x][1];
+				s2 = s2 + '<span style="margin-left: 5px;">' + prevmove[x][1] + '<\/span>';
 			}
 			s2 = s2 + '<\/div>&nbsp;';
 			if (x + 1 < prevmove.length) {
 				s2 = s2 + '<div onClick="NavStep(' + (x + 2) + ')">';
 				if(x + 2 == curstep) {
-					s2 = s2 + '<span id="cur">' + prevmove[x + 1][1] + '<\/span>';
+					s2 = s2 + '<span id="cur" style="margin-left: 5px;">' + prevmove[x + 1][1] + '<\/span>';
 				} else {
-					s2 = s2 + prevmove[x + 1][1];
+					s2 = s2 + '<span style="margin-left: 5px;">' + prevmove[x + 1][1] + '<\/span>';
 				}
 				s2 = s2 + '<\/div>';
 			}
@@ -954,7 +954,7 @@ function GetMoveList(s) {
 		ml = new String();
 	a = trimNull(s).split('|');
 	if( !Vhidescore.checked ) {
-		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:26px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><tbody style="height:640px">';
+		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:20px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><tbody style="height:640px">';
 		var skip = 0;
 		for (var x = 0; x < a.length; x++) {
 			vs = a[x];
@@ -1749,6 +1749,9 @@ function ondstart(ev, id) {
 	ev.target.style.opacity = 0;
 	ev.target.ondragover = ondover;
 	ev.dataTransfer.effectAllowed = "move";
+	const img = new Image();
+	img.src = ev.target.src;
+	ev.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
 	if (iif != id) {
 		if (f != 3) {
 			f = 1;
@@ -1771,3 +1774,4 @@ function ond(ev, cid) {
 	ev.preventDefault();
 	mdown(cid);
 }
+
