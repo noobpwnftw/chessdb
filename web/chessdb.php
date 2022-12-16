@@ -1640,7 +1640,7 @@ try{
 							{
 								if( count( ccbmovegen( ccbmovemake( $row, $move ) ) ) == 0 )
 								{
-									$score = 30000;
+									$score = -30000;
 								}
 							}
 							else if( abs( $score ) > 10000 )
