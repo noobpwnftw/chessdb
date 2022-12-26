@@ -1,6 +1,9 @@
 ﻿@charset "utf-8";
 * {
-	margin: 0px; padding: 0em; position: relative; z-index: 4;
+	margin: 0px;
+	padding: 0em;
+	position: relative;
+	z-index: 4;
 }
 a {
 	text-decoration:none;
@@ -20,6 +23,14 @@ body {
 p {
 	margin-left: 20px;
 	line-height: 20px;
+}
+img {
+	-webkit-touch-callout:none;
+	-webkit-user-select:none;
+	-khtml-user-select:none;
+	-moz-user-select:none;
+	-ms-user-select:none;
+	user-select:none;
 }
 .transperenttext {
 	color: rgb(250, 250, 200);
