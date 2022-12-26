@@ -166,6 +166,20 @@ function Start() {
 	Vbqs = document.getElementById("bqs");
 	Vwks = document.getElementById("wks");
 	Vwqs = document.getElementById("wqs");
+	Vtheme = document.getElementById("theme");
+
+	var month = new Date().getMonth();
+	if (month >= 11 || month <= 1) {
+		Vtheme.href = "/file/style_candy.css";
+		var snow3d = document.createElement("script");
+		snow3d.src = "/file/snow3d.js";
+		Vtheme.parentElement.appendChild(snow3d);
+	} else if (month >= 5 && month <= 7) {
+		Vtheme.href = "/file/style_mint.css";
+		var snow3d = document.createElement("script");
+		snow3d.src = "/file/snow3d.js";
+		Vtheme.parentElement.appendChild(snow3d);
+	}
 
 	Vrulecheck.checked = Vrulecheck.defaultChecked;
 	Vhidescore.checked = Vhidescore.defaultChecked;
