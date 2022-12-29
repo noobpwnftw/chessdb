@@ -101,6 +101,7 @@ table {
 }
 .stats {
 	min-width: 363px;
+	white-space: nowrap;
 }
 .stats tr {
 	height: 20px;
