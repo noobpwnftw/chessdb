@@ -1822,7 +1822,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getAnalysisPath( $redis, $row, 0, 50, true, $learn, 0, $pv );
+							$statmoves = getAnalysisPath( $redis, $row, 0, 400, true, $learn, 0, $pv );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
 									echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"],"pvSAN":["' . implode( '","', cbmovesan( $row, $pv ) ) . '"]';
@@ -1860,7 +1860,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, 0, 100, true, true, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, 0, 200, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								if( $isJson )
 									echo '"status":"ok"';

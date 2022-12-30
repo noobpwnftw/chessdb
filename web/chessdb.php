@@ -2215,7 +2215,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
-							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 50, true, $learn, 0, $pv );
+							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 400, true, $learn, 0, $pv );
 							if( count( $statmoves ) > 0 ) {
 								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}
@@ -2240,7 +2240,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 100, true, true, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 200, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								echo 'ok';
 							}
