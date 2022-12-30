@@ -892,7 +892,13 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					}
 					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
-						updateQueue( $row, $key, true );
+						if( $ply == 0 )
+						{
+							updateQueue( $row, $key, true );
+						}
+						else {
+							updateQueue( $row, $key, false );
+						}
 					}
 				}
 				
@@ -1254,7 +1260,13 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					}
 					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
-						updateQueue( $row, $key, true );
+						if( $ply == 0 )
+						{
+							updateQueue( $row, $key, true );
+						}
+						else {
+							updateQueue( $row, $key, false );
+						}
 					}
 				}
 				if( $ply == 0 ) {
