@@ -155,7 +155,7 @@ function getMoves( $redis, $row, $depth ) {
 
 		if( !$isloop )
 		{
-			if( $depth < 20 )
+			//if( $depth < 20 )
 			{
 				shuffle_assoc( $moves1 );
 				foreach( $moves1 as $key => $item ) {
