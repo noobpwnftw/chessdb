@@ -307,7 +307,7 @@ function updateScore( $redis, $row, $updatemoves ) {
 			if( $redis->hMSet( hex2bin($minhexfen), $updatemoves ) === FALSE )
 				throw new RedisException( 'Server operation error.' );
 			foreach( $updatemoves as $key => $newscore ) {
-				if( $key != ccbgetLRmove( $key ) )
+				if( $key < ccbgetLRmove( $key ) )
 				{
 					if( $redis->hDel( hex2bin($minhexfen), ccbgetLRmove( $key ) ) === FALSE )
 						throw new RedisException( 'Server operation error.' );
@@ -322,7 +322,7 @@ function updateScore( $redis, $row, $updatemoves ) {
 			if( $redis->hMSet( hex2bin($minhexfen), $newmoves ) === FALSE )
 				throw new RedisException( 'Server operation error.' );
 			foreach( array_keys( $updatemoves ) as $key ) {
-				if( $key != ccbgetLRmove( $key ) )
+				if( ccbgetBWmove( $key ) < ccbgetLRBWmove( $key ) )
 				{
 					if( $redis->hDel( hex2bin($minhexfen), ccbgetLRBWmove( $key ) ) === FALSE )
 						throw new RedisException( 'Server operation error.' );

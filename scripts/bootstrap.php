@@ -205,7 +205,7 @@ function updateScore( $redis, $row, $updatemoves ) {
 			$redis->hMSet( hex2bin($minhexfen), $updatemoves );
 
 			foreach( $updatemoves as $key => $newscore ) {
-				if( $key != ccbgetLRmove( $key ) )
+				if( $key < ccbgetLRmove( $key ) )
 				{
 					$redis->hDel( hex2bin($minhexfen), ccbgetLRmove( $key ) );
 				}
@@ -219,7 +219,7 @@ function updateScore( $redis, $row, $updatemoves ) {
 			$redis->hMSet( hex2bin($minhexfen), $newmoves );
 
 			foreach( array_keys( $updatemoves ) as $key ) {
-				if( $key != ccbgetLRmove( $key ) )
+				if( ccbgetBWmove( $key ) < ccbgetLRBWmove( $key ) )
 				{
 					$redis->hDel( hex2bin($minhexfen), ccbgetLRBWmove( $key ) );
 				}
