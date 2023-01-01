@@ -261,6 +261,16 @@ function updatePly( $redis, $row, $ply ) {
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
 }
+function shuffle_assoc(&$array) {
+	$keys = array_keys($array);
+	shuffle($keys);
+	$new = array();
+	foreach($keys as $key) {
+		$new[$key] = $array[$key];
+	}
+	$array = $new;
+	return true;
+}
 function getMoves( $redis, $row, $update, $learn, $depth ) {
 	$moves1 = getAllScores( $redis, $row );
 	$moves2 = array();
@@ -461,6 +471,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 						$moves2[ $key ] = $item;
 					}
 				}
+				shuffle_assoc( $moves2 );
 				arsort( $moves2 );
 
 				if( $ply == 0 ) {
@@ -736,6 +747,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 						$moves2[ $key ] = $item;
 					}
 				}
+				shuffle_assoc( $moves2 );
 				arsort( $moves2 );
 				foreach( $moves2 as $key => $item ) {
 					$nextfen = cbmovemake( $row, $key );

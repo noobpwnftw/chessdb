@@ -547,6 +547,16 @@ function updatePly( $redis, $row, $ply ) {
 		$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
 	}
 }
+function shuffle_assoc(&$array) {
+	$keys = array_keys($array);
+	shuffle($keys);
+	$new = array();
+	foreach($keys as $key) {
+		$new[$key] = $array[$key];
+	}
+	$array = $new;
+	return true;
+}
 function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 	$hasLRmirror = ( $row == ccbgetLRfen( $row ) ? false : true );
 	$moves1 = getAllScores( $redis, $row );
@@ -812,6 +822,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 						$moves2[ $key ] = $item;
 					}
 				}
+				shuffle_assoc( $moves2 );
 				arsort( $moves2 );
 
 				if( $ply == 0 ) {
@@ -1191,6 +1202,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 						$moves2[ $key ] = $item;
 					}
 				}
+				shuffle_assoc( $moves2 );
 				arsort( $moves2 );
 				foreach( $moves2 as $key => $item ) {
 					$nextfen = ccbmovemake( $row, $key );
