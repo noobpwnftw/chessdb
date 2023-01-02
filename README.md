@@ -87,4 +87,4 @@ Please check the corresponding source code for detailed API syntax and output fo
 
 Full database snapshots are available upon request, it is no longer trivial to distribute the online database due to size.
 
-*** Expect no further documentation except this one but the code should be self-explanatory.
+*** Expect no further documentation except this one: the code speaks for itself.
