@@ -292,6 +292,9 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
+	if( $depth > 0 )
+		$moves2['ply'] = $depth - 1;
+
 	if( $update )
 	{
 		$knownmoves = array();
@@ -1669,8 +1672,12 @@ try{
 										}
 									}
 								}
-								if( $isJson )
+								if( $isJson ) {
 									echo '}]';
+									if( isset( $variations['ply'] ) ) {
+										echo ',"ply":' . $variations['ply'];
+									}
+								}
 							}
 							else {
 								$allmoves = cbmovegen( $row );
@@ -1867,8 +1874,13 @@ try{
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
-								if( $isJson )
-									echo '"status":"ok","eval":' . $maxscore;
+								if( $isJson ) {
+									if( isset( $variations['ply'] ) ) {
+										echo '"status":"ok","eval":' . $maxscore . ',"ply":' . $variations['ply'];
+									} else {
+										echo '"status":"ok","eval":' . $maxscore;
+									}
+								}
 								else
 									echo 'eval:' . $maxscore;
 							}
