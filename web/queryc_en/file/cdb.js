@@ -70,7 +70,7 @@ function trimNull(a) {
 
 function SetAddr() {
 	if (fens.length) {
-		var ss = fens.replace(/ /g, '%20');
+		var ss = fens.replace(/ /g, '_');
 		window.location.replace(window.location.pathname + "?" + ss);
 	}
 }
@@ -729,7 +729,7 @@ function NavStep(pos) {
 }
 function SyncHistory()
 {
-	var s2 = '<table cellspacing="0" class="movelist" style="width:100%"><thead style="border-spacing: 2px;"><tr><td onClick="NavStep(\'-\')" id="gbck" class="mbutton">&nbsp;<<&nbsp;<\/td><td onClick="NavStep(\'+\')" id="gfwd" class="mbutton">&nbsp;>>&nbsp;<\/td><td onClick="PreviousStep()" id="undo" class="mbutton">&nbsp;<--&nbsp;<\/td><\/tr><tr><td colspan="3"><div style="margin-top:5px;" onClick="NavStep(0)">';
+	var s2 = '<table cellspacing="0" class="movelist" style="width:100%"><thead style="border-spacing: 2px;"><tr><td onClick="NavStep(\'-\')" id="gbck" class="mbutton">&nbsp;<<&nbsp;<\/td><td onClick="NavStep(\'+\')" id="gfwd" class="mbutton">&nbsp;>>&nbsp;<\/td><td onClick="PreviousStep()" id="undo" class="mbutton">&nbsp;<--&nbsp;<\/td><\/tr><tr><td colspan="3"><div style="margin-top:5px;" onClick="nclick(event, 0)" onContextMenu="ncontext(event)">';
 	if(curstep == 0) {
 		s2 = s2 + '<span id="cur">&nbsp;&nbsp;===&nbsp;Move History&nbsp;===&nbsp;&nbsp;<\/span>';
 	} else {
@@ -738,7 +738,7 @@ function SyncHistory()
 	s2 = s2 + '<\/div><\/td><\/tr><\/thead><tbody id="movehis" style="margin-top:2px;">';
 	if (prevmove.length != 0) {
 		for (var x = 0; x < prevmove.length; x += 2) {
-			s2 = s2 + '<tr style="height: 20px;"><td><span style="display: inline-block; min-width:30px; text-align:right; background-color: inherit;">' + (x / 2 + 1) + '.&nbsp;<\/span><div onClick="NavStep(' + (x + 1) + ')">';
+			s2 = s2 + '<tr style="height: 20px;"><td><span style="display: inline-block; min-width:30px; text-align:right; background-color: inherit;">' + (x / 2 + 1) + '.&nbsp;<\/span><div onClick="nclick(event, ' + (x + 1) + ')" onContextMenu="ncontext(event)">';
 			if(x + 1 == curstep) {
 				s2 = s2 + '<span id="cur" style="margin-left: 5px;">' + prevmove[x][1] + '<\/span>';
 			} else {
@@ -746,7 +746,7 @@ function SyncHistory()
 			}
 			s2 = s2 + '<\/div>&nbsp;';
 			if (x + 1 < prevmove.length) {
-				s2 = s2 + '<div onClick="NavStep(' + (x + 2) + ')">';
+				s2 = s2 + '<div onClick="nclick(event, ' + (x + 2) + ')" onContextMenu="ncontext(event)">';
 				if(x + 2 == curstep) {
 					s2 = s2 + '<span id="cur" style="margin-left: 5px;">' + prevmove[x + 1][1] + '<\/span>';
 				} else {
@@ -847,7 +847,7 @@ function GetMoveList(s) {
 
 			var mov = GetFigureMove(i[0]);
 			if (!skip) {
-				s = s + '<tr class="hovoff" onMouseOver="OnHover(\'ft' + x + '\')" onMouseOut="OffHover(\'ft' + x + '\')" onClick="ChangeFen(\'' + x + '\')" id="ft' + x + '"><td>';
+				s = s + '<tr class="hovoff" onMouseOver="OnHover(\'ft' + x + '\')" onMouseOut="OffHover(\'ft' + x + '\')" onClick="mclick(event, \'' + x + '\')" onContextMenu="mcontext(event, \'' + x + '\')" id="ft' + x + '"><td>';
 				if ((i[2] == 'rank:2') || (i[2] == 'rank:1')) {
 					s = s + '<span>' + mov[1] + '<\/span><\/td>';
 				} else {
@@ -892,6 +892,7 @@ function VerifyFEN(s) {
 	s = s.replace(/[\r\n]/, '');
 	s = s.replace(/%20/g, ' ');
 	s = s.replace(/\+/g, ' ');
+	s = s.replace(/_/g, ' ');
 	s = s.replace(/ moves.*/, '');
 	var result = chess.validate_fen(s);
 	return result['valid'];
@@ -932,6 +933,7 @@ function SetFen(s) {
 	s = s.replace(/[\r\n]/, '');
 	s = s.replace(/%20/g, ' ');
 	s = s.replace(/\+/g, ' ');
+	s = s.replace(/_/g, ' ');
 	var mvl = new Array();
 	if (s.search(/ moves /) != -1) {
 		mvl = s.split(/ moves /)[1].split(/ /);
@@ -939,17 +941,23 @@ function SetFen(s) {
 	s = s.replace(/ moves.*/g, '');
 	fens = s;
 	Initialize();
-	for (var i = 0; i < mvl.length; i++) {
-		var mov = GetFigureMove(mvl[i]);
-		prevmove.push(new Array(fens, mov[4], mvl[i], mov[2], mov[3]));
-		curstep++;
+	if (mvl.length > 0) {
+		for (var i = 0; i < mvl.length; i++) {
+			var mov = GetFigureMove2(mvl[i]);
+			prevmove.push(new Array(fens, mov[4], mvl[i], mov[2], mov[3]));
+			curstep++;
+			ClearDesk();
+			fens = mov[0];
+			Initialize2();
+		}
 		ClearDesk();
-		fens = mov[0];
+		fens = chess.fen();
 		Initialize();
 	}
 	RefreshAll();
 	return;
 }
+
 function ChangeFen(id) {
 	if (busy)
 		return;
@@ -964,6 +972,131 @@ function ChangeFen(id) {
 	curstep++;
 	SetFen(b[2]);
 	return;
+}
+
+function GetFigureMove2(s) {
+	var ef = new String();
+	var fromx = s.charCodeAt(0) - 97;
+	var fromy = 8 - (s.charCodeAt(1) - 48);
+	var tox = s.charCodeAt(2) - 97;
+	var toy = 8 - (s.charCodeAt(3) - 48);
+
+	if (flipmode == 1) {
+		FlipDesk();
+	}
+	var mov = chess.move(s, {sloppy: true});
+	var vf = chess.fen();
+	var fn = FigureIcons[desk[fromx][fromy].charAt(0)][desk[fromx][fromy].charAt(1)] + mov.san;
+	if (flipmode == 1) {
+		FlipDesk();
+	}
+	ef = fromx + ',' + fromy + '.' + tox + ',' + toy + '.' + vf + '.' + fn + '.' + s + '.' + mov.san;
+	return new Array(vf, fn, fromx + ',' + fromy, tox + ',' + toy, mov.san);
+}
+
+function Initialize2() {
+	var s = fens;
+	var f = new String();
+	z = 0;
+	var x = 0;
+	for (var y = 0; y < 8; y++) {
+		while (x < 8) {
+			f = s.charAt(0);
+			s = s.substr(1);
+			if (f.search(/[1-8]/) == -1) {
+				if (f == f.toLowerCase()) {
+					f = 'b' + f;
+				} else {
+					f = 'w' + f;
+				}
+				if (flipmode) {
+					AddFigure(7 - x, 7 - y, f);
+				} else {
+					AddFigure(x, y, f);
+				}
+				x++;
+			} else {
+				x = x + Number(f);
+			}
+		}
+		s = s.substr(1, s.length - 1);
+		x = 0;
+	}
+	f = 0;
+	iif = 0;
+	unselectpiece();
+	return;
+}
+
+function FillPV(id) {
+	if (busy)
+		return;
+	busy = 1;
+	var b = new Array();
+	b = String(movtable[Number(id)]).split(/\./);
+	while(prevmove.length > curstep)
+		prevmove.pop();
+	prevmove.push(new Array(fens, b[5], b[4], b[0], b[1]));
+
+	var xmlhttpPV = getXmlHttp();
+
+	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2], true);
+	xmlhttpPV.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+	xmlhttpPV.onreadystatechange = function() {
+		if (xmlhttpPV.readyState == 4) {
+			if (xmlhttpPV.status == 200) {
+				if (xmlhttpPV.responseText.search(/pv:/) != -1) {
+					var oldmovtable = movtable.slice();
+					GetFigureMove2(b[4]);
+					var mvl = trimNull(xmlhttpPV.responseText.split(/pv:/)[1]).split(/\|/);
+					ClearDesk();
+					fens = b[2];
+					Initialize2();
+					for (var i = 0; i < mvl.length; i++) {
+						var mov = GetFigureMove2(mvl[i]);
+						prevmove.push(new Array(fens, mov[4], mvl[i], mov[2], mov[3]));
+						ClearDesk();
+						fens = mov[0];
+						Initialize2();
+					}
+					ClearDesk();
+					fens = prevmove[curstep][0];
+					Initialize();
+					movtable = oldmovtable;
+				}
+			}
+			SyncHistory();
+		}
+	};
+	xmlhttpPV.send(null);
+}
+
+function mclick(e, id) {
+	e.preventDefault();
+	if (e.shiftKey) {
+		FillPV(id);
+	}
+	else {
+		ChangeFen(id);
+	}
+	return false;
+}
+
+function mcontext(e, id) {
+	e.preventDefault();
+	FillPV(id);
+	return false;
+}
+
+function nclick(e, pos) {
+	e.preventDefault();
+	NavStep(pos);
+	return false;
+}
+
+function ncontext(e) {
+	e.preventDefault();
+	return false;
 }
 
 function SyncDesk() {

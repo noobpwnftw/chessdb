@@ -430,6 +430,14 @@ function getMoves( $redis, $row, $depth ) {
 			}
 		}
 	}
+	else
+	{
+		if( isset( $GLOBALS['historytt'][$current_hash] ) || isset( $GLOBALS['historytt'][$current_hash_bw] ) || ($hasLRmirror && (isset( $GLOBALS['historytt'][$current_hash_lr] ) || isset( $GLOBALS['historytt'][$current_hash_lrbw] ))) )
+		{
+			$recurse = true;
+		}
+
+	}
 	unset( $moves1['ply'] );
 	
 	if( $recurse && $depth < 30000 )

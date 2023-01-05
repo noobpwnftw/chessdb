@@ -24,11 +24,11 @@ ChessBoolean chess_fen_load(const char* s, ChessPosition* position)
     strncpy(s_copy, s, CHESS_FEN_MAX_LENGTH - 1);
 
     t = 0;
-    token = strtok(s_copy, " ");
+    token = strtok(s_copy, " _+");
     while (token && t < 6)
     {
         tokens[t++] = token;
-        token = strtok(NULL, " ");
+        token = strtok(NULL, " _+");
     }
 
     /* Clear the position before filling it in */

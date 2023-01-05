@@ -121,6 +121,13 @@ function getMoves( $redis, $row, $depth ) {
 			}
 		}
 	}
+	else
+	{
+		if( isset( $GLOBALS['historytt'][$current_hash] ) || isset( $GLOBALS['historytt'][$current_hash_bw] ) )
+		{
+			$recurse = true;
+		}
+	}
 	unset( $moves1['ply'] );
 
 	if( $recurse && $depth < 30000 )

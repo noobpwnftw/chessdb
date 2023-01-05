@@ -27,7 +27,7 @@ The following indexes of MongoDB are required to ensure proper performance:
 
 For `cdbqueue` & `ccdbqueue`, the databases for scoring queues:
 ```
-db.queuedb.ensureIndex({p:-1})
+db.queuedb.ensureIndex({p:-1,e:1})
 db.queuedb.ensureIndex({e:1},{expireAfterSeconds:7200})
 ```
 
@@ -38,7 +38,7 @@ db.ackqueuedb.ensureIndex({ts:1})
 
 For `cdbsel` & `ccdbsel`, the databases for sieving queues:
 ```
-db.seldb.ensureIndex({p:-1})
+db.seldb.ensureIndex({p:-1,e:-1})
 db.seldb.ensureIndex({e:1},{expireAfterSeconds:7200})
 ```
 
