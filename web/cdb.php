@@ -350,7 +350,7 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 					$updatemoves[ $key ] = $nextscore;
 				}
 			}
-			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+			else if( count_pieces( $nextfen ) > 7 )
 			{
 				updateQueue( $row, $key, true );
 			}
@@ -361,10 +361,10 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 		$memcache_obj->pconnect('localhost', 11211);
 		if( !$memcache_obj )
 			throw new Exception( 'Memcache error.' );
-		if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
+		if( count_pieces( $row ) > 7 ) {
 			$allmoves = cbmovegen( $row );
 			if( count( $allmoves ) > count( $moves1 ) ) {
-				if( count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
+				if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
 					updateSel( $row, true );
 				}
 				$allmoves = array_diff_key( $allmoves, $moves1 );
@@ -542,19 +542,19 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
+					else if( count_pieces( $nextfen ) > 7 )
 					{
 						if( $ply == 0 )
 							updateQueue( $row, $key, true );
-						else
+						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 							updateSel( $nextfen, false );
 					}
 				}
 
-				if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
+				if( count_pieces( $row ) > 7 ) {
 					$allmoves = cbmovegen( $row );
 					if( count( $allmoves ) > count( $moves1 ) ) {
-						if( count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
+						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
 							updateSel( $row, false );
 						}
 						if( $ply == 0 ) {
@@ -797,19 +797,19 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
+					else if( count_pieces( $nextfen ) > 7 )
 					{
 						if( $ply == 0 )
 							updateQueue( $row, $key, true );
-						else
+						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 							updateSel( $nextfen, false );
 					}
 				}
 
-				if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
+				if( count_pieces( $row ) > 7 ) {
 					$allmoves = cbmovegen( $row );
 					if( count( $allmoves ) > count( $moves1 ) ) {
-						if( count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
+						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
 							updateSel( $row, false );
 						}
 						if( $ply == 0 ) {
@@ -1040,7 +1040,7 @@ try{
 			}
 
 			if( $action == 'store' ) {
-				if( isset( $_REQUEST['move'] ) && !empty( $_REQUEST['move'] ) && count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
+				if( isset( $_REQUEST['move'] ) && !empty( $_REQUEST['move'] ) && count_pieces( $row ) > 7 ) {
 					$moves = cbmovegen( $row );
 					$move = $_REQUEST['move'];
 					if( isset( $moves[$move] ) && isset( $_REQUEST['score'] ) ) {
@@ -1880,7 +1880,7 @@ try{
 								else
 									echo 'ok';
 							}
-							else if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( cbmovegen( $row ) ) > 0 ) {
+							else if( count_pieces( $row ) > 7 && count( cbmovegen( $row ) ) > 0 ) {
 								updateSel( $row, true );
 								if( $isJson )
 									echo '"status":"ok"';
@@ -1982,26 +1982,24 @@ try{
 					$queueout = '';
 					foreach( $cursor as $doc ) {
 						$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
-						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 ) {
-							$moves = array();
-							foreach( $doc as $key => $item ) {
-								if( $key == '_id' )
-									continue;
-								else if( $key == 'p' )
-									continue;
-								else if( $key == 'e' )
-									continue;
-								else if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
-									$moves[] = $key;
-							}
-							if( count( $moves ) > 0 ) {
-								$queueout .= $fen . "\n";
-								foreach( $moves as $move )
-									$queueout .= $fen . ' moves ' . $move . "\n";
-								$thisminute = date('i');
-								$memcache_obj->add( 'QueueCount2::' . $thisminute, 0, 0, 150 );
-								$memcache_obj->increment( 'QueueCount2::' . $thisminute );
-							}
+						$moves = array();
+						foreach( $doc as $key => $item ) {
+							if( $key == '_id' )
+								continue;
+							else if( $key == 'p' )
+								continue;
+							else if( $key == 'e' )
+								continue;
+							else if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
+								$moves[] = $key;
+						}
+						if( count( $moves ) > 0 ) {
+							$queueout .= $fen . "\n";
+							foreach( $moves as $move )
+								$queueout .= $fen . ' moves ' . $move . "\n";
+							$thisminute = date('i');
+							$memcache_obj->add( 'QueueCount2::' . $thisminute, 0, 0, 150 );
+							$memcache_obj->increment( 'QueueCount2::' . $thisminute );
 						}
 						$docs[] = $doc['_id'];
 					}
@@ -2065,7 +2063,7 @@ try{
 					$selout = '';
 					foreach( $cursor as $doc ) {
 						$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
-						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 && $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
+						if( $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
 						{
 							if( isset( $doc['p'] ) && $doc['p'] > 0 )
 								$selout .= '!' . $fen . "\n";
