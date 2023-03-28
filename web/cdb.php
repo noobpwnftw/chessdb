@@ -354,6 +354,45 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 			{
 				updateQueue( $row, $key, true );
 			}
+			else if( $moves1[$key] != 0 && abs( $moves1[$key] ) <= 10000 )
+			{
+				$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
+				if( $egtbresult !== FALSE ) {
+					if( $egtbresult['checkmate'] ) {
+					}
+					else if( $egtbresult['stalemate'] ) {
+					}
+					else if( $egtbresult['category'] == 'unknown' ) {
+					}
+					else
+					{
+						$bestmove = reset( $egtbresult['moves'] );
+						if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
+							$nextscore = 0;
+						}
+						else {
+							if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
+								$step = -$bestmove['dtz'];
+								if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
+									$nextscore = 20000 - $step;
+								else
+									$nextscore = 30000 - $step;
+							}
+							else {
+								$step = $bestmove['dtz'];
+								if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
+									$nextscore = $step - 20000;
+								else
+									$nextscore = $step - 30000;
+							}
+						}
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
+						}
+					}
+				}
+			}
 		}
 		if( count( $updatemoves ) > 0 )
 			updateScore( $redis, $row, $updatemoves );
@@ -548,6 +587,45 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							updateQueue( $row, $key, true );
 						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 							updateSel( $nextfen, false );
+					}
+					else if( $moves1[$key] != 0 && abs( $moves1[$key] ) <= 10000 )
+					{
+						$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
+						if( $egtbresult !== FALSE ) {
+							if( $egtbresult['checkmate'] ) {
+							}
+							else if( $egtbresult['stalemate'] ) {
+							}
+							else if( $egtbresult['category'] == 'unknown' ) {
+							}
+							else
+							{
+								$bestmove = reset( $egtbresult['moves'] );
+								if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
+									$nextscore = 0;
+								}
+								else {
+									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
+										$step = -$bestmove['dtz'];
+										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
+											$nextscore = 20000 - $step;
+										else
+											$nextscore = 30000 - $step;
+									}
+									else {
+										$step = $bestmove['dtz'];
+										if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
+											$nextscore = $step - 20000;
+										else
+											$nextscore = $step - 30000;
+									}
+								}
+								if( $item != -$nextscore ) {
+									$moves1[ $key ] = -$nextscore;
+									$updatemoves[ $key ] = $nextscore;
+								}
+							}
+						}
 					}
 				}
 
@@ -803,6 +881,45 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							updateQueue( $row, $key, true );
 						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 							updateSel( $nextfen, false );
+					}
+					else if( $moves1[$key] != 0 && abs( $moves1[$key] ) <= 10000 )
+					{
+						$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
+						if( $egtbresult !== FALSE ) {
+							if( $egtbresult['checkmate'] ) {
+							}
+							else if( $egtbresult['stalemate'] ) {
+							}
+							else if( $egtbresult['category'] == 'unknown' ) {
+							}
+							else
+							{
+								$bestmove = reset( $egtbresult['moves'] );
+								if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
+									$nextscore = 0;
+								}
+								else {
+									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
+										$step = -$bestmove['dtz'];
+										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
+											$nextscore = 20000 - $step;
+										else
+											$nextscore = 30000 - $step;
+									}
+									else {
+										$step = $bestmove['dtz'];
+										if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
+											$nextscore = $step - 20000;
+										else
+											$nextscore = $step - 30000;
+									}
+								}
+								if( $item != -$nextscore ) {
+									$moves1[ $key ] = -$nextscore;
+									$updatemoves[ $key ] = $nextscore;
+								}
+							}
+						}
 					}
 				}
 
