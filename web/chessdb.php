@@ -1812,96 +1812,42 @@ try{
 								$bestmove = reset( $moves );
 								$isfirst = true;
 								if( $dtmtb ) {
-									$finals = array();
-									$finalcount = 0;
-									if( $bestmove['score'] > 0 ) {
-										$egtbresult = $memcache_obj->get( 'EGTB_DTC::' . $row );
-										if( $egtbresult === FALSE ) {
-//											$egtblock = new MyRWLock( "EGTBLock" );
-//											$egtblock->writelock();
-											$egtbresult = ccegtbprobe( $row, false );
-//											$egtblock->writeunlock();
-											if( $egtbresult !== FALSE ) {
-												$memcache_obj->add( 'EGTB_DTC::' . $row, $egtbresult, 0, 30 );
-											}
-										}
-										if( $egtbresult !== FALSE ) {
-											$GLOBALS['order'] = array_pop( $egtbresult );
-											$GLOBALS['score'] = array_pop( $egtbresult );
-
-											if( $GLOBALS['order'] > 0 ) {
-												$dtcmoves = array_diff_key( $egtbresult, $banmoves );
-												uasort( $dtcmoves , 'dtccmp' );
-												$dtcbestmove = reset( $dtcmoves );
-												foreach( array_keys( $dtcmoves ) as $record ) {
-													if( $dtcmoves[$record]['score'] == $dtcbestmove['score'] && $dtcmoves[$record]['order'] == $dtcbestmove['order'] && $dtcmoves[$record]['cap'] == $dtcbestmove['cap'] && $dtcmoves[$record]['check'] == $dtcbestmove['check'] ) {
-														if( $moves[$record]['score'] >= $bestmove['score'] - 2 ) {
-															$finals[$finalcount++] = $record;
-														}
-													}
-													else
-														break;
-												}
-											}
-										}
-									}
-									if( $finalcount == 0 ) {
-										foreach( array_keys( $moves ) as $record ) {
-											if( !$isfirst ) {
-												if( $moves[$record]['score'] > 0 ) {
-													if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-													else
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-												}
-												else if( $moves[$record]['score'] == 0 ) {
-													if( $bestmove['score'] == 0 ) {
-														if( $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-															echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-														else
-															echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-													}
-													else
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-												}
-												else {
-													if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-													else if( $bestmove['score'] < 0 )
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-													else
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-												}
-											}
-											else {
-												$isfirst = false;
-												if( $bestmove['score'] == 0 && $moves[$record]['score'] == 0 )
-													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+									foreach( array_keys( $moves ) as $record ) {
+										if( !$isfirst ) {
+											if( $moves[$record]['score'] > 0 ) {
+												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
+													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
 												else
-													if( $moves[$record]['score'] > 0 )
-														echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-													else
-														echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
 											}
-										}
-									}
-									else {
-										foreach( $finals as $record ) {
-											if( !$isfirst ) {
-												echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+											else if( $moves[$record]['score'] == 0 ) {
+												if( $bestmove['score'] == 0 ) {
+													if( $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else
+													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
 											}
 											else {
-												$isfirst = false;
-												echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
+													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												else if( $bestmove['score'] < 0 )
+													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												else
+													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
 											}
 										}
-										foreach( array_diff( array_keys( $moves ), $finals ) as $record ) {
-											if( $moves[$record]['score'] > 0 )
-												echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-											else if( $moves[$record]['score'] == 0 )
-												echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+										else {
+											$isfirst = false;
+											if( $bestmove['score'] == 0 && $moves[$record]['score'] == 0 )
+												echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
 											else
-												echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												if( $moves[$record]['score'] > 0 )
+													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												else
+													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
 										}
 									}
 								}
@@ -1967,44 +1913,11 @@ try{
 									$finals = array();
 									$finalcount = 0;
 									if( $dtmtb ) {
-										if( $bestmove['score'] > 0 ) {
-											$egtbresult = $memcache_obj->get( 'EGTB_DTC::' . $row );
-											if( $egtbresult === FALSE ) {
-//												$egtblock = new MyRWLock( "EGTBLock" );
-//												$egtblock->writelock();
-												$egtbresult = ccegtbprobe( $row, false );
-//												$egtblock->writeunlock();
-												if( $egtbresult !== FALSE ) {
-													$memcache_obj->add( 'EGTB_DTC::' . $row, $egtbresult, 0, 30 );
-												}
-											}
-											if( $egtbresult !== FALSE ) {
-												$GLOBALS['order'] = array_pop( $egtbresult );
-												$GLOBALS['score'] = array_pop( $egtbresult );
-
-												if( $GLOBALS['order'] > 0 ) {
-													$dtcmoves = array_diff_key( $egtbresult, $banmoves );
-													uasort( $dtcmoves , 'dtccmp' );
-													$dtcbestmove = reset( $dtcmoves );
-													foreach( array_keys( $dtcmoves ) as $record ) {
-														if( $dtcmoves[$record]['score'] == $dtcbestmove['score'] && $dtcmoves[$record]['order'] == $dtcbestmove['order'] && $dtcmoves[$record]['cap'] == $dtcbestmove['cap'] && $dtcmoves[$record]['check'] == $dtcbestmove['check'] ) {
-															if( $moves[$record]['score'] >= $bestmove['score'] - 2 ) {
-																$finals[$finalcount++] = $record;
-															}
-														}
-														else
-															break;
-													}
-												}
-											}
-										}
-										if( $finalcount == 0 ) {
-											foreach( array_keys( $moves ) as $record ) {
-												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-													$finals[$finalcount++] = $record;
-												else
-													break;
-											}
+										foreach( array_keys( $moves ) as $record ) {
+											if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
+												$finals[$finalcount++] = $record;
+											else
+												break;
 										}
 									}
 									else {
