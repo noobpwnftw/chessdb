@@ -1561,6 +1561,18 @@ using namespace std;
 		{
 			return false;
 		}
+		for (int color = White; color <= Black; ++color)
+		{
+			U64 piecebit = pieces[piece_make(color, Pawn)][color];
+			while (piecebit)
+			{
+				int from = pop_1st_sq(piecebit, color);
+				if (pawn_attack_bb(from, color)[color] & pieces[piece_make(color, Pawn)][color])
+				{
+					return false;
+				}
+			}
+		}
 		return true;
 	}
 
