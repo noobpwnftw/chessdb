@@ -1445,7 +1445,7 @@ function getEngineMove( $row, $movelist, $maxtime ) {
 					break;
 				}
 			}
-			else if( time() - $startTime >= $maxtime ) {
+			if( time() - $startTime >= $maxtime ) {
 				fwrite( $pipes[0], 'stop' . PHP_EOL );
 			}
 			$readfd = array( $pipes[1] );
@@ -1964,16 +1964,34 @@ try{
 								$bestmove = reset( $moves );
 								echo 'score:' . $bestmove['score'] . ',depth:' . $bestmove['step'] . ',pv:' . key( $moves );
 							}
-							else
-								echo 'unknown';
+							else {
+								$allmoves = ccbmovegen( $row );
+								if( count( $allmoves ) > 0 )
+									echo 'unknown';
+								else {
+									if( ccbincheck( $row ) )
+										echo 'checkmate';
+									else
+										echo 'stalemate';
+								}
+							}
 						}
 						else if( $action == 'queryscore' ) {
 							if( count( $moves ) > 0 ) {
 								$bestmove = reset( $moves );
 								echo 'eval:' . $bestmove['score'];
 							}
-							else
-								echo 'unknown';
+							else {
+								$allmoves = ccbmovegen( $row );
+								if( count( $allmoves ) > 0 )
+									echo 'unknown';
+								else {
+									if( ccbincheck( $row ) )
+										echo 'checkmate';
+									else
+										echo 'stalemate';
+								}
+							}
 						}
 					}
 					else if( !$endgame || $action == 'queryall' || $action == 'queryscore' || $action == 'querypv' || $action == 'queue' ) {
@@ -2226,8 +2244,17 @@ try{
 							if( count( $statmoves ) > 0 ) {
 								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}
-							else
-								echo 'unknown';
+							else {
+								$allmoves = ccbmovegen( $row );
+								if( count( $allmoves ) > 0 )
+									echo 'unknown';
+								else {
+									if( ccbincheck( $row ) )
+										echo 'checkmate';
+									else
+										echo 'stalemate';
+								}
+							}
 						}
 						else if( $action == 'queryscore' ) {
 							$redis = new Redis();
@@ -2239,7 +2266,15 @@ try{
 								echo 'eval:' . $maxscore;
 							}
 							else {
-								echo 'unknown';
+								$allmoves = ccbmovegen( $row );
+								if( count( $allmoves ) > 0 )
+									echo 'unknown';
+								else {
+									if( ccbincheck( $row ) )
+										echo 'checkmate';
+									else
+										echo 'stalemate';
+								}
 							}
 						}
 						else if( $action == 'queue' ) {
@@ -2281,7 +2316,7 @@ try{
 								if( $isvalid ) {
 									$memcache_obj->add( 'EngineCount', 0 );
 									$engcount = $memcache_obj->increment( 'EngineCount' );
-									$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
+									$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
 									$memcache_obj->decrement( 'EngineCount' );
 									if( !empty( $result ) ) {
 										echo 'move:' . $result;

@@ -1047,7 +1047,7 @@ function getEngineMove( $row, $movelist, $maxtime ) {
 					break;
 				}
 			}
-			else if( time() - $startTime >= $maxtime ) {
+			if( time() - $startTime >= $maxtime ) {
 				fwrite( $pipes[0], 'stop' . PHP_EOL );
 			}
 			$readfd = array( $pipes[1] );
@@ -1298,7 +1298,13 @@ try{
 								$isfirst = true;
 								foreach( $egtbresult['moves'] as $move ) {
 									if( !$isfirst ) {
-										if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
+										if( $bestmove['category'] == 'unknown' || $move['category'] == 'unknown' ) {
+											if( $isJson )
+												echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":"??","rank":0,"note":"? (??-??)"';
+											else
+												echo '|move:' . $move['uci'] . ',score:??,rank:0,note:? (??-??)';
+										}
+										else if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
 											$step = -$move['dtz'];
 											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
 												$score = 20000 - $step;
@@ -1373,7 +1379,13 @@ try{
 									}
 									else {
 										$isfirst = false;
-										if( $bestmove['category'] == 'draw' && $move['category'] == 'draw' ) {
+										if( $bestmove['category'] == 'unknown' || $move['category'] == 'unknown' ) {
+											if( $isJson )
+												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":"??","rank":0,"note":"? (??-??)"';
+											else
+												echo 'move:' . $move['uci'] . ',score:??,rank:0,note:? (??-??)';
+										}
+										else if( $bestmove['category'] == 'draw' && $move['category'] == 'draw' ) {
 											$step = 0;
 											$score = 0;
 											if( $isJson )
@@ -1381,33 +1393,31 @@ try{
 											else
 												echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
 										}
+										else if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
+											$step = -$move['dtz'];
+											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
+												$score = 20000 - $step;
+											else
+												$score = 30000 - $step;
+											if( $move['zeroing'] || $move['checkmate'] )
+												$step = 0;
+											if( $isJson )
+												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+											else
+											echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+										}
 										else {
-											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
-												$step = -$move['dtz'];
-												if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
-													$score = 20000 - $step;
-												else
-													$score = 30000 - $step;
-												if( $move['zeroing'] || $move['checkmate'] )
-													$step = 0;
-												if( $isJson )
-													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-												echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-											else {
-												$step = $move['dtz'];
-												if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
-													$score = $step - 20000;
-												else
-													$score = $step - 30000;
-												if( $move['zeroing'] || $move['checkmate'] )
-													$step = 0;
-												if( $isJson )
-													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
+											$step = $move['dtz'];
+											if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
+												$score = $step - 20000;
+											else
+												$score = $step - 30000;
+											if( $move['zeroing'] || $move['checkmate'] )
+												$step = 0;
+											if( $isJson )
+												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+											else
+												echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
 										}
 									}
 								}
@@ -1476,7 +1486,19 @@ try{
 							}
 						}
 						else if( $action == 'querypv' ) {
-							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] || $egtbresult['category'] == 'unknown' ) {
+							if( $egtbresult['checkmate'] ) {
+								if( $isJson )
+									echo '"status":"checkmate"';
+								else
+									echo 'checkmate';
+							}
+							else if( $egtbresult['stalemate'] ) {
+								if( $isJson )
+									echo '"status":"stalemate"';
+								else
+									echo 'stalemate';
+							}
+							else if( $egtbresult['category'] == 'unknown' ) {
 								if( $isJson )
 									echo '"status":"unknown"';
 								else
@@ -1508,7 +1530,19 @@ try{
 							}
 						}
 						else if( $action == 'queryscore' ) {
-							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] || $egtbresult['category'] == 'unknown' ) {
+							if( $egtbresult['checkmate'] ) {
+								if( $isJson )
+									echo '"status":"checkmate"';
+								else
+									echo 'checkmate';
+							}
+							else if( $egtbresult['stalemate'] ) {
+								if( $isJson )
+									echo '"status":"stalemate"';
+								else
+									echo 'stalemate';
+							}
+							else if( $egtbresult['category'] == 'unknown' ) {
 								if( $isJson )
 									echo '"status":"unknown"';
 								else
@@ -1564,7 +1598,7 @@ try{
 								if( $isvalid ) {
 									$memcache_obj->add( 'EngineCount2', 0 );
 									$engcount = $memcache_obj->increment( 'EngineCount2' );
-									$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
+									$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
 									$memcache_obj->decrement( 'EngineCount2' );
 									if( !empty( $result ) ) {
 										echo 'move:' . $result;
@@ -1769,7 +1803,17 @@ try{
 								if( $isJson ) {
 									echo '}]';
 									if( isset( $variations['ply'] ) ) {
-										echo ',"ply":' . $variations['ply'];
+										$ply = $variations['ply'];
+										$side = substr( $row, strpos( $row, ' ' ) + 1, 1 );
+										if( $side == 'w' ) {
+											if( $ply & 1 )
+												$ply++;
+										}
+										else {
+											if( ( $ply & 1 ) == 0 )
+												$ply++;
+										}
+										echo ',"ply":' . $ply;
 									}
 								}
 							}
@@ -1955,10 +1999,27 @@ try{
 									echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}
 							else {
-								if( $isJson )
-									echo '"status":"unknown"';
-								else
-									echo 'unknown';
+								$allmoves = cbmovegen( $row );
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
+									else
+										echo 'unknown';
+								}
+								else {
+									if( cbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
+								}
 							}
 						}
 						else if( $action == 'queryscore' ) {
@@ -1970,7 +2031,17 @@ try{
 								$maxscore = reset( $statmoves );
 								if( $isJson ) {
 									if( isset( $variations['ply'] ) ) {
-										echo '"status":"ok","eval":' . $maxscore . ',"ply":' . $variations['ply'];
+										$ply = $variations['ply'];
+										$side = substr( $row, strpos( $row, ' ' ) + 1, 1 );
+										if( $side == 'w' ) {
+											if( $ply & 1 )
+												$ply++;
+										}
+										else {
+											if( ( $ply & 1 ) == 0 )
+												$ply++;
+										}
+										echo '"status":"ok","eval":' . $maxscore . ',"ply":' . $ply;
 									} else {
 										echo '"status":"ok","eval":' . $maxscore;
 									}
@@ -1979,10 +2050,27 @@ try{
 									echo 'eval:' . $maxscore;
 							}
 							else {
-								if( $isJson )
-									echo '"status":"unknown"';
-								else
-									echo 'unknown';
+								$allmoves = cbmovegen( $row );
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
+									else
+										echo 'unknown';
+								}
+								else {
+									if( cbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
+								}
 							}
 						}
 						else if( $action == 'queue' ) {
@@ -2030,7 +2118,7 @@ try{
 								if( $isvalid ) {
 									$memcache_obj->add( 'EngineCount2', 0 );
 									$engcount = $memcache_obj->increment( 'EngineCount2' );
-									$result = getEngineMove( $row, $movelist, 5 - $engcount / 2 );
+									$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
 									$memcache_obj->decrement( 'EngineCount2' );
 									if( !empty( $result ) ) {
 										echo 'move:' . $result;

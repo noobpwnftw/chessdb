@@ -800,26 +800,33 @@ function OnKeyEvent(e) {
 	switch(e.keyCode) {
 		case 37:
 		case 38:
+			e.preventDefault();
 			NavStep('-');
 			break;
 		case 39:
 		case 40:
+			e.preventDefault();
 			NavStep('+');
 			break;
 		case 13:
+			e.preventDefault();
 			AutoMove();
 			break;
 		case 8:
 		case 46:
+			e.preventDefault();
 			PreviousStep();
 			break;
 		case 81:
+			e.preventDefault();
 			RequestQueue();
 			break;
 		case 82:
+			e.preventDefault();
 			RefreshInner();
 			break;
 		case 84:
+			e.preventDefault();
 			ToggleMetric();
 			break;
 	}

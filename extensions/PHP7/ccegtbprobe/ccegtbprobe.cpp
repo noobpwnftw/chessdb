@@ -66,9 +66,9 @@ static bool calc_egtb_index(const char* fen, char* names, int turn, S8& mirror, 
 static bool probe_egtb(const char* file, U16& score, uint64 pos, S8 side, uint64& flags);
 int probe(char* pFen, int turn, bool isdtm, bool& found, uint64& flags);
 
-inline int uncompress_lzma(char *dest, size_t *destLen, const char *src, size_t *srcLen, const char *props)
+inline int uncompress_lzma(char* dest, size_t* destLen, const char* src, size_t* srcLen, const char* props)
 {
-	return LzmaUncompress((unsigned char *)dest, destLen, (const unsigned char *)src, srcLen, (const unsigned char *)props, 5);
+	return LzmaUncompress((unsigned char*)dest, destLen, (const unsigned char*)src, srcLen, (const unsigned char*)props, 5);
 }
 
 typedef struct _probe_struct
@@ -82,7 +82,7 @@ typedef struct _probe_struct
 	int score;
 	int check;
 	uint64 flags;
-	char fenstr[100];
+	char fenstr[120];
 } probe_struct;
 
 void* probe_func(void* arg)
@@ -108,19 +108,19 @@ PHP_FUNCTION(ccegtbprobe)
 	zend_bool isdtm = 0;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &fenstr, &fenstr_len, &isdtm) != FAILURE) {
 		Position pos;
-		if(pos.from_fen(fenstr) && pos.is_legal())
+		if (pos.from_fen(fenstr) && pos.is_legal())
 		{
 			bool found = false;
 			bool dtm = (isdtm != 0);
 			uint64 flags;
 			int root_score = probe(fenstr, pos.turn, dtm, found, flags);
-			if(found)
+			if (found)
 			{
 				int root_order;
 				int root_check;
-				if(dtm)
+				if (dtm)
 				{
-					if(flags)
+					if (flags)
 					{
 						root_check = ((((root_score >> 15) & 1) | ((root_score >> 13) & 1)) << 1) - (((root_score >> 14) & 1) | ((root_score >> 12) & 1));
 					}
@@ -130,7 +130,7 @@ PHP_FUNCTION(ccegtbprobe)
 					}
 					root_order = (root_score >> 11) & 1;
 					int score = root_score & 0x7ff;
-					if(score != 0)
+					if (score != 0)
 					{
 						if(root_order != 0)
 							root_score = 30000 - score;
@@ -141,7 +141,7 @@ PHP_FUNCTION(ccegtbprobe)
 				else
 				{
 					root_order = (root_score >> 10) & 0x3f;
-					if(flags)
+					if (flags)
 					{
 						if((root_score & 512))
 							root_order += 64;
@@ -151,9 +151,9 @@ PHP_FUNCTION(ccegtbprobe)
 					{
 						root_score = root_score & 0x3ff;
 					}
-					if(root_score != 0)
+					if (root_score != 0)
 					{
-						if(root_order > 0)
+						if (root_order > 0)
 						{
 							if((root_score & 1) == 0)
 								root_score = 20000 - root_score;
@@ -162,7 +162,7 @@ PHP_FUNCTION(ccegtbprobe)
 						}
 						else
 						{
-							if((root_score & 1) == 0)
+							if ((root_score & 1) == 0)
 								root_score = 30000 - root_score;
 							else
 								root_score = root_score - 30000;
@@ -172,17 +172,17 @@ PHP_FUNCTION(ccegtbprobe)
 				Move_List list;
 				pos.gen_legals(list);
 				probe_struct* pprobe_structs[128];
-				long probe_idx = 0;
+				int probe_idx = 0;
 				for (int i = 0; i < list.size(); i++)
 				{
 					pos.move_do(list.move(i));
-					pprobe_structs[probe_idx] = new probe_struct;
+					pprobe_structs[probe_idx] = (probe_struct*)malloc(sizeof(probe_struct));
 					pprobe_structs[probe_idx]->found = false;
 					pprobe_structs[probe_idx]->turn = pos.turn;
 					pprobe_structs[probe_idx]->isdtm = dtm;
 					pos.to_fen(pprobe_structs[probe_idx]->fenstr);
 					pprobe_structs[probe_idx]->move = list.move(i);
-					if(pos.stack[0].cap != 0)
+					if (pos.stack[0].cap != 0)
 						pprobe_structs[probe_idx]->cap = true;
 					else
 						pprobe_structs[probe_idx]->cap = false;
@@ -192,10 +192,10 @@ PHP_FUNCTION(ccegtbprobe)
 					pos.move_undo();
 				}
 				bool bSuccess = true;
-				for(long i = 0; i < probe_idx; i++)
+				for (int i = 0; i < probe_idx; i++)
 				{
 					pthread_join(pprobe_structs[i]->tid, NULL);
-					if(!pprobe_structs[i]->found)
+					if (!pprobe_structs[i]->found)
 					{
 						bSuccess = false;
 #ifdef EGTB_LOGGING
@@ -203,25 +203,25 @@ PHP_FUNCTION(ccegtbprobe)
 #endif
 					}
 				}
-				if(bSuccess)
+				if (bSuccess)
 				{
 					array_init(return_value);
-					for(long i = 0; i < probe_idx; i++)
+					for (int i = 0; i < probe_idx; i++)
 					{
 						int order = 0;
 						int step = 0;
 						int score = 0;
-						if(dtm)
+						if (dtm)
 						{
-							if(pprobe_structs[i]->flags)
+							if (pprobe_structs[i]->flags)
 							{
 								pprobe_structs[i]->check = ((((pprobe_structs[i]->score >> 15) & 1) | ((pprobe_structs[i]->score >> 13) & 1)) << 1) - (((pprobe_structs[i]->score >> 14) & 1) | ((pprobe_structs[i]->score >> 12) & 1));
 							}
 							order = (pprobe_structs[i]->score >> 11) & 1;
 							step = pprobe_structs[i]->score & 0x7ff;
-							if(step != 0)
+							if (step != 0)
 							{
-								if(order != 0)
+								if (order != 0)
 									score = step - 30000;
 								else {
 									score = 30000 - step;
@@ -231,9 +231,9 @@ PHP_FUNCTION(ccegtbprobe)
 						else
 						{
 							order = (pprobe_structs[i]->score >> 10) & 0x3f;
-							if(pprobe_structs[i]->flags)
+							if (pprobe_structs[i]->flags)
 							{
-								if((pprobe_structs[i]->score & 512))
+								if ((pprobe_structs[i]->score & 512))
 									order += 64;
 								step = pprobe_structs[i]->score & 0x1ff;
 							}
@@ -241,9 +241,9 @@ PHP_FUNCTION(ccegtbprobe)
 							{
 								step = pprobe_structs[i]->score & 0x3ff;
 							}
-							if(step != 0)
+							if (step != 0)
 							{
-								if(order > 0)
+								if (order > 0)
 								{
 									if((step & 1) == 0)
 										score = step - 20000;
@@ -270,9 +270,9 @@ PHP_FUNCTION(ccegtbprobe)
 						add_assoc_long(&moveinfo, "check", pprobe_structs[i]->check);
 						add_assoc_long(&moveinfo, "step", step);
 						add_assoc_zval(return_value, movestr, &moveinfo);
-						delete pprobe_structs[i];
+						free(pprobe_structs[i]);
 					}
-					if(!dtm)
+					if (!dtm)
 					{
 						add_assoc_long(return_value, "score", root_score);
 						add_assoc_long(return_value, "order", root_order);
@@ -285,9 +285,9 @@ PHP_FUNCTION(ccegtbprobe)
 				}
 				else
 				{
-					for(long i = 0; i < probe_idx; i++)
+					for (int i = 0; i < probe_idx; i++)
 					{
-						delete pprobe_structs[i];
+						free(pprobe_structs[i]);
 					}
 					RETURN_FALSE;
 				}
@@ -316,16 +316,16 @@ int probe(char* pFen, int turn, bool isdtm, bool& found, uint64& flags)
 	U16 score = 0;
 	uint64 pos = 0ULL;
 	bool draw = false;
-	if(calc_egtb_index(pFen, names, turn, mirror, pos, draw))
+	if (calc_egtb_index(pFen, names, turn, mirror, pos, draw))
 	{
 		if (draw)
 		{
 			found = true;
 			return score;
 		}
-		if(isdtm)
+		if (isdtm)
 		{
-			for(int i = 0; i < EGTB_DTM_DIR_COUNT; i++)
+			for (int i = 0; i < EGTB_DTM_DIR_COUNT; i++)
 			{
 				S8 side;
 				sprintf(egtb_file, "%s%s.lzdtm", egtb_dtm_dir[i], names);
@@ -352,7 +352,7 @@ int probe(char* pFen, int turn, bool isdtm, bool& found, uint64& flags)
 		}
 		else
 		{
-			for(int i = 0; i < EGTB_DTC_DIR_COUNT; i++)
+			for (int i = 0; i < EGTB_DTC_DIR_COUNT; i++)
 			{
 				S8 side;
 				sprintf(egtb_file, "%s%s.lzdtc", egtb_dtc_dir[i], names);
@@ -370,7 +370,7 @@ int probe(char* pFen, int turn, bool isdtm, bool& found, uint64& flags)
 					else
 						side = White;
 				}
-				if(probe_egtb(egtb_file, score, pos, side, flags))
+				if (probe_egtb(egtb_file, score, pos, side, flags))
 				{
 					found = true;
 					return score;
@@ -418,11 +418,11 @@ static bool calc_egtb_index(const char* fen, char* names, int turn, S8& mirror, 
 		}
 	}
 
-	if(number[WhitePawn] >= 4 || number[BlackPawn] >= 4)
+	if (number[WhitePawn] >= 4 || number[BlackPawn] >= 4)
 	{
 		return false;
 	}
-	if(number[WhitePawn] + number[BlackPawn] + number[WhiteRook] + number[BlackRook] + number[WhiteKnight] + number[BlackKnight] + number[WhiteCannon] + number[BlackCannon] == 0)
+	if (number[WhitePawn] + number[BlackPawn] + number[WhiteRook] + number[BlackRook] + number[WhiteKnight] + number[BlackKnight] + number[WhiteCannon] + number[BlackCannon] == 0)
 	{
 		draw = true;
 		return true;
@@ -647,7 +647,7 @@ static bool calc_egtb_index(const char* fen, char* names, int turn, S8& mirror, 
 static bool probe_egtb(const char* file_name, U16& score, uint64 pos, S8 side, uint64& flags)
 {
 	int fd = open(file_name, O_RDONLY);
-	if(fd == -1)
+	if (fd == -1)
 		return false;
 
 	iovec iov;
@@ -775,12 +775,12 @@ static bool probe_egtb(const char* file_name, U16& score, uint64 pos, S8 side, u
 #endif
 		return false;
 	}
-	char * lp_src = new char[size];
+	char* lp_src = (char*)malloc(size);
 	iov.iov_base = (void*)lp_src;
 	iov.iov_len = size;
 	if (readv(fd, &iov, 1) != size)
 	{
-		delete[] lp_src;
+		free(lp_src);
 		close(fd);
 #ifdef EGTB_LOGGING
 		syslog(LOG_ERR|LOG_USER, "Error reading EGTB block: %s", file_name);
@@ -788,14 +788,14 @@ static bool probe_egtb(const char* file_name, U16& score, uint64 pos, S8 side, u
 		return false;
 	}
 
-	char * lp_dst = new char[block_size[side]];
+	char* lp_dst = (char*)malloc(block_size[side]);
 	size_t decode_size = (i == block_cnt[side] - 1) ? tail_size[side] : block_size[side];
 	size -= 5;
 	int ret = uncompress_lzma(lp_dst, &decode_size, lp_src, &size, (lp_src+size));
 	if (ret != SZ_OK)
 	{
-		delete[] lp_dst;
-		delete[] lp_src;
+		free(lp_dst);
+		free(lp_src);
 		close(fd);
 #ifdef EGTB_LOGGING
 		syslog(LOG_ERR|LOG_USER, "Error uncompressing EGTB block: %s", file_name);
@@ -805,8 +805,8 @@ static bool probe_egtb(const char* file_name, U16& score, uint64 pos, S8 side, u
 	U16* entry = (U16*)lp_dst;
 	int new_index = int(pos - uint64(block_size[side]) / 2 * i);
 	score = entry[new_index];
-	delete[] lp_dst;
-	delete[] lp_src;
+	free(lp_dst);
+	free(lp_src);
 	close(fd);
 	return true;
 }
