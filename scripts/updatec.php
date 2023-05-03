@@ -3,6 +3,11 @@ header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 ini_set("memory_limit", "-1");
 
+function count_pieces( $fen ) {
+	@list( $board, $color ) = explode( " ", $fen );
+	$pieces = 'kqrbnp';
+	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
+}
 function getthrottle( $maxscore ) {
 	if( $maxscore >= 50 ) {
 		$throttle = $maxscore - 1;
@@ -171,46 +176,89 @@ function getMoves( $redis, $row, $depth ) {
 						$GLOBALS['curmove'] = $key;
 
 					$nextfen = cbmovemake( $row, $key );
-					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-					$GLOBALS['historytt'][$current_hash]['move'] = $key;
-					$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
-					unset( $GLOBALS['historytt'][$current_hash] );
-					if( isset( $GLOBALS['loopcheck'] ) ) {
-						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
-						unset( $GLOBALS['loopcheck'] );
+					if( count_pieces( $nextfen ) <= 7 ) {
+						if( $item != 0 && abs( $item ) < 10000 ) {
+							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
+							if( $egtbresult !== FALSE ) {
+								if( $egtbresult['checkmate'] ) {
+								}
+								else if( $egtbresult['stalemate'] ) {
+								}
+								else if( $egtbresult['category'] == 'unknown' ) {
+								}
+								else
+								{
+									$bestmove = reset( $egtbresult['moves'] );
+									if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
+										$nextscore = 0;
+									}
+									else {
+										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
+											$step = -$bestmove['dtz'];
+											if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
+												$nextscore = 20000 - $step;
+											else
+												$nextscore = 30000 - $step;
+										}
+										else {
+											$step = $bestmove['dtz'];
+											if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
+												$nextscore = $step - 20000;
+											else
+												$nextscore = $step - 30000;
+										}
+									}
+									if( $item != -$nextscore ) {
+										$moves1[ $key ] = -$nextscore;
+										$updatemoves[ $key ] = $nextscore;
+									}
+								}
+							}
+						}
 					}
-					if( count( $nextmoves ) > 0 ) {
-						arsort( $nextmoves );
-						$nextscore = reset( $nextmoves );
-						$throttle = getthrottle( $nextscore );
-						$nextsum = 0;
-						$nextcount = 0;
-						$totalvalue = 0;
-						foreach( $nextmoves as $record => $score ) {
-							if( $score >= $throttle ) {
-								$nextcount++;
-								$nextsum = $nextsum + $score;
-								$totalvalue = $totalvalue + $nextsum;
-							}
-							else
-								break;
+					else
+					{
+						$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+						$GLOBALS['historytt'][$current_hash]['move'] = $key;
+						$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
+						unset( $GLOBALS['historytt'][$current_hash] );
+						if( isset( $GLOBALS['loopcheck'] ) ) {
+							$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
+							unset( $GLOBALS['loopcheck'] );
 						}
-						if( abs( $nextscore ) < 10000 ) {
-							if( $nextcount > 1 )
-								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-							else if( $nextcount == 1 ) {
-								if( count( $nextmoves ) > 1 ) {
-									if( $nextscore >= -50 )
-										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+						if( count( $nextmoves ) > 0 ) {
+							arsort( $nextmoves );
+							$nextscore = reset( $nextmoves );
+							$throttle = getthrottle( $nextscore );
+							$nextsum = 0;
+							$nextcount = 0;
+							$totalvalue = 0;
+							foreach( $nextmoves as $record => $score ) {
+								if( $score >= $throttle ) {
+									$nextcount++;
+									$nextsum = $nextsum + $score;
+									$totalvalue = $totalvalue + $nextsum;
 								}
-								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-									$nextscore = ( int )( $nextscore * 9 / 10 );
+								else
+									break;
+							}
+							if( abs( $nextscore ) < 10000 ) {
+								if( $nextcount > 1 )
+									$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+								else if( $nextcount == 1 ) {
+									if( count( $nextmoves ) > 1 ) {
+										if( $nextscore >= -50 )
+											$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+									}
+									else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
+										$nextscore = ( int )( $nextscore * 9 / 10 );
+									}
 								}
 							}
-						}
-						if( $item != -$nextscore ) {
-							$moves1[ $key ] = -$nextscore;
-							$updatemoves[ $key ] = $nextscore;
+							if( $item != -$nextscore ) {
+								$moves1[ $key ] = -$nextscore;
+								$updatemoves[ $key ] = $nextscore;
+							}
 						}
 					}
 				}
