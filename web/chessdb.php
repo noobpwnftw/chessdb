@@ -1488,8 +1488,11 @@ function getEngineMove( $row, $movelist, $maxtime ) {
 					break;
 				}
 			}
+			else if( $res > 0 )
+				break;
 			if( time() - $startTime >= $maxtime ) {
-				fwrite( $pipes[0], 'stop' . PHP_EOL );
+				if( fwrite( $pipes[0], 'stop' . PHP_EOL ) === FALSE )
+					break;
 			}
 			$readfd = array( $pipes[1] );
 		}
