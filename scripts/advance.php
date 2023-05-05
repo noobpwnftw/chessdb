@@ -104,6 +104,7 @@ function getHexFenStorage( $hexfenarr ) {
 }
 function getAllScores( $redis, $row ) {
 	$moves = array();
+	$finals = array();
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
@@ -111,60 +112,106 @@ function getAllScores( $redis, $row ) {
 		$LRBWfen = ccbgetLRfen( $BWfen );
 		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen), ccbfen2hexfen($LRfen), ccbfen2hexfen($LRBWfen) ) );
 		$doc = $redis->hGetAll( hex2bin( $minhexfen ) );
+		if( $doc === FALSE )
+			throw new RedisException( 'Server operation error.' );
 		if( $minindex == 0 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[$key] = 1;
+					}
 					$moves[$key] = -$item;
+				}
 			}
 		}
 		else if( $minindex == 1 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetBWmove( $key )] = 1;
+					}
 					$moves[ccbgetBWmove( $key )] = -$item;
+				}
 			}
 		}
 		else if( $minindex == 2 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetLRmove( $key )] = 1;
+					}
 					$moves[ccbgetLRmove( $key )] = -$item;
+				}
 			}
 		}
 		else {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetLRBWmove( $key )] = 1;
+					}
 					$moves[ccbgetLRBWmove( $key )] = -$item;
+				}
 			}
 		}
 	}
 	else {
 		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
 		$doc = $redis->hGetAll( hex2bin( $minhexfen ) );
+		if( $doc === FALSE )
+			throw new RedisException( 'Server operation error.' );
 		if( $minindex == 0 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[$key] = 1;
+					}
 					$moves[$key] = -$item;
+				}
 			}
 		}
 		else {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetBWmove( $key )] = 1;
+					}
 					$moves[ccbgetBWmove( $key )] = -$item;
+				}
 			}
 		}
 	}
-	return $moves;
+	return array( $moves, $finals );
 }
 function updatePly( $redis, $row, $ply ) {
 	$LRfen = ccbgetLRfen( $row );
@@ -443,7 +490,7 @@ function updateSel( $row, $priority ) {
 	}
 }
 function getMoves( $redis, $row, $depth ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$current_hash = abs( xxhash64( $row ) );
@@ -559,10 +606,10 @@ function getMoves( $redis, $row, $depth ) {
 				}
 				arsort( $moves2 );
 				foreach( $moves2 as $key => $item ) {
-
 					if( $depth == 0 )
 						$GLOBALS['curmove'] = $key;
-
+					if( isset( $finals[ $key ] ) )
+						continue;
 					$nextfen = ccbmovemake( $row, $key );
 					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$current_hash]['move'] = $key;

@@ -104,6 +104,7 @@ function getHexFenStorage( $hexfenarr ) {
 }
 function getAllScores( $redis, $row ) {
 	$moves = array();
+	$finals = array();
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	$doc = $redis->hGetAll( hex2bin( $minhexfen ) );
@@ -113,19 +114,33 @@ function getAllScores( $redis, $row ) {
 		foreach( $doc as $key => $item ) {
 			if( $key == 'a0a0' )
 				$moves['ply'] = $item;
-			else
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[$key] = 1;
+				}
 				$moves[$key] = -$item;
+			}
 		}
 	}
 	else {
 		foreach( $doc as $key => $item ) {
 			if( $key == 'a0a0' )
 				$moves['ply'] = $item;
-			else
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[cbgetBWmove( $key )] = 1;
+				}
 				$moves[cbgetBWmove( $key )] = -$item;
+			}
 		}
 	}
-	return $moves;
+	return array( $moves, $finals );
 }
 function updatePly( $redis, $row, $ply ) {
 	$BWfen = cbgetBWfen( $row );
@@ -213,7 +228,7 @@ function updateSel( $row, $priority ) {
 	$readwrite_sel->readunlock();
 }
 function getMoves( $redis, $row, $depth ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 	$current_hash = abs( xxhash64( $row ) );
 	$current_hash_bw = abs( xxhash64( $BWfen ) );
@@ -280,10 +295,10 @@ function getMoves( $redis, $row, $depth ) {
 				}
 				arsort( $moves2 );
 				foreach( $moves2 as $key => $item ) {
-
 					if( $depth == 0 )
 						$GLOBALS['curmove'] = $key;
-
+					if( isset( $finals[ $key ] ) )
+						continue;
 					$nextfen = cbmovemake( $row, $key );
 					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$current_hash]['move'] = $key;

@@ -138,6 +138,7 @@ function getHexFenStorage( $hexfenarr ) {
 }
 function getAllScores( $redis, $row ) {
 	$moves = array();
+	$finals = array();
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	$doc = $redis->hGetAll( hex2bin( $minhexfen ) );
@@ -147,19 +148,33 @@ function getAllScores( $redis, $row ) {
 		foreach( $doc as $key => $item ) {
 			if( $key == 'a0a0' )
 				$moves['ply'] = $item;
-			else
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[$key] = 1;
+				}
 				$moves[$key] = -$item;
+			}
 		}
 	}
 	else {
 		foreach( $doc as $key => $item ) {
 			if( $key == 'a0a0' )
 				$moves['ply'] = $item;
-			else
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[cbgetBWmove( $key )] = 1;
+				}
 				$moves[cbgetBWmove( $key )] = -$item;
+			}
 		}
 	}
-	return $moves;
+	return array( $moves, $finals );
 }
 function countAllScores( $redis, $row ) {
 	$BWfen = cbgetBWfen( $row );
@@ -272,7 +287,7 @@ function shuffle_assoc(&$array) {
 	return true;
 }
 function getMoves( $redis, $row, $update, $learn, $depth ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$moves2 = array();
 
 	if( isset($moves1['ply']) )
@@ -299,10 +314,12 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 	{
 		$updatemoves = array();
 		foreach( $moves1 as $key => $item ) {
-			$nextfen = cbmovemake( $row, $key );
-			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false, $depth );
 			$moves2[ $key ][0] = 0;
 			$moves2[ $key ][1] = 0;
+			if( isset( $finals[ $key ] ) )
+				continue;
+			$nextfen = cbmovemake( $row, $key );
+			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false, $depth );
 			if( count( $nextmoves ) > 0 ) {
 				arsort( $nextmoves );
 				$nextscore = reset( $nextmoves );
@@ -341,20 +358,20 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 			}
 			else if( count( cbmovegen( $nextfen ) ) == 0 )
 			{
-				if( cbincheck( $nextfen ) )
-					$nextscore = -30000;
-				else
-					$nextscore = 0;
-				if( $item != -$nextscore ) {
-					$moves1[ $key ] = -$nextscore;
-					$updatemoves[ $key ] = $nextscore;
+				if( cbincheck( $nextfen ) ) {
+					$moves1[ $key ] = 30000;
+					$updatemoves[ $key ] = -30000;
+				}
+				else {
+					$moves1[ $key ] = 0;
+					$updatemoves[ $key ] = -30001;
 				}
 			}
 			else if( count_pieces( $nextfen ) > 7 )
 			{
 				updateQueue( $row, $key, true );
 			}
-			else if( $moves1[$key] != 0 && abs( $moves1[$key] ) <= 10000 )
+			else if( abs( $moves1[$key] ) <= 10000 )
 			{
 				$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
 				if( $egtbresult !== FALSE ) {
@@ -368,7 +385,8 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 					{
 						$bestmove = reset( $egtbresult['moves'] );
 						if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
-							$nextscore = 0;
+							$moves1[ $key ] = 0;
+							$updatemoves[ $key ] = -30001;
 						}
 						else {
 							if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
@@ -385,8 +403,6 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 								else
 									$nextscore = $step - 30000;
 							}
-						}
-						if( $item != -$nextscore ) {
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
 						}
@@ -443,7 +459,7 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 	return array( $moves1, $moves2 );
 }
 function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn, $depth ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 
 	if( isset($moves1['ply']) )
@@ -514,9 +530,6 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					$GLOBALS['movecnt'] = array();
 				}
 				foreach( $moves2 as $key => $item ) {
-					$nextfen = cbmovemake( $row, $key );
-					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					if( $resetlimit )
 						$GLOBALS['counter'] = 0;
 					else
@@ -526,7 +539,14 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 						$GLOBALS['counter1'] = 1;
 					else
 						$GLOBALS['counter1']++;
-
+					if( isset( $finals[ $key ] ) ) {
+						if( $ply == 0 )
+							$GLOBALS['movecnt'][$key] = $GLOBALS['counter1'];
+						continue;
+					}
+					$nextfen = cbmovemake( $row, $key );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					$nextmoves = getMovesWithCheck( $redis, $nextfen, $ply + 1, $enumlimit, false, false, $depth );
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
@@ -572,13 +592,13 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					}
 					else if( count( cbmovegen( $nextfen ) ) == 0 )
 					{
-						if( cbincheck( $nextfen ) )
-							$nextscore = -30000;
-						else
-							$nextscore = 0;
-						if( $item != -$nextscore ) {
-							$moves1[ $key ] = -$nextscore;
-							$updatemoves[ $key ] = $nextscore;
+						if( cbincheck( $nextfen ) ) {
+							$moves1[ $key ] = 30000;
+							$updatemoves[ $key ] = -30000;
+						}
+						else {
+							$moves1[ $key ] = 0;
+							$updatemoves[ $key ] = -30001;
 						}
 					}
 					else if( count_pieces( $nextfen ) > 7 )
@@ -588,7 +608,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 							updateSel( $nextfen, false );
 					}
-					else if( $moves1[$key] != 0 && abs( $moves1[$key] ) <= 10000 )
+					else if( abs( $moves1[$key] ) <= 10000 )
 					{
 						$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
 						if( $egtbresult !== FALSE ) {
@@ -602,7 +622,8 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							{
 								$bestmove = reset( $egtbresult['moves'] );
 								if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
-									$nextscore = 0;
+									$moves1[ $key ] = 0;
+									$updatemoves[ $key ] = -30001;
 								}
 								else {
 									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
@@ -619,8 +640,6 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 										else
 											$nextscore = $step - 30000;
 									}
-								}
-								if( $item != -$nextscore ) {
 									$moves1[ $key ] = -$nextscore;
 									$updatemoves[ $key ] = $nextscore;
 								}
@@ -748,7 +767,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 	return $moves1;
 }
 function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $depth, &$pv ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 
 	if( isset($moves1['ply']) )
@@ -815,14 +834,17 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 				shuffle_assoc( $moves2 );
 				arsort( $moves2 );
 				foreach( $moves2 as $key => $item ) {
-					$nextfen = cbmovemake( $row, $key );
-					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					$GLOBALS['counter']++;
-
 					if( $isbest ) {
 						array_push( $pv, $key );
 					}
+					if( isset( $finals[ $key ] ) ) {
+						$isbest = false;
+						continue;
+					}
+					$nextfen = cbmovemake( $row, $key );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					$nextmoves = getAnalysisPath( $redis, $nextfen, $ply + 1, $enumlimit, $isbest, false, $depth, $pv );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$current_hash] );
@@ -866,13 +888,13 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					}
 					else if( count( cbmovegen( $nextfen ) ) == 0 )
 					{
-						if( cbincheck( $nextfen ) )
-							$nextscore = -30000;
-						else
-							$nextscore = 0;
-						if( $item != -$nextscore ) {
-							$moves1[ $key ] = -$nextscore;
-							$updatemoves[ $key ] = $nextscore;
+						if( cbincheck( $nextfen ) ) {
+							$moves1[ $key ] = 30000;
+							$updatemoves[ $key ] = -30000;
+						}
+						else {
+							$moves1[ $key ] = 0;
+							$updatemoves[ $key ] = -30001;
 						}
 					}
 					else if( count_pieces( $nextfen ) > 7 )
@@ -882,7 +904,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 							updateSel( $nextfen, false );
 					}
-					else if( $moves1[$key] != 0 && abs( $moves1[$key] ) <= 10000 )
+					else if( abs( $moves1[$key] ) <= 10000 )
 					{
 						$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
 						if( $egtbresult !== FALSE ) {
@@ -896,7 +918,8 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							{
 								$bestmove = reset( $egtbresult['moves'] );
 								if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
-									$nextscore = 0;
+									$moves1[ $key ] = 0;
+									$updatemoves[ $key ] = -30001;
 								}
 								else {
 									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
@@ -913,8 +936,6 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 										else
 											$nextscore = $step - 30000;
 									}
-								}
-								if( $item != -$nextscore ) {
 									$moves1[ $key ] = -$nextscore;
 									$updatemoves[ $key ] = $nextscore;
 								}

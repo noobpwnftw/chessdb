@@ -143,6 +143,7 @@ function getHexFenStorage( $hexfenarr ) {
 }
 function getAllScores( $redis, $row ) {
 	$moves = array();
+	$finals = array();
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
@@ -156,32 +157,60 @@ function getAllScores( $redis, $row ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[$key] = 1;
+					}
 					$moves[$key] = -$item;
+				}
 			}
 		}
 		else if( $minindex == 1 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetBWmove( $key )] = 1;
+					}
 					$moves[ccbgetBWmove( $key )] = -$item;
+				}
 			}
 		}
 		else if( $minindex == 2 ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetLRmove( $key )] = 1;
+					}
 					$moves[ccbgetLRmove( $key )] = -$item;
+				}
 			}
 		}
 		else {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetLRBWmove( $key )] = 1;
+					}
 					$moves[ccbgetLRBWmove( $key )] = -$item;
+				}
 			}
 		}
 	}
@@ -194,20 +223,34 @@ function getAllScores( $redis, $row ) {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[$key] = 1;
+					}
 					$moves[$key] = -$item;
+				}
 			}
 		}
 		else {
 			foreach( $doc as $key => $item ) {
 				if( $key == 'a0a0' )
 					$moves['ply'] = $item;
-				else
+				else {
+					if( abs( $item ) >= 30000 ) {
+						if ( $item == -30001 ) {
+							$item = 0;
+						}
+						$finals[ccbgetBWmove( $key )] = 1;
+					}
 					$moves[ccbgetBWmove( $key )] = -$item;
+				}
 			}
 		}
 	}
-	return $moves;
+	return array( $moves, $finals );
 }
 function countAllScores( $redis, $row ) {
 	$LRfen = ccbgetLRfen( $row );
@@ -559,7 +602,7 @@ function shuffle_assoc(&$array) {
 }
 function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 	$hasLRmirror = ( $row == ccbgetLRfen( $row ) ? false : true );
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$moves2 = array();
 
 	if( isset($moves1['ply']) )
@@ -588,10 +631,12 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 			if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
 				$knownmoves[ccbgetLRmove( $key )] = 0;
 			}
-			$nextfen = ccbmovemake( $row, $key );
-			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false, $depth );
 			$moves2[ $key ][0] = 0;
 			$moves2[ $key ][1] = 0;
+			if( isset( $finals[ $key ] ) )
+				continue;
+			$nextfen = ccbmovemake( $row, $key );
+			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false, $depth );
 			if( count( $nextmoves ) > 0 ) {
 				arsort( $nextmoves );
 				$nextscore = reset( $nextmoves );
@@ -630,11 +675,8 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 			}
 			else if( count( ccbmovegen( $nextfen ) ) == 0 )
 			{
-				$nextscore = -30000;
-				if( $item != -$nextscore ) {
-					$moves1[ $key ] = -$nextscore;
-					$updatemoves[ $key ] = $nextscore;
-				}
+				$moves1[ $key ] = 30000;
+				$updatemoves[ $key ] = -30000;
 			}
 			else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
 			{
@@ -706,7 +748,7 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 	return array( $moves1, $moves2 );
 }
 function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlimit, $learn, $depth ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
@@ -827,9 +869,6 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					$GLOBALS['movecnt'] = array();
 				}
 				foreach( $moves2 as $key => $item ) {
-					$nextfen = ccbmovemake( $row, $key );
-					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					if( $resetlimit )
 						$GLOBALS['counter'] = 0;
 					else
@@ -839,7 +878,14 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 						$GLOBALS['counter1'] = 1;
 					else
 						$GLOBALS['counter1']++;
-
+					if( isset( $finals[ $key ] ) ) {
+						if( $ply == 0 )
+							$GLOBALS['movecnt'][$key] = $GLOBALS['counter1'];
+						continue;
+					}
+					$nextfen = ccbmovemake( $row, $key );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					$nextmoves = getMovesWithCheck( $redis, $nextfen, array(), $ply + 1, $enumlimit, false, false, $depth );
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
@@ -885,11 +931,8 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					}
 					else if( count( ccbmovegen( $nextfen ) ) == 0 )
 					{
-						$nextscore = -30000;
-						if( $item != -$nextscore ) {
-							$moves1[ $key ] = -$nextscore;
-							$updatemoves[ $key ] = $nextscore;
-						}
+						$moves1[ $key ] = 30000;
+						$updatemoves[ $key ] = -30000;
 					}
 					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{
@@ -1078,7 +1121,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 	return $moves1;
 }
 function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $learn, $depth, &$pv ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
@@ -1195,14 +1238,17 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 				shuffle_assoc( $moves2 );
 				arsort( $moves2 );
 				foreach( $moves2 as $key => $item ) {
-					$nextfen = ccbmovemake( $row, $key );
-					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					$GLOBALS['counter']++;
-
 					if( $isbest ) {
 						array_push( $pv, $key );
 					}
+					if( isset( $finals[ $key ] ) ) {
+						$isbest = false;
+						continue;
+					}
+					$nextfen = ccbmovemake( $row, $key );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
 					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $ply + 1, $enumlimit, $isbest, false, $depth, $pv );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$current_hash] );
@@ -1246,11 +1292,8 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					}
 					else if( count( ccbmovegen( $nextfen ) ) == 0 )
 					{
-						$nextscore = -30000;
-						if( $item != -$nextscore ) {
-							$moves1[ $key ] = -$nextscore;
-							$updatemoves[ $key ] = $nextscore;
-						}
+						$moves1[ $key ] = 30000;
+						$updatemoves[ $key ] = -30000;
 					}
 					else if( $ply == 0 || (count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4) )
 					{

@@ -27,6 +27,7 @@ function getHexFenStorage( $hexfenarr ) {
 }
 function getAllScores( $redis, $row ) {
 	$moves = array();
+	$finals = array();
 	$BWfen = cbgetBWfen( $row );
 	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	$doc = $redis->hGetAll( hex2bin( $minhexfen ) );
@@ -36,19 +37,33 @@ function getAllScores( $redis, $row ) {
 		foreach( $doc as $key => $item ) {
 			if( $key == 'a0a0' )
 				$moves['ply'] = $item;
-			else
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[$key] = 1;
+				}
 				$moves[$key] = -$item;
+			}
 		}
 	}
 	else {
 		foreach( $doc as $key => $item ) {
 			if( $key == 'a0a0' )
 				$moves['ply'] = $item;
-			else
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[cbgetBWmove( $key )] = 1;
+				}
 				$moves[cbgetBWmove( $key )] = -$item;
+			}
 		}
 	}
-	return $moves;
+	return array( $moves, $finals );
 }
 function updatePly( $redis, $row, $ply ) {
 	$BWfen = cbgetBWfen( $row );
@@ -100,7 +115,7 @@ function shuffle_assoc(&$array) {
 }
 
 function getMoves( $redis, $row, $depth ) {
-	$moves1 = getAllScores( $redis, $row );
+	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$BWfen = cbgetBWfen( $row );
 	$current_hash = abs( xxhash64( $row ) );
 	$current_hash_bw = abs( xxhash64( $BWfen ) );
@@ -171,10 +186,10 @@ function getMoves( $redis, $row, $depth ) {
 			{
 				shuffle_assoc( $moves1 );
 				foreach( $moves1 as $key => $item ) {
-
 					if( $depth == 0 )
 						$GLOBALS['curmove'] = $key;
-
+					if( isset( $finals[ $key ] ) )
+						continue;
 					$nextfen = cbmovemake( $row, $key );
 					if( count_pieces( $nextfen ) <= 7 ) {
 						if( $item != 0 && abs( $item ) < 10000 ) {
@@ -190,7 +205,8 @@ function getMoves( $redis, $row, $depth ) {
 								{
 									$bestmove = reset( $egtbresult['moves'] );
 									if( $bestmove['category'] == 'draw' && $bestmove['category'] == 'draw' ) {
-										$nextscore = 0;
+										$moves1[ $key ] = 0;
+										$updatemoves[ $key ] = -30001;
 									}
 									else {
 										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
@@ -207,8 +223,6 @@ function getMoves( $redis, $row, $depth ) {
 											else
 												$nextscore = $step - 30000;
 										}
-									}
-									if( $item != -$nextscore ) {
 										$moves1[ $key ] = -$nextscore;
 										$updatemoves[ $key ] = $nextscore;
 									}
