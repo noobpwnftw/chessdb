@@ -192,7 +192,7 @@ function getMoves( $redis, $row, $depth ) {
 						continue;
 					$nextfen = cbmovemake( $row, $key );
 					if( count_pieces( $nextfen ) <= 7 ) {
-						if( $item != 0 && abs( $item ) < 10000 ) {
+						if( abs( $item ) < 10000 ) {
 							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
 							if( $egtbresult !== FALSE ) {
 								if( $egtbresult['checkmate'] ) {
@@ -227,52 +227,52 @@ function getMoves( $redis, $row, $depth ) {
 										$updatemoves[ $key ] = $nextscore;
 									}
 								}
+								continue;
 							}
 						}
+						else
+							continue;
 					}
-					else
-					{
-						$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-						$GLOBALS['historytt'][$current_hash]['move'] = $key;
-						$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
-						unset( $GLOBALS['historytt'][$current_hash] );
-						if( isset( $GLOBALS['loopcheck'] ) ) {
-							$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
-							unset( $GLOBALS['loopcheck'] );
+					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$current_hash]['move'] = $key;
+					$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
+					unset( $GLOBALS['historytt'][$current_hash] );
+					if( isset( $GLOBALS['loopcheck'] ) ) {
+						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
+						unset( $GLOBALS['loopcheck'] );
+					}
+					if( count( $nextmoves ) > 0 ) {
+						arsort( $nextmoves );
+						$nextscore = reset( $nextmoves );
+						$throttle = getthrottle( $nextscore );
+						$nextsum = 0;
+						$nextcount = 0;
+						$totalvalue = 0;
+						foreach( $nextmoves as $record => $score ) {
+							if( $score >= $throttle ) {
+								$nextcount++;
+								$nextsum = $nextsum + $score;
+								$totalvalue = $totalvalue + $nextsum;
+							}
+							else
+								break;
 						}
-						if( count( $nextmoves ) > 0 ) {
-							arsort( $nextmoves );
-							$nextscore = reset( $nextmoves );
-							$throttle = getthrottle( $nextscore );
-							$nextsum = 0;
-							$nextcount = 0;
-							$totalvalue = 0;
-							foreach( $nextmoves as $record => $score ) {
-								if( $score >= $throttle ) {
-									$nextcount++;
-									$nextsum = $nextsum + $score;
-									$totalvalue = $totalvalue + $nextsum;
+						if( abs( $nextscore ) < 10000 ) {
+							if( $nextcount > 1 )
+								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+							else if( $nextcount == 1 ) {
+								if( count( $nextmoves ) > 1 ) {
+									if( $nextscore >= -50 )
+										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
 								}
-								else
-									break;
-							}
-							if( abs( $nextscore ) < 10000 ) {
-								if( $nextcount > 1 )
-									$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-								else if( $nextcount == 1 ) {
-									if( count( $nextmoves ) > 1 ) {
-										if( $nextscore >= -50 )
-											$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
-									}
-									else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-										$nextscore = ( int )( $nextscore * 9 / 10 );
-									}
+								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
+									$nextscore = ( int )( $nextscore * 9 / 10 );
 								}
 							}
-							if( $item != -$nextscore ) {
-								$moves1[ $key ] = -$nextscore;
-								$updatemoves[ $key ] = $nextscore;
-							}
+						}
+						if( $item != -$nextscore ) {
+							$moves1[ $key ] = -$nextscore;
+							$updatemoves[ $key ] = $nextscore;
 						}
 					}
 				}
