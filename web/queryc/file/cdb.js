@@ -1390,7 +1390,6 @@ function onmdown2(event, id) {
 			}
 			else {
 				chess.put(tmp, FigureFiles[dst[0]] + (8 - dst[1]));
-				return;
 			}
 		}
 		else {

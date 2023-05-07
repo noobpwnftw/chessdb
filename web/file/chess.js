@@ -411,12 +411,10 @@ var Chess = function(fen) {
 
   /* called when the initial board setup is changed with put() or remove().
    * modifies the SetUp and FEN properties of the header object.  if the FEN is
-   * equal to the default position, the SetUp and FEN are deleted
-   * the setup is only updated if history.length is zero, ie moves haven't been
-   * made.
+   * equal to the default position, the SetUp and FEN are deleted.
    */
   function update_setup(fen) {
-    if (history.length > 0) return;
+    history = [];
 
     if (fen !== DEFAULT_POSITION) {
       header['SetUp'] = '1';
