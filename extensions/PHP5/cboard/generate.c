@@ -483,9 +483,9 @@ ChessBoolean chess_generate_is_square_attacked(const ChessPosition* position, Ch
 
 ChessBoolean chess_generate_check_impossible(const ChessPosition* position, ChessSquare sq, ChessColor color)
 {
-    ChessSquare from;
+    ChessSquare from, ep_from;
     ChessPiece piece;
-    int dirs, dir, d, dist, count = 0, last_slider_dir = 0;
+    int dirs, dir, d, dist, count = 0, ep_dir = 0, last_slider_dir = 0;
 
     /* Check for knight attacks */
     dirs = jump_dirs[sq];
@@ -498,9 +498,18 @@ ChessBoolean chess_generate_check_impossible(const ChessPosition* position, Ches
         from = sq + jumps_array[d];
         piece = position->piece[from];
         if (position->piece[from] == chess_piece_of_color(CHESS_PIECE_WHITE_KNIGHT, color))
+        {
+            if (position->ep != CHESS_FILE_INVALID)
+                return CHESS_TRUE;
             count++;
+        }
     }
 
+    if (position->ep != CHESS_FILE_INVALID)
+    {
+        ep_from = chess_square_from_fr(position->ep, color == CHESS_COLOR_WHITE ? CHESS_RANK_2 : CHESS_RANK_7);
+    }
+    
     for (d = 0; d < 8; d++)
     {
         dir = dirs_array[d];
@@ -524,6 +533,8 @@ ChessBoolean chess_generate_check_impossible(const ChessPosition* position, Ches
                         if (last_slider_dir == -slides_array[d])
                             return CHESS_TRUE;
                         last_slider_dir = slides_array[d];
+                        if (position->ep != CHESS_FILE_INVALID && (count > 0 || ep_dir == 0 || ep_dir != last_slider_dir))
+                            return CHESS_TRUE;
                         count++;
                         break;
                     case CHESS_PIECE_WHITE_BISHOP:
@@ -532,6 +543,8 @@ ChessBoolean chess_generate_check_impossible(const ChessPosition* position, Ches
                             if (last_slider_dir == -slides_array[d])
                                 return CHESS_TRUE;
                             last_slider_dir = slides_array[d];
+                            if (position->ep != CHESS_FILE_INVALID && (count > 0 || ep_dir == 0 || ep_dir != last_slider_dir))
+                                return CHESS_TRUE;
                             count++;
                         }
                         break;
@@ -541,21 +554,29 @@ ChessBoolean chess_generate_check_impossible(const ChessPosition* position, Ches
                             if (last_slider_dir == -slides_array[d])
                                 return CHESS_TRUE;
                             last_slider_dir = slides_array[d];
+                            if (position->ep != CHESS_FILE_INVALID && (count > 0 || ep_dir == 0 || ep_dir != last_slider_dir))
+                                return CHESS_TRUE;
                             count++;
                         }
                         break;
                     case CHESS_PIECE_WHITE_KING:
                     case CHESS_PIECE_BLACK_KING:
-                        if (dist == 1)
-                            count++;
                         break;
                     case CHESS_PIECE_WHITE_PAWN:
                         if (dist == 1 && dir & (DIR_SE | DIR_SW))
+                        {
+                            if (position->ep != CHESS_FILE_INVALID && (count > 0 || from != chess_square_from_fr(position->ep, CHESS_RANK_4)))
+                                return CHESS_TRUE;
                             count++;
+                        }
                         break;
                     case CHESS_PIECE_BLACK_PAWN:
                         if (dist == 1 && dir & (DIR_NE | DIR_NW))
+                        {
+                            if (position->ep != CHESS_FILE_INVALID && (count > 0 || from != chess_square_from_fr(position->ep, CHESS_RANK_5)))
+                                return CHESS_TRUE;
                             count++;
+                        }
                         break;
                     case CHESS_PIECE_WHITE_KNIGHT:
                     case CHESS_PIECE_BLACK_KNIGHT:
@@ -564,6 +585,12 @@ ChessBoolean chess_generate_check_impossible(const ChessPosition* position, Ches
                         assert(CHESS_FALSE);
                         break;
                 }
+            }
+            else if (position->ep != CHESS_FILE_INVALID && from == ep_from)
+            {
+                if (last_slider_dir != 0)
+                    return CHESS_TRUE;
+                ep_dir = slides_array[d];
             }
             dist++;
         } while (piece == CHESS_PIECE_NONE);
