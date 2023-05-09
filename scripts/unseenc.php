@@ -1,0 +1,280 @@
+<?php
+header("Cache-Control: no-cache");
+header("Pragma: no-cache");
+ini_set("memory_limit", "-1");
+
+include('/home/ssdb/api/php/SSDB.php');
+
+$host = '/tmp/chess.sock';
+$ssdb = new SimpleSSDB($host);
+
+$size = 100000;
+$s_key = '';
+$e_key = '';
+
+$child = 0;
+$max_child = 26;
+$total = 0;
+
+function hlist_entries($rows) {
+	$entries = array();
+	for($i=0; $i<count($rows); ) {
+		$name = $rows[$i++];
+		if($i >= count($rows)) {
+			break;
+		}
+		$cnt = intval($rows[$i++]);
+		$skip = $cnt * 2;
+		if($skip < 0 || ($i + $skip > count($rows))) {
+			break;
+		}
+		$doc = array();
+		for($j=0; $j<$cnt; $j++) {
+			$key = $rows[$i++];
+			$val = $rows[$i++];
+			$doc[$key] = $val;
+		}
+		$entries[] = array($name, $doc);
+	}
+	return $entries;
+}
+
+function round_stochastic( $x, $key ) {
+	$t = ( int )$x;
+	if ( $x == $t )
+		return $t;
+	if ( abs( $t ) <= 2 )
+		return ( int )round( $x );
+	$b = floor( $x );
+	$f = $x - $b;
+	$u = ( xxhash64( $key ) & PHP_INT_MAX ) / ( PHP_INT_MAX + 1.0 );
+	return ( int )( $u < $f ? $b + 1 : $b );
+}
+function getthrottle( $maxscore ) {
+	$upper_max = 75;
+	$upper_min = 50;
+	$lower_max = -30;
+	$lower_min = -50;
+	if( $maxscore >= $upper_max ) {
+		$throttle = $maxscore;
+	}
+	else if( $maxscore >= $lower_max ) {
+		$throttle = $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) );
+		if( $maxscore > $upper_min ) {
+			$throttle = $throttle + ( ( $maxscore - $upper_min ) / ( $upper_max - $upper_min ) ) * ( $maxscore - $throttle );
+		}
+	}
+	else if( $maxscore > $lower_min ) {
+		$throttle = $lower_max - 10 / ( 1 + exp( -abs( $lower_max ) / 10 ) );
+		$throttle = $lower_min + ( $maxscore - $lower_min ) / ( $lower_max - $lower_min ) * ( $throttle - $lower_min );
+	}
+	else {
+		$throttle = $lower_min;
+	}
+	return $throttle;
+}
+function getBinFenStorage( $hexfenarr ) {
+	asort( $hexfenarr, SORT_STRING );
+	$minhexfen = reset( $hexfenarr );
+	return array( hex2bin( $minhexfen ), key( $hexfenarr ) );
+}
+function getAllScores( $redis, $minbinfen, $minindex, $doc = null ) {
+	$moves = array();
+	$finals = array();
+	if( $doc === null ) {
+		$doc = $redis->hGetAll( $minbinfen );
+		if( $doc === FALSE )
+			throw new RedisException( 'Server operation error.' );
+	}
+	if( $minindex == 0 ) {
+		foreach( $doc as $key => $item ) {
+			$item = (int)$item;
+			if( $key == 'a0a0' )
+				$moves['ply'] = $item;
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[$key] = 1;
+				}
+				$moves[$key] = -$item;
+			}
+		}
+	}
+	else {
+		foreach( $doc as $key => $item ) {
+			$item = (int)$item;
+			if( $key == 'a0a0' )
+				$moves['ply'] = $item;
+			else {
+				if( abs( $item ) >= 30000 ) {
+					if ( $item == -30001 ) {
+						$item = 0;
+					}
+					$finals[cbgetBWmove( $key )] = 1;
+				}
+				$moves[cbgetBWmove( $key )] = -$item;
+			}
+		}
+	}
+	return array( $moves, $finals );
+}
+function updateScore( $redis, $minbinfen, $minindex, $updatemoves ) {
+	if( $minindex == 0 ) {
+		if( $redis->hMSet( $minbinfen, $updatemoves ) === FALSE )
+			throw new RedisException( 'Server operation error.' );
+	}
+	else if( $minindex == 1 ) {
+		$newmoves = array();
+		foreach( $updatemoves as $key => $newscore ) {
+			$newmoves[cbgetBWmove( $key )] = $newscore;
+		}
+		if( $redis->hMSet( $minbinfen, $newmoves ) === FALSE )
+			throw new RedisException( 'Server operation error.' );
+	}
+}
+
+function getMoves( $ssdb, $redis, $row, $frc, $recurse, $doc = null, $doc_key = null ) {
+	$BWfen = cbgetBWfen( $row );
+
+	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+
+	if( $recurse && $minbinfen !== $doc_key ) {
+		echo 'error: ' . $row . "\n";
+		$ssdb->hclear( $doc_key );
+		return;
+	}
+
+	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex, $doc );
+
+	if( count( $moves1 ) == 0 )
+		return $moves1;
+
+	unset( $moves1['ply'] );
+
+	if( $recurse ) {
+		if( count( $moves1 ) == 0 ) {
+			echo 'empty: ' . $row . "\n";
+			$ssdb->hclear( $doc_key );
+			return;
+		}
+		$moves1 = array_diff_key( cbmovegen( $row, $frc ), $moves1 );
+		if( count( $moves1 ) > 0 ) {
+			$nextarr = array();
+			$nextprobe = array();
+			foreach( $moves1 as $key => $item ) {
+				list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
+				$nextBWfen = cbgetBWfen( $nextfen );
+				list( $nextminbinfen, $nextminindex ) = getBinFenStorage( array( cbfen2hexfen($nextfen), cbfen2hexfen($nextBWfen) ) );
+				$nextarr[$nextminbinfen] = $key;
+				if( !isset( $GLOBALS['cached'][xxhash64( $nextminbinfen ) & PHP_INT_MAX] ) ) {
+					$nextprobe[] = $nextminbinfen;
+				}
+			}
+			$nextsizes = array();
+			if( count( $nextprobe ) > 0 )
+				$nextsizes = $ssdb->multi_hsize( $nextprobe );
+			$nextknown = array();
+			foreach( $nextsizes as $next => $item ) {
+				if( (int)$item <= 0 ) {
+					$GLOBALS['cached'][xxhash64( $next ) & PHP_INT_MAX] = 1;
+					continue;
+				}
+				$nextknown[] = $next;
+			}
+			$updatemoves = array();
+			foreach( $nextknown as $next ) {
+				$key = $nextarr[$next];
+				list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
+				$nextmoves = getMoves( $ssdb, $redis, $nextfen, $nextfrc, false );
+				if( count( $nextmoves ) > 0 ) {
+					arsort( $nextmoves );
+					$nextscore = reset( $nextmoves );
+					$throttle = getthrottle( $nextscore );
+					$nextsum = 0;
+					$nextcount = 0;
+					$totalvalue = 0;
+					foreach( $nextmoves as $record => $score ) {
+						if( $score >= $throttle ) {
+							$nextcount++;
+							$nextsum = $nextsum + $score;
+							$totalvalue = $totalvalue + $nextsum;
+						}
+						else
+							break;
+					}
+					if( abs( $nextscore ) < 10000 ) {
+						if( $nextcount > 1 )
+							$nextscore = ( int )round_stochastic( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5, $minbinfen . $key . $nextscore );
+						else {
+							if( count( $nextmoves ) > 1 ) {
+								if( $nextscore > 0 && $nextscore < 50 )
+									$nextscore = ( int )round_stochastic( ( $nextscore * 4 + $throttle ) / 5, $minbinfen . $key . $nextscore );
+								else if( $nextscore >= 50 && $nextscore < 75 )
+									$nextscore = ( int )round_stochastic( ( $nextscore * 13 + $throttle * 2 ) / 15, $minbinfen . $key . $nextscore );
+							}
+							else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 100 ) {
+								$t = max( 0, ( abs( $nextscore ) - 50 ) / ( 100 - 50 ) );
+								$nextscore = ( int )round_stochastic( $nextscore * 0.9, $minbinfen . $key . $nextscore ) + ( int )round_stochastic( $nextscore * 0.1 * $t, $minbinfen . $key . $nextscore );
+							}
+						}
+					}
+					$moves1[ $key ] = -$nextscore;
+					$updatemoves[ $key ] = $nextscore;
+				}
+			}
+			if( count( $updatemoves ) > 0 )
+				updateScore( $redis, $minbinfen, $minindex, $updatemoves );
+		}
+	}
+	foreach( $moves1 as $key => $entry ) {
+		if( abs( $moves1[$key] ) > 10000 ) {
+			if( $moves1[$key] < 0 ) {
+				$moves1[$key] = $moves1[$key] + 1;
+			}
+			else {
+				$moves1[$key] = $moves1[$key] - 1;
+			}
+		}
+	}
+	return $moves1;
+}
+
+while(1) {
+	$rows = $ssdb->hlist($s_key, $e_key, $size);
+	if(!$rows) {
+		while(pcntl_wait($status) >= 0) {
+		}
+		echo $total . "\n";
+		break;
+	}
+	$entries = hlist_entries($rows);
+	if(!$entries) {
+		break;
+	}
+	$s_key = end($entries)[0];
+	if($child >= $max_child) {
+		pcntl_wait($status);
+		$child--;
+	}
+	$pid = pcntl_fork();
+	if($pid > 0) {
+		$total += count($entries);
+		$child++;
+	} else {
+		$GLOBALS['cached'] = new Judy( Judy::BITSET );
+		$ssdb = new SimpleSSDB($host);
+		$redis = new Redis();
+		$redis->connect($host);
+		foreach($entries as $entry) {
+			$name = $entry[0];
+			$row = cbhexfen2fen(bin2hex($name));
+			list( $row, $frc ) = cbgetfen( $row );
+			getMoves($ssdb, $redis, $row, $frc, true, $entry[1], $name);
+		}
+		exit(0);
+	}
+}
+
+echo "done.\n";
