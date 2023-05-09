@@ -1,6 +1,0 @@
-ARG_ENABLE("ccegtbprobe", "CCEGTBProbe Support", "no");
-
-if (PHP_CCEGTBPROBE == "yes") {
-	EXTENSION("ccegtbprobe", "ccegtbprobe.cpp piece_set.cpp LZMA/Alloc.c LZMA/CpuArch.c LZMA/LzFind.c LZMA/LzmaDec.c LZMA/LzmaEnc.c LZMA/LzmaLib.c");
-	AC_DEFINE('HAVE_CCEGTBPROBE', 1, 'Have CCEGTBProbe support', false);
-}
