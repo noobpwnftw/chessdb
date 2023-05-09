@@ -1208,10 +1208,7 @@ try{
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
 							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, cbmovemake( $row, $move ) ) == 0 ) {
 								updateScore( $redis, $row, array( $move => $score ) );
-								if( $isJson )
-									echo '"status":"ok"';
-								else
-									echo 'ok';
+								echo 'ok';
 							}
 						}
 						else {
