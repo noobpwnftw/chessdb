@@ -167,6 +167,7 @@ var Chess = function(fen) {
   var move_number = 1;
   var history = [];
   var header = {};
+  var gen_cache = null;
 
   /* if the user passes in a fen string, load it, else default to
    * starting position
@@ -191,6 +192,7 @@ var Chess = function(fen) {
     move_number = 1;
     history = [];
     if (!keep_headers) header = {};
+    gen_cache = null;
     update_setup(generate_fen());
   }
 
@@ -246,7 +248,7 @@ var Chess = function(fen) {
     ep_square = (tokens.length < 4 || tokens[3] === '-') ? EMPTY : SQUARES[tokens[3]];
     half_moves = isNaN(tokens[4]) ? 0 : parseInt(tokens[4], 10);
     move_number = isNaN(tokens[5]) ? 1 : parseInt(tokens[5], 10);
-
+    gen_cache = null;
     update_setup(generate_fen());
 
     return true;
@@ -461,6 +463,7 @@ var Chess = function(fen) {
       kings[piece.color] = sq;
     }
 
+    gen_cache = null;
     update_setup(generate_fen());
 
     return true;
@@ -473,6 +476,7 @@ var Chess = function(fen) {
       kings[piece.color] = EMPTY;
     }
 
+    gen_cache = null;
     update_setup(generate_fen());
 
     return piece;
@@ -501,6 +505,9 @@ var Chess = function(fen) {
   }
 
   function generate_moves(options) {
+    if (gen_cache !== null && typeof options === 'undefined') {
+      return gen_cache;
+    }
     function add_move(board, moves, from, to, flags) {
       /* if pawn promotion */
       if (
@@ -656,7 +663,9 @@ var Chess = function(fen) {
       }
       undo_move();
     }
-
+    if (!single_square) {
+      gen_cache = legal_moves;
+    }
     return legal_moves;
   }
 
@@ -873,7 +882,8 @@ var Chess = function(fen) {
       castling: { b: castling.b, w: castling.w },
       ep_square: ep_square,
       half_moves: half_moves,
-      move_number: move_number
+      move_number: move_number,
+      gen_cache: gen_cache
     });
   }
 
@@ -948,7 +958,7 @@ var Chess = function(fen) {
 
     /* if big pawn move, update the en passant square */
     if (move.flags & BITS.BIG_PAWN) {
-      if (turn === 'b') {
+      if (turn === BLACK) {
         ep_square = move.to - 16;
       } else {
         ep_square = move.to + 16;
@@ -970,6 +980,7 @@ var Chess = function(fen) {
       move_number++;
     }
     turn = swap_color(turn);
+    gen_cache = null;
   }
 
   function undo_move() {
@@ -985,6 +996,7 @@ var Chess = function(fen) {
     ep_square = old.ep_square;
     half_moves = old.half_moves;
     move_number = old.move_number;
+    gen_cache = old.gen_cache;
 
     var us = turn;
     var them = swap_color(turn);
@@ -1623,6 +1635,27 @@ var Chess = function(fen) {
 
     turn: function() {
       return turn;
+    },
+
+    do_null_move: function() {
+      half_moves++;
+      if (turn === BLACK) {
+        move_number++;
+      }
+      turn = swap_color(turn);
+      undo_ep_square = ep_square;
+      ep_square = EMPTY;
+      gen_cache = null;
+    },
+
+    undo_null_move: function() {
+      half_moves--;
+      if (turn === WHITE) {
+        move_number--;
+      }
+      turn = swap_color(turn);
+      ep_square = undo_ep_square;
+      gen_cache = null;
     },
 
     move: function(move, options) {
