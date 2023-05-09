@@ -2393,66 +2393,63 @@ try{
 	}
 	else if( $action == 'getqueue' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
-			if( $readwrite_queue->trywritelock() )
+			$memcache_obj = new Memcache();
+			$memcache_obj->pconnect('localhost', 11211);
+			if( !$memcache_obj )
+				throw new Exception( 'Memcache error.' );
+			$activelist = $memcache_obj->get( 'WorkerList' );
+			if( $activelist === FALSE ) {
+				$activelist = array();
+				$memcache_obj->add( 'WorkerList', $activelist, 0, 0 );
+			}
+			if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
+				$activelist[$_SERVER['REMOTE_ADDR']] = 1;
+				$memcache_obj->set( 'WorkerList', $activelist, 0, 0 );
+			}
+			$m = new MongoClient('mongodb://localhost');
+			$collection = $m->selectDB('ccdbackqueue')->selectCollection('ackqueuedb');
+			$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+			if( !empty( $doc ) && isset( $doc['data'] ) ) {
+				echo $doc['data'];
+			}
+			else if( $readwrite_queue->trywritelock() )
 			{
-				//$readwrite_queue->writelock();
-				$memcache_obj = new Memcache();
-				$memcache_obj->pconnect('localhost', 11211);
-				if( !$memcache_obj )
-					throw new Exception( 'Memcache error.' );
-				$activelist = $memcache_obj->get( 'WorkerList' );
-				if( $activelist === FALSE ) {
-					$activelist = array();
-					$memcache_obj->add( 'WorkerList', $activelist, 0, 0 );
-				}
-				if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
-					$activelist[$_SERVER['REMOTE_ADDR']] = 1;
-					$memcache_obj->set( 'WorkerList', $activelist, 0, 0 );
-				}
-				$m = new MongoClient('mongodb://localhost');
-				$collection = $m->selectDB('ccdbackqueue')->selectCollection('ackqueuedb');
-				$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
-				if( !empty( $doc ) && isset( $doc['data'] ) ) {
-					echo $doc['data'];
-				}
-				else {
-					$collection2 = $m->selectDB('ccdbqueue')->selectCollection('queuedb');
-					$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => 1 ) )->limit(10);
-					$docs = array();
-					$queueout = '';
-					foreach( $cursor as $doc ) {
-						$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
-						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 ) {
-							$moves = array();
-							foreach( $doc as $key => $item ) {
-								if( $key == '_id' )
-									continue;
-								else if( $key == 'p' )
-									continue;
-								else if( $key == 'e' )
-									continue;
-								else if( $memcache_obj->add( 'QueueHistory::' . $fen . $key, 1, 0, 300 ) )
-									$moves[] = $key;
-							}
-							if( count( $moves ) > 0 ) {
-								$queueout .= $fen . "\n";
-								foreach( $moves as $move )
-									$queueout .= $fen . ' moves ' . $move . "\n";
-								$thisminute = date('i');
-								$memcache_obj->add( 'QueueCount::' . $thisminute, 0, 0, 150 );
-								$memcache_obj->increment( 'QueueCount::' . $thisminute );
-							}
+				$collection2 = $m->selectDB('ccdbqueue')->selectCollection('queuedb');
+				$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => 1 ) )->limit(10);
+				$docs = array();
+				$queueout = '';
+				foreach( $cursor as $doc ) {
+					$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
+					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 ) {
+						$moves = array();
+						foreach( $doc as $key => $item ) {
+							if( $key == '_id' )
+								continue;
+							else if( $key == 'p' )
+								continue;
+							else if( $key == 'e' )
+								continue;
+							else if( $memcache_obj->add( 'QueueHistory::' . $fen . $key, 1, 0, 300 ) )
+								$moves[] = $key;
 						}
-						$docs[] = $doc['_id'];
+						if( count( $moves ) > 0 ) {
+							$queueout .= $fen . "\n";
+							foreach( $moves as $move )
+								$queueout .= $fen . ' moves ' . $move . "\n";
+							$thisminute = date('i');
+							$memcache_obj->add( 'QueueCount::' . $thisminute, 0, 0, 150 );
+							$memcache_obj->increment( 'QueueCount::' . $thisminute );
+						}
 					}
-					$cursor->reset();
-					if( count( $docs ) > 0 ) {
-						$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
-					}
-					if( strlen($queueout) > 0 ) {
-						$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
-						echo $queueout;
-					}
+					$docs[] = $doc['_id'];
+				}
+				$cursor->reset();
+				if( count( $docs ) > 0 ) {
+					$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
+				}
+				if( strlen($queueout) > 0 ) {
+					$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+					echo $queueout;
 				}
 				$readwrite_queue->writeunlock();
 			}
@@ -2475,56 +2472,52 @@ try{
 	}
 	else if( $action == 'getsel' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
-			if( $readwrite_sel->trywritelock() )
+			$memcache_obj = new Memcache();
+			$memcache_obj->pconnect('localhost', 11211);
+			if( !$memcache_obj )
+				throw new Exception( 'Memcache error.' );
+			$activelist = $memcache_obj->get( 'SelList' );
+			if( $activelist === FALSE ) {
+					$activelist = array();
+					$memcache_obj->add( 'SelList', $activelist, 0, 0 );
+			}
+			if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
+					$activelist[$_SERVER['REMOTE_ADDR']] = 1;
+					$memcache_obj->set( 'SelList', $activelist, 0, 0 );
+			}
+			$m = new MongoClient('mongodb://localhost');
+			$collection = $m->selectDB('ccdbacksel')->selectCollection('ackseldb');
+			$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
+			if( !empty( $doc ) && isset( $doc['data'] ) ) {
+				echo $doc['data'];
+			}
+			else if( $readwrite_sel->trywritelock() )
 			{
-				//$readwrite_sel->writelock();
-				$m = new MongoClient('mongodb://localhost');
-				$collection = $m->selectDB('ccdbacksel')->selectCollection('ackseldb');
-				$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
-				if( !empty( $doc ) && isset( $doc['data'] ) ) {
-					echo $doc['data'];
+				$collection2 = $m->selectDB('ccdbsel')->selectCollection('seldb');
+				$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => -1 ) )->limit(10);
+				$docs = array();
+				$selout = '';
+				foreach( $cursor as $doc ) {
+					$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
+					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
+					{
+						if( isset( $doc['p'] ) && $doc['p'] > 0 )
+							$selout .= '!' . $fen . "\n";
+						else
+							$selout .= $fen . "\n";
+						$thisminute = date('i');
+						$memcache_obj->add( 'SelCount::' . $thisminute, 0, 0, 150 );
+						$memcache_obj->increment( 'SelCount::' . $thisminute );
+					}
+					$docs[] = $doc['_id'];
 				}
-				else {
-					$memcache_obj = new Memcache();
-					$memcache_obj->pconnect('localhost', 11211);
-					if( !$memcache_obj )
-						throw new Exception( 'Memcache error.' );
-					$activelist = $memcache_obj->get( 'SelList' );
-					if( $activelist === FALSE ) {
-							$activelist = array();
-							$memcache_obj->add( 'SelList', $activelist, 0, 0 );
-					}
-					if( !isset( $activelist[$_SERVER['REMOTE_ADDR']] ) ) {
-							$activelist[$_SERVER['REMOTE_ADDR']] = 1;
-							$memcache_obj->set( 'SelList', $activelist, 0, 0 );
-					}
-
-					$collection2 = $m->selectDB('ccdbsel')->selectCollection('seldb');
-					$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => -1 ) )->limit(10);
-					$docs = array();
-					$selout = '';
-					foreach( $cursor as $doc ) {
-						$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
-						if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
-						{
-							if( isset( $doc['p'] ) && $doc['p'] > 0 )
-								$selout .= '!' . $fen . "\n";
-							else
-								$selout .= $fen . "\n";
-							$thisminute = date('i');
-							$memcache_obj->add( 'SelCount::' . $thisminute, 0, 0, 150 );
-							$memcache_obj->increment( 'SelCount::' . $thisminute );
-						}
-						$docs[] = $doc['_id'];
-					}
-					$cursor->reset();
-					if( count( $docs ) > 0 ) {
-						$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
-					}
-					if( strlen($selout) > 0 ) {
-						$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
-						echo $selout;
-					}
+				$cursor->reset();
+				if( count( $docs ) > 0 ) {
+					$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
+				}
+				if( strlen($selout) > 0 ) {
+					$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+					echo $selout;
 				}
 				$readwrite_sel->writeunlock();
 			}
