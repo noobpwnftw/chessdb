@@ -10,7 +10,7 @@
 	<title>Chess Cloud Database Query Interface</title>
 </head>
 
-<body style="width:1066px;">
+<body style="width:1065px;">
 	<table width="100%">
 		<tr style="vertical-align:middle;">
 			<td>
@@ -58,34 +58,34 @@
 						<td>
 							<br>
 							<span>Black Castling</span>
-							<div style="height: 17px;"><input type="checkbox" name="bks" id="bks" onclick="ChangeCastling()" /><label for="bks">&nbsp;O-O</label></div>
-							<div style="height: 17px;"><input type="checkbox" name="bqs" id="bqs" onclick="ChangeCastling()" /><label for="bqs">&nbsp;O-O-O</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="bks" id="bks" onclick="ChangeCastling()" /><label for="bks">&nbsp;O-O</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="bqs" id="bqs" onclick="ChangeCastling()" /><label for="bqs">&nbsp;O-O-O</label></div>
 							<br>
 							<span>White Castling</span>
-							<div style="height: 17px;"><input type="checkbox" name="wks" id="wks" onclick="ChangeCastling()" /><label for="wks">&nbsp;O-O</label></div>
-							<div style="height: 17px;"><input type="checkbox" name="wqs" id="wqs" onclick="ChangeCastling()" /><label for="wqs">&nbsp;O-O-O</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="wks" id="wks" onclick="ChangeCastling()" /><label for="wks">&nbsp;O-O</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="wqs" id="wqs" onclick="ChangeCastling()" /><label for="wqs">&nbsp;O-O-O</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
 							<br>
-							<div style="height: 17px;"><input type="checkbox" name="rulecheck" id="rulecheck" onclick="RefreshAll()" checked="checked" /><label for="rulecheck">&nbsp;Rules</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="rulecheck" id="rulecheck" onclick="RefreshAll()" checked="checked" /><label for="rulecheck">&nbsp;Rules</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 17px;"><input type="checkbox" name="hidescore" id="hidescore" onclick="RefreshInner()" /><label for="hidescore">&nbsp;Hide Info</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="hidescore" id="hidescore" onclick="RefreshInner()" /><label for="hidescore">&nbsp;Hide Info</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
 							<br>
-							<div style="height: 17px;"><input type="checkbox" name="bauto" id="bauto" onclick="RefreshInner()" /><label for="bauto">&nbsp;AI Black</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="bauto" id="bauto" onclick="RefreshInner()" /><label for="bauto">&nbsp;AI Black</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 17px;"><input type="checkbox" name="wauto" id="wauto" onclick="RefreshInner()" /><label for="wauto">&nbsp;AI White</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="wauto" id="wauto" onclick="RefreshInner()" /><label for="wauto">&nbsp;AI White</label></div>
 						</td>
 					</tr>
 					<tr>
@@ -102,7 +102,7 @@
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 17px;"><input type="checkbox" name="localengine" id="localengine" onclick="RefreshInner()" checked="checked" /><label for="localengine">&nbsp;Live AI</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="localengine" id="localengine" onclick="RefreshInner()" checked="checked" /><label for="localengine">&nbsp;Live AI</label></div>
 						</td>
 					</tr>
 					<tr>
@@ -118,19 +118,19 @@
 			</td>
 
 			<td style="vertical-align:top;">
-				<table cellspacing="0" style="margin-left:2px;">
+				<table cellspacing="0">
 					<tr>
 						<td>
 							<table>
 								<tr>
 									<td></td>
 									<td style="text-align:center;">
-										<div style="height:15px;" id="numbar1"></div>
+										<div style="height:16px;" id="numbar1"></div>
 									</td>
 									<td></td>
 								</tr>
 								<tr>
-									<td id="rankbar" style="text-align:center;min-width:10px;line-height:45px;"></td>
+									<td id="rankbar" style="text-align:center;min-width:8px;line-height:45px;"></td>
 									<td class="snow">
 										<div class="deskc" id="desk"><noscript>This site requires JavaScript!</noscript></div>
 									</td>
@@ -146,7 +146,7 @@
 								<tr>
 									<td></td>
 									<td style="text-align:center;">
-										<div style="height:15px;" id="numbar2"></div>
+										<div style="height:16px;" id="numbar2"></div>
 									</td>
 									<td></td>
 								</tr>
@@ -154,8 +154,8 @@
 						</td>
 					</tr>
 					<tr>
-						<td style="padding-left:15px;">
-							<table cellspacing="5">
+						<td style="padding-left:18px;">
+							<table cellspacing="4">
 								<tr id="tt1">
 									<td class="unselpiece" id="bkt"><img alt="" onclick="SelectFigure('bk')" src="/file/chess/bk.svg"></td>
 									<td class="unselpiece" id="bqt"><img alt="" onclick="SelectFigure('bq')" src="/file/chess/bq.svg"></td>
@@ -163,7 +163,7 @@
 									<td class="unselpiece" id="bbt"><img alt="" onclick="SelectFigure('bb')" src="/file/chess/bb.svg"></td>
 									<td class="unselpiece" id="bnt"><img alt="" onclick="SelectFigure('bn')" src="/file/chess/bn.svg"></td>
 									<td class="unselpiece" id="bpt"><img alt="" onclick="SelectFigure('bp')" src="/file/chess/bp.svg"></td>
-									<td class="unselpiece" id="movet"><img alt="" onclick="SelectFigure('move')" src="/file/move.gif"></td>
+									<td class="unselpiece" id="movet" style="width:45px;text-align:center;"><img alt="" onclick="SelectFigure('move')" src="/file/move.gif"></td>
 								</tr>
 								<tr id="tt2">
 									<td class="unselpiece" id="wKt"><img alt="" onclick="SelectFigure('wK')" src="/file/chess/wk.svg"></td>
@@ -172,13 +172,13 @@
 									<td class="unselpiece" id="wBt"><img alt="" onclick="SelectFigure('wB')" src="/file/chess/wb.svg"></td>
 									<td class="unselpiece" id="wNt"><img alt="" onclick="SelectFigure('wN')" src="/file/chess/wn.svg"></td>
 									<td class="unselpiece" id="wPt"><img alt="" onclick="SelectFigure('wP')" src="/file/chess/wp.svg"></td>
-									<td class="unselpiece" id="delt"><img alt="" onclick="SelectFigure('del')" src="/file/del.gif"></td>
+									<td class="unselpiece" id="delt" style="width:45px;text-align:center;"><img alt="" onclick="SelectFigure('del')" src="/file/del.gif"></td>
 								</tr>
 							</table>
 						</td>
 					</tr>
 					<tr>
-						<td id="stats" style="padding-top:9px;padding-left:10px;"></td>
+						<td id="stats" style="padding-top:6px;padding-left:10px;"></td>
 					</tr>
 				</table>
 			</td>
@@ -191,9 +191,10 @@
 		</tr>
 	</table>
 	<a id="img_link" style="display:none"></a>
-	<script src='https://libs.jshub.com/es6-promise/4.1.1/es6-promise.min.js'></script>
-	<script src='https://libs.jshub.com/html2canvas/0.5.0-beta4/html2canvas.min.js'></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.min.js" integrity="sha512-JMK7ImCd/9VxQM7FWvAT3njqo5iGKkWcOax6Bwzuq48xxFd7/jekKcgN+59ZRwBoEpZvv6Jkwh3fDGrBVWX5vA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="/file/chess.js"></script>
+	<script src="/file/chess960_shim.js"></script>
 	<script src="file/cdb.js"></script>
 </body>
 </html>

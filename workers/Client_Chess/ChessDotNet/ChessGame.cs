@@ -109,7 +109,7 @@ namespace ChessDotNet
         }
 
         public virtual bool NeedsPgnMoveSpecialTreatment(string move, Player player) { return false; }
-        public virtual bool HandleSpecialPgnMove(string move, Player player) { return false;  } 
+        public virtual bool HandleSpecialPgnMove(string move, Player player) { return false; }
 
         protected bool fiftyMoves = false;
         protected virtual bool FiftyMovesAndThisCanResultInDraw { get { return fiftyMoves; } }
@@ -345,15 +345,31 @@ namespace ChessDotNet
                 CanWhiteCastleKingSide = data.CanWhiteCastleKingSide;
                 CanWhiteCastleQueenSide = data.CanWhiteCastleQueenSide;
             }
-            InitialBlackRookFileQueensideCastling = CanBlackCastleQueenSide ? (File)Array.IndexOf(eighthRank, new Rook(Player.Black)) : File.None;
-            InitialBlackRookFileKingsideCastling = CanBlackCastleKingSide ? (File)Array.LastIndexOf(eighthRank, new Rook(Player.Black)) : File.None;
-            InitialWhiteRookFileQueensideCastling = CanWhiteCastleQueenSide ? (File)Array.IndexOf(firstRank, new Rook(Player.White)) : File.None;
-            InitialWhiteRookFileKingsideCastling = CanWhiteCastleKingSide ? (File)Array.LastIndexOf(firstRank, new Rook(Player.White)) : File.None;
+
+            InitialBlackRookFileQueensideCastling =
+                data.InitialBlackRookFileQueensideCastling != File.None
+                    ? data.InitialBlackRookFileQueensideCastling
+                    : (CanBlackCastleQueenSide ? (File)Array.IndexOf(eighthRank, new Rook(Player.Black)) : File.None);
+
+            InitialBlackRookFileKingsideCastling =
+                data.InitialBlackRookFileKingsideCastling != File.None
+                    ? data.InitialBlackRookFileKingsideCastling
+                    : (CanBlackCastleKingSide ? (File)Array.LastIndexOf(eighthRank, new Rook(Player.Black)) : File.None);
+
+            InitialWhiteRookFileQueensideCastling =
+                data.InitialWhiteRookFileQueensideCastling != File.None
+                    ? data.InitialWhiteRookFileQueensideCastling
+                    : (CanWhiteCastleQueenSide ? (File)Array.IndexOf(firstRank, new Rook(Player.White)) : File.None);
+
+            InitialWhiteRookFileKingsideCastling =
+                data.InitialWhiteRookFileKingsideCastling != File.None
+                    ? data.InitialWhiteRookFileKingsideCastling
+                    : (CanWhiteCastleKingSide ? (File)Array.LastIndexOf(firstRank, new Rook(Player.White)) : File.None);
 
             if (InitialBlackRookFileQueensideCastling == File.None) CanBlackCastleQueenSide = false;
             if (InitialBlackRookFileKingsideCastling == File.None) CanBlackCastleKingSide = false;
-            if (InitialWhiteRookFileKingsideCastling == File.None) CanWhiteCastleKingSide = false;
             if (InitialWhiteRookFileQueensideCastling == File.None) CanWhiteCastleQueenSide = false;
+            if (InitialWhiteRookFileKingsideCastling == File.None) CanWhiteCastleKingSide = false;
 
             if (!data.Moves.Any() && data.EnPassant != null)
             {
@@ -424,35 +440,7 @@ namespace ChessDotNet
 
             fenBuilder.Append(' ');
 
-            bool hasAnyCastlingOptions = false;
-
-
-            if (CanWhiteCastleKingSide)
-            {
-                fenBuilder.Append('K');
-                hasAnyCastlingOptions = true;
-            }
-            if (CanWhiteCastleQueenSide)
-            {
-                fenBuilder.Append('Q');
-                hasAnyCastlingOptions = true;
-            }
-
-
-            if (CanBlackCastleKingSide)
-            {
-                fenBuilder.Append('k');
-                hasAnyCastlingOptions = true;
-            }
-            if (CanBlackCastleQueenSide)
-            {
-                fenBuilder.Append('q');
-                hasAnyCastlingOptions = true;
-            }
-            if (!hasAnyCastlingOptions)
-            {
-                fenBuilder.Append('-');
-            }
+            fenBuilder.Append(BuildCastlingField());
 
             fenBuilder.Append(' ');
 
@@ -497,19 +485,7 @@ namespace ChessDotNet
             {
                 throw new ArgumentException("Expected `w` or `b` for the active player in the FEN string.");
             }
-
-            if (parts[2].Contains("K")) data.CanWhiteCastleKingSide = true;
-            else data.CanWhiteCastleKingSide = false;
-
-            if (parts[2].Contains("Q")) data.CanWhiteCastleQueenSide = true;
-            else data.CanWhiteCastleQueenSide = false;
-
-            if (parts[2].Contains("k")) data.CanBlackCastleKingSide = true;
-            else data.CanBlackCastleKingSide = false;
-
-            if (parts[2].Contains("q")) data.CanBlackCastleQueenSide = true;
-            else data.CanBlackCastleQueenSide = false;
-
+            ParseXfenCastling(parts[2], data);
             if (parts[3] == "-") data.EnPassant = null;
             else
             {
@@ -524,7 +500,132 @@ namespace ChessDotNet
 
             return data;
         }
+        private static void ParseXfenCastling(string cr, GameCreationData data)
+        {
+            // reset
+            data.CanWhiteCastleKingSide = data.CanWhiteCastleQueenSide =
+            data.CanBlackCastleKingSide = data.CanBlackCastleQueenSide = false;
 
+            data.InitialWhiteRookFileKingsideCastling = File.None;
+            data.InitialWhiteRookFileQueensideCastling = File.None;
+            data.InitialBlackRookFileKingsideCastling = File.None;
+            data.InitialBlackRookFileQueensideCastling = File.None;
+
+            if (string.IsNullOrEmpty(cr) || cr == "-")
+                return;
+
+            // need king files to decide K/Q side when file letters are used
+            Piece[] firstRank = data.Board[7];
+            Piece[] eighthRank = data.Board[0];
+            File whiteKingFile = (File)Array.IndexOf(firstRank, new King(Player.White));
+            File blackKingFile = (File)Array.IndexOf(eighthRank, new King(Player.Black));
+
+            foreach (char c in cr)
+            {
+                switch (c)
+                {
+                    case 'K': data.CanWhiteCastleKingSide = true; break;
+                    case 'Q': data.CanWhiteCastleQueenSide = true; break;
+                    case 'k': data.CanBlackCastleKingSide = true; break;
+                    case 'q': data.CanBlackCastleQueenSide = true; break;
+
+                    default:
+                        if (c >= 'A' && c <= 'H')
+                        {
+                            File f = (File)(c - 'A');
+                            if (whiteKingFile != File.None)
+                            {
+                                if (f < whiteKingFile)
+                                {
+                                    data.CanWhiteCastleQueenSide = true;
+                                    data.InitialWhiteRookFileQueensideCastling = f;
+                                }
+                                else
+                                {
+                                    data.CanWhiteCastleKingSide = true;
+                                    data.InitialWhiteRookFileKingsideCastling = f;
+                                }
+                            }
+                        }
+                        else if (c >= 'a' && c <= 'h')
+                        {
+                            File f = (File)(c - 'a');
+                            if (blackKingFile != File.None)
+                            {
+                                if (f < blackKingFile)
+                                {
+                                    data.CanBlackCastleQueenSide = true;
+                                    data.InitialBlackRookFileQueensideCastling = f;
+                                }
+                                else
+                                {
+                                    data.CanBlackCastleKingSide = true;
+                                    data.InitialBlackRookFileKingsideCastling = f;
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        private bool SideRequiresXfen(Player side)
+        {
+            if (side == Player.White)
+            {
+                if (!(CanWhiteCastleKingSide || CanWhiteCastleQueenSide)) return false;
+                if (InitialWhiteKingFile != File.E) return true;
+                if (CanWhiteCastleKingSide && InitialWhiteRookFileKingsideCastling != File.H) return true;
+                if (CanWhiteCastleQueenSide && InitialWhiteRookFileQueensideCastling != File.A) return true;
+                return false;
+            }
+            else
+            {
+                if (!(CanBlackCastleKingSide || CanBlackCastleQueenSide)) return false;
+                if (InitialBlackKingFile != File.E) return true;
+                if (CanBlackCastleKingSide && InitialBlackRookFileKingsideCastling != File.H) return true;
+                if (CanBlackCastleQueenSide && InitialBlackRookFileQueensideCastling != File.A) return true;
+                return false;
+            }
+        }
+
+        private bool CastlingRequiresXfen()
+        {
+            return SideRequiresXfen(Player.White) || SideRequiresXfen(Player.Black);
+        }
+
+        private string BuildCastlingField()
+        {
+            if (!CastlingRequiresXfen())
+            {
+                var sb = new System.Text.StringBuilder(4);
+                if (CanWhiteCastleKingSide) sb.Append('K');
+                if (CanWhiteCastleQueenSide) sb.Append('Q');
+                if (CanBlackCastleKingSide) sb.Append('k');
+                if (CanBlackCastleQueenSide) sb.Append('q');
+                return sb.Length > 0 ? sb.ToString() : "-";
+            }
+
+            if (CanWhiteCastleKingSide && InitialWhiteRookFileKingsideCastling == File.None)
+                throw new InvalidOperationException("Missing white KS rook file for X-FEN.");
+            if (CanWhiteCastleQueenSide && InitialWhiteRookFileQueensideCastling == File.None)
+                throw new InvalidOperationException("Missing white QS rook file for X-FEN.");
+            if (CanBlackCastleKingSide && InitialBlackRookFileKingsideCastling == File.None)
+                throw new InvalidOperationException("Missing black KS rook file for X-FEN.");
+            if (CanBlackCastleQueenSide && InitialBlackRookFileQueensideCastling == File.None)
+                throw new InvalidOperationException("Missing black QS rook file for X-FEN.");
+
+            var s = new System.Text.StringBuilder(4);
+            if (CanWhiteCastleKingSide)
+                s.Append((char)('A' + (int)InitialWhiteRookFileKingsideCastling));
+            if (CanWhiteCastleQueenSide)
+                s.Append((char)('A' + (int)InitialWhiteRookFileQueensideCastling));
+            if (CanBlackCastleKingSide)
+                s.Append((char)('a' + (int)InitialBlackRookFileKingsideCastling));
+            if (CanBlackCastleQueenSide)
+                s.Append((char)('a' + (int)InitialBlackRookFileQueensideCastling));
+
+            return s.Length > 0 ? s.ToString() : "-";
+        }
         protected virtual Piece[][] InterpretBoardOfFen(string board)
         {
             Piece[][] pieceArr = new Piece[8][];
@@ -765,16 +866,16 @@ namespace ChessDotNet
             {
                 if (move.Player == Player.White)
                 {
-                    if (move.OriginalPosition.File == File.A && move.OriginalPosition.Rank == 1)
+                    if (move.OriginalPosition.File == InitialWhiteRookFileQueensideCastling && move.OriginalPosition.Rank == 1)
                         CanWhiteCastleQueenSide = false;
-                    else if (move.OriginalPosition.File == File.H && move.OriginalPosition.Rank == 1)
+                    else if (move.OriginalPosition.File == InitialWhiteRookFileKingsideCastling && move.OriginalPosition.Rank == 1)
                         CanWhiteCastleKingSide = false;
                 }
                 else
                 {
-                    if (move.OriginalPosition.File == File.A && move.OriginalPosition.Rank == 8)
+                    if (move.OriginalPosition.File == InitialBlackRookFileQueensideCastling && move.OriginalPosition.Rank == 8)
                         CanBlackCastleQueenSide = false;
-                    else if (move.OriginalPosition.File == File.H && move.OriginalPosition.Rank == 8)
+                    else if (move.OriginalPosition.File == InitialBlackRookFileKingsideCastling && move.OriginalPosition.Rank == 8)
                         CanBlackCastleKingSide = false;
                 }
             }
@@ -782,13 +883,13 @@ namespace ChessDotNet
             {
                 type |= MoveType.Capture;
                 i_halfMoveClock = 0;
-                if (move.NewPosition.File == File.A && move.NewPosition.Rank == 1)
+                if (move.NewPosition.File == InitialWhiteRookFileQueensideCastling && move.NewPosition.Rank == 1)
                     CanWhiteCastleQueenSide = false;
-                else if (move.NewPosition.File == File.H && move.NewPosition.Rank == 1)
+                else if (move.NewPosition.File == InitialWhiteRookFileKingsideCastling && move.NewPosition.Rank == 1)
                     CanWhiteCastleKingSide = false;
-                else if (move.NewPosition.File == File.A && move.NewPosition.Rank == 8)
+                else if (move.NewPosition.File == InitialBlackRookFileQueensideCastling && move.NewPosition.Rank == 8)
                     CanBlackCastleQueenSide = false;
-                else if (move.NewPosition.File == File.H && move.NewPosition.Rank == 8)
+                else if (move.NewPosition.File == InitialBlackRookFileKingsideCastling && move.NewPosition.Rank == 8)
                     CanBlackCastleKingSide = false;
             }
             if (!isCapture && !(movingPiece is Pawn))
@@ -1132,6 +1233,10 @@ namespace ChessDotNet
                 CanBlackCastleQueenSide = CanBlackCastleQueenSide,
                 CanWhiteCastleKingSide = CanWhiteCastleKingSide,
                 CanWhiteCastleQueenSide = CanWhiteCastleQueenSide,
+                InitialWhiteRookFileKingsideCastling = InitialWhiteRookFileKingsideCastling,
+                InitialWhiteRookFileQueensideCastling = InitialWhiteRookFileQueensideCastling,
+                InitialBlackRookFileKingsideCastling = InitialBlackRookFileKingsideCastling,
+                InitialBlackRookFileQueensideCastling = InitialBlackRookFileQueensideCastling,
                 Moves = Moves.Select(x => x).ToArray(),
                 FullMoveNumber = i_fullMoveNumber,
                 HalfMoveClock = i_halfMoveClock,

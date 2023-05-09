@@ -433,6 +433,7 @@ namespace ChessDBDiscover
             {
                 ThreadCount = 1;
             }
+            ServicePointManager.DefaultConnectionLimit = 64;
             List<Thread> workerThreads = new List<Thread>();
             for (int i = 0; i < ThreadCount; i++)
             {

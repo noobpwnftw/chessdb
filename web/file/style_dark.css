@@ -1,0 +1,130 @@
+﻿@charset "utf-8";
+* {
+	margin: 0px;
+	padding: 0em;
+	position: relative;
+	z-index: 4;
+}
+a {
+	text-decoration:none;
+}
+hr {
+	margin-top: 5px;
+	border-right : 0;
+	border-left: 0;
+}
+br {
+	line-height: 12px;
+}
+a {
+	color: rgb(122, 162, 255);
+}
+body {
+	color-scheme: dark;
+	color: rgb(192, 192, 192);
+	background: rgb(32, 32, 32); margin: 10px 20px 20px; font: normal 14px/1.2 Tahoma, Pingfang SC, "Liberation Sans Narrow", sans-serif;
+	line-height: 16px;
+}
+p {
+	margin-left: 20px;
+	line-height: 20px;
+}
+img {
+	-webkit-touch-callout:none;
+	-webkit-user-select:none;
+	-khtml-user-select:none;
+	-moz-user-select:none;
+	-ms-user-select:none;
+	user-select:none;
+}
+div.chess {
+	z-index: 6;
+}
+.button {
+	box-sizing: border-box; border-width: 1px 1px 2px; border-style: solid; border-color: rgb(160, 160, 160) rgb(80, 80, 80) rgb(80, 80, 80) rgb(160, 160, 160); text-align: center; color: black; cursor: pointer; background-color: rgb(128, 128, 128); min-width: 80px; height: 23px;
+}
+.button:hover {
+	border-width: 2px 1px 1px; border-color: rgb(80, 80, 80) rgb(224, 224, 224) rgb(224, 224, 224) rgb(80, 80, 80); background-color: rgb(192, 192, 192);
+}
+.mbutton {
+	box-sizing: border-box; border-width: 1px 1px 2px; border-style: solid; border-color: rgb(160, 160, 160) rgb(80, 80, 80) rgb(80, 80, 80) rgb(160, 160, 160); text-align: center; color: black; cursor: pointer; background-color: rgb(128, 128, 128); min-width: 61px!important; height: 19px;
+}
+.mbutton:hover {
+	border-width: 2px 1px 1px; border-color: rgb(80, 80, 80) rgb(224, 224, 224) rgb(224, 224, 224) rgb(80, 80, 80); background-color: rgb(192, 192, 192);
+}
+.hovon {
+	height: 20px;
+	cursor: pointer;
+}
+.movelist div {
+	display: inline-block;
+	min-width: 68px;
+	cursor: pointer;
+	line-height: 20px;
+	width: max-content;
+}
+.movelist div:hover {
+	background-color: rgb(64, 64, 64);
+	color: white;
+}
+#cur {
+	font-weight: bold;
+	color: wheat;
+}
+#cur b {
+	color: rgb(192, 192, 192);
+}
+.hovon td + td {
+	color: white; white-space: nowrap; background-color: rgb(64, 64, 64);
+}
+.hovon td {
+	color: wheat; white-space: nowrap; background-color: rgb(64, 64, 64);
+}
+.hovon td span {
+	color: lime; white-space: nowrap; background-color: rgb(64, 64, 64);
+}
+.hovoff {
+	white-space: nowrap; background-color: rgb(32, 32, 32); height: 20px;
+}
+.framed {
+	border: 2px solid blue; border-image: none;
+}
+.selpiece {
+	background-color: rgb(192, 192, 192);
+	line-height: 10px;
+}
+.unselpiece {
+	background-color: rgb(64, 64, 64);
+	line-height: 10px;
+}
+table {
+	border-style:none;
+}
+.movelist thead,
+.movelist tbody {
+	display: block;
+	overflow-y: auto;
+}
+.movelist td {
+	min-width: 80px;
+}
+.stats {
+	min-width: 363px;
+	white-space: nowrap;
+}
+.stats tr {
+	height: 20px;
+}
+label {
+	vertical-align:middle;
+}
+input {
+	vertical-align:middle;
+}
+.desk {
+	height: 403px;
+	margin-bottom: 3px;
+}
+.deskc {
+	height: 360px;
+}

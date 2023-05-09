@@ -2,61 +2,188 @@
 ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
-header("Access-Control-Allow-Origin: *");
 header('Content-Type: text/html; charset=utf-8');
 
-if (!function_exists('http_response_code')) {
-	function http_response_code($code = NULL) {
-		if ($code !== NULL) {
-			switch ($code) {
-			case 100: $text = 'Continue'; break;
-			case 101: $text = 'Switching Protocols'; break;
-			case 200: $text = 'OK'; break;
-			case 201: $text = 'Created'; break;
-			case 202: $text = 'Accepted'; break;
-			case 203: $text = 'Non-Authoritative Information'; break;
-			case 204: $text = 'No Content'; break;
-			case 205: $text = 'Reset Content'; break;
-			case 206: $text = 'Partial Content'; break;
-			case 300: $text = 'Multiple Choices'; break;
-			case 301: $text = 'Moved Permanently'; break;
-			case 302: $text = 'Moved Temporarily'; break;
-			case 303: $text = 'See Other'; break;
-			case 304: $text = 'Not Modified'; break;
-			case 305: $text = 'Use Proxy'; break;
-			case 400: $text = 'Bad Request'; break;
-			case 401: $text = 'Unauthorized'; break;
-			case 402: $text = 'Payment Required'; break;
-			case 403: $text = 'Forbidden'; break;
-			case 404: $text = 'Not Found'; break;
-			case 405: $text = 'Method Not Allowed'; break;
-			case 406: $text = 'Not Acceptable'; break;
-			case 407: $text = 'Proxy Authentication Required'; break;
-			case 408: $text = 'Request Time-out'; break;
-			case 409: $text = 'Conflict'; break;
-			case 410: $text = 'Gone'; break;
-			case 411: $text = 'Length Required'; break;
-			case 412: $text = 'Precondition Failed'; break;
-			case 413: $text = 'Request Entity Too Large'; break;
-			case 414: $text = 'Request-URI Too Large'; break;
-			case 415: $text = 'Unsupported Media Type'; break;
-			case 500: $text = 'Internal Server Error'; break;
-			case 501: $text = 'Not Implemented'; break;
-			case 502: $text = 'Bad Gateway'; break;
-			case 503: $text = 'Service Unavailable'; break;
-			case 504: $text = 'Gateway Time-out'; break;
-			case 505: $text = 'HTTP Version not supported'; break;
-			default: exit('Unknown http status code "' . htmlentities($code) . '"'); break;
-			}
-			$protocol = (isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0');
-			header($protocol . ' ' . $code . ' ' . $text);
-			$GLOBALS['http_response_code'] = $code;
-		} else {
-			$code = (isset($GLOBALS['http_response_code']) ? $GLOBALS['http_response_code'] : 200);
-		}
-		return $code;
-	}
+final class FlexibleQueueDBClient
+{
+    private $sock;
+    private $socketPath;
+    private $timeout; // connect timeout (seconds)
+
+    /**
+     * @param string $socketPath Path to Unix socket (default "/tmp/fqdb.sock")
+     * @param float  $timeout    Connect timeout in seconds (default 5.0).
+     */
+    public function __construct($socketPath = "/tmp/fqdb.sock", $timeout = 5.0)
+    {
+        $this->socketPath = $socketPath;
+        $this->timeout = $timeout;
+        $this->connectPersistent();
+    }
+
+    /** PUSH: returns array('exists'=>bool, 'updated'=>bool) */
+    public function push($type, $key, $value, $priority, $expiry, $upsert, $mutate)
+    {
+        $payload  = $this->u32(strlen($key));
+        $payload .= $this->u32(strlen($value));
+        $payload .= $this->u16($priority);
+        $payload .= $this->u64($expiry);
+        $payload .= chr($upsert ? 1 : 0);
+        $payload .= chr($mutate ? 1 : 0);
+        $payload .= $key . $value;
+
+        $resp = $this->rpc($type, 1, $payload);
+        return array('exists'=>ord($resp[0])!==0, 'updated'=>ord($resp[1])!==0);
+    }
+
+    /** POP: returns array of items */
+    public function pop($type, $n, $direction)
+    {
+        $payload = $this->u32($n) . chr($direction);
+        $resp = $this->rpc($type, 2, $payload);
+
+        $off=0; $count=$this->ru32($resp,$off); $items=array();
+        for($i=0;$i<$count;$i++){
+            $klen=$this->ru32($resp,$off);
+            $vlen=$this->ru32($resp,$off);
+            $pri =$this->ru16($resp,$off);
+            $exp =$this->ru64($resp,$off);
+            $key =substr($resp,$off,$klen); $off+=$klen;
+            $val =substr($resp,$off,$vlen); $off+=$vlen;
+            $items[]=array('key'=>$key,'value'=>$val,'priority'=>$pri,'expiry'=>$exp);
+        }
+        return $items;
+    }
+
+    /** REFRESH: returns array of items */
+    public function refresh($type, $threshold, $expiry, $n)
+    {
+        $payload  = $this->u64($threshold);
+        $payload .= $this->u64($expiry);
+        $payload .= $this->u32($n);
+        $resp = $this->rpc($type, 3, $payload);
+
+        $off=0; $count=$this->ru32($resp,$off); $items=array();
+        for($i=0;$i<$count;$i++){
+            $klen=$this->ru32($resp,$off);
+            $vlen=$this->ru32($resp,$off);
+            $pri =$this->ru16($resp,$off);
+            $exp =$this->ru64($resp,$off);
+            $key =substr($resp,$off,$klen); $off+=$klen;
+            $val =substr($resp,$off,$vlen); $off+=$vlen;
+            $items[]=array('key'=>$key,'value'=>$val,'priority'=>$pri,'expiry'=>$exp);
+        }
+        return $items;
+    }
+
+    /** REMOVE: returns bool */
+    public function remove($type, $key)
+    {
+        $payload  = $this->u32(strlen($key));
+        $payload .= $key;
+
+        $resp = $this->rpc($type, 4, $payload);
+        return ord($resp[0])!==0;
+    }
+
+    /** COUNT: returns u64 (as int on 64-bit PHP) */
+    public function count($type, $min, $max)
+    {
+        $payload = $this->u32($min & 0xFFFFFFFF).$this->u32($max & 0xFFFFFFFF);
+        $resp = $this->rpc($type, 5, $payload);
+        $off=0; return $this->ru64($resp,$off);
+    }
+
+    /** Optional explicit close */
+    public function close()
+    {
+        if (is_resource($this->sock)) {
+            @fclose($this->sock);
+        }
+        $this->sock = null;
+    }
+
+    // ---------------------------------------------------------------------
+    // Internals
+    // ---------------------------------------------------------------------
+
+    private function connectPersistent()
+    {
+        $errno = 0; $errstr = '';
+        $this->sock = @pfsockopen("unix://".$this->socketPath, -1, $errno, $errstr, $this->timeout);
+        if (!$this->sock) {
+            throw new RuntimeException("connect($this->socketPath): [$errno] $errstr");
+        }
+        stream_set_blocking($this->sock, true);
+    }
+
+    private function ensureConnected()
+    {
+        if (!is_resource($this->sock) || feof($this->sock)) {
+            $this->close();
+            $this->connectPersistent();
+        }
+    }
+
+    /** RPC with close on failure. */
+    private function rpc($type, $op, $payload)
+    {
+        $this->ensureConnected();
+
+        $hdr = $this->u16($type).$this->u16($op).$this->u32(strlen($payload));
+        $buf = $hdr.$payload;
+
+        try {
+            $this->writeAll($buf);
+            $h=$this->readN(4); $off=0; $len=$this->ru32($h,$off);
+            if($len==0){
+                throw new RuntimeException("server error");
+            }
+            return $this->readN($len);
+        } catch (Exception $e) {
+            $this->close();
+            throw $e;
+        }
+    }
+
+    private function writeAll($buf)
+    {
+        $n=strlen($buf); $o=0;
+        while($o<$n){
+            $w=@fwrite($this->sock, substr($buf,$o));
+            if($w===false || $w===0){
+                throw new RuntimeException("socket write failed");
+            }
+            $o+=$w;
+        }
+    }
+
+    private function readN($n)
+    {
+        $out='';
+        while(strlen($out)<$n){
+            $chunk=@fread($this->sock, $n - strlen($out));
+            if($chunk===false || $chunk===''){
+                $meta = @stream_get_meta_data($this->sock);
+                if (!empty($meta['timed_out'])) {
+                    throw new RuntimeException("socket read timeout");
+                }
+                throw new RuntimeException("socket closed");
+            }
+            $out.=$chunk;
+        }
+        return $out;
+    }
+
+    // Little-endian pack/unpack
+    private function u16($v){return pack('v',$v & 0xFFFF);}
+    private function u32($v){return pack('V',$v & 0xFFFFFFFF);}
+    private function u64($v){return pack('P',$v);}
+    private function ru16($b,&$o){$v=unpack('v',substr($b,$o,2));$o+=2;return $v[1];}
+    private function ru32($b,&$o){$v=unpack('V',substr($b,$o,4));$o+=4;return $v[1];}
+    private function ru64($b,&$o){$v=unpack('P',substr($b,$o,8));$o+=8;return $v[1];}
 }
+
 function sizeFilter( $bytes )
 {
 	$label = array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB' );
@@ -73,34 +200,39 @@ function secondsToTime($seconds_time)
 	$seconds = floor($seconds_time - ($days * 86400) - ($hours * 3600) - ($minutes * 60));
 	return str_pad( $days, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $hours, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $minutes, 2, '0', STR_PAD_LEFT ) . ':' . str_pad( $seconds, 2, '0', STR_PAD_LEFT );
 }
+function is_true( $val ) {
+	return ( is_string( $val ) ? filter_var( $val, FILTER_VALIDATE_BOOLEAN ) : ( bool ) $val );
+}
 
 try{
 	$lang = 0;
 	if( isset( $_REQUEST['lang'] ) ) {
 		$lang = intval($_REQUEST['lang']);
 	}
+	if( isset( $_REQUEST['json'] ) ) {
+		$isJson = is_true( $_REQUEST['json'] );
+	}
+	else {
+		$isJson = false;
+	}
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8889, 1.0);
-	$count1 = $redis->dbsize();
+	$redis->pconnect('dbserver.internal', 8889, 5.0);
+	$pos_count = $redis->dbsize();
 
-	$m = new MongoClient();
-	$collection = $m->selectDB('ccdbqueue')->selectCollection('queuedb');
-	$cursor = $collection->find();
-	$count2 = $cursor->count();
-	$cursor->reset();
+	$fq_queue = new FlexibleQueueDBClient( '/run/ccqueue/ccqueue.sock' );
+	$queue_count = $fq_queue->count(0, 0, 2);
+	$queue_count_prio = $fq_queue->count(0, 1, 2);
 
-	$collection = $m->selectDB('ccdbsel')->selectCollection('seldb');
-	$cursor = $collection->find();
-	$count3 = $cursor->count();
-	$cursor->reset();
+	$fq_sel = new FlexibleQueueDBClient( '/run/ccsel/ccsel.sock' );
+	$sel_count = $fq_sel->count(0, 0, 2);
+	$sel_count_prio = $fq_sel->count(0, 1, 2);
 
 	$egtb_count_dtc = 0;
 	$egtb_size_dtc = 0;
 	$egtb_count_dtm = 0;
 	$egtb_size_dtm = 0;
 	$memcache_obj = new Memcache();
-	$memcache_obj->pconnect('localhost', 11211);
-	if( !$memcache_obj )
+	if( !$memcache_obj->pconnect('unix:///run/memcached/memcached.sock', 0) )
 		throw new Exception( 'Memcache error.' );
 	$egtbstats = $memcache_obj->get( 'EGTBStats' );
 	if( $egtbstats !== FALSE ) {
@@ -109,67 +241,62 @@ try{
 		$egtb_count_dtm = $egtbstats[2];
 		$egtb_size_dtm = $egtbstats[3];
 	} else {
-		$egtb_dirs_dtc = array( '/home/apache/EGTB_DTC/' );
-		foreach( $egtb_dirs_dtc as $dir ) {
-			$dir_iter = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
-			foreach( $dir_iter as $file ) {
-				$egtb_count_dtc++;
-				$egtb_size_dtc += $file->getSize();
-			}
+		$egtbstats = file_get_contents( 'http://tbserver.internal/tbproxy.php?action=ccegtbstats' );
+		if( $egtbstats !== FALSE ) {
+			list( $egtb_count_dtc, $egtb_size_dtc, $egtb_count_dtm, $egtb_size_dtm ) = unserialize( $egtbstats );
+			$memcache_obj->set( 'EGTBStats', array( $egtb_count_dtc, $egtb_size_dtc, $egtb_count_dtm, $egtb_size_dtm ), 0, 86400 );
 		}
-
-		$egtb_dirs_dtm = array( '/home/apache/EGTB_DTM/' );
-		foreach( $egtb_dirs_dtm as $dir ) {
-			$dir_iter = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::SELF_FIRST );
-			foreach( $dir_iter as $file ) {
-				$egtb_count_dtm++;
-				$egtb_size_dtm += $file->getSize();
-			}
-		}
-		$memcache_obj->set( 'EGTBStats', array( $egtb_count_dtc, $egtb_size_dtc, $egtb_count_dtm, $egtb_size_dtm ), 0, 86400 );
 	}
 	$nps = 0;
 	$est = 0;
-	$activelist = $memcache_obj->get('WorkerList');
-	if($activelist !== FALSE) {
-		$lastminute = date('i', time() - 60);
-		foreach($activelist as $key => $value) {
-			$npn = $memcache_obj->get('Worker::' . $key . 'NC_' . $lastminute);
+	$lastminute = date('i', time() - 60);
+	$queue = $memcache_obj->get( 'QueueCount::' . $lastminute );
+	$sel = $memcache_obj->get( 'SelCount::' . $lastminute );
+	$activelist = $memcache_obj->get( 'WorkerList' );
+	if( $activelist !== FALSE ) {
+		foreach( $activelist as $key => $value ) {
+			$npn = $memcache_obj->get( 'Worker::' . $key . 'NC_' . $lastminute );
 			if( $npn !== FALSE ) {
 				$nps += $npn;
 			}
 		}
-		$nps /= 60 * 1000 * 1000;
-		$queue = $memcache_obj->get('QueueCount::' . $lastminute);
-		$sel = $memcache_obj->get('SelCount::' . $lastminute);
-		$est = max( ( $count2 + $count3 ) / ( $queue + 1 ), $count3 / ( $sel + 1 ) );
+		$nps /= 60;
+		$est = max( ( $queue_count + $sel_count ) / ( $queue + 1 ), $sel_count / ( $sel + 1 ) );
 	}
-	echo '<table class="stats">';
-	if($lang == 0) {
-		echo '<tr><td>局面数量（近似）：</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
-		echo '<tr><td>学习队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>后台计算（剩时 / 速度）：</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
-		echo '<tr><td>残局库数量（ DTC / DTM ）：</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
-		echo '<tr><td>残局库体积（ DTC / DTM ）：</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
+	$newrate = (int)max( 5, 1000 * pow( 1 + ( $queue_count_prio + $sel_count_prio * 5 + $queue_count / 5000 + $sel_count / 1000 ) / ( 10000 / ( 1000 / 5 - 1 ) ), -1 ) );
+	$rate = $memcache_obj->get( 'RateLimit' );
+	if( $rate !== FALSE ) {
+		if( $queue_count_prio > ( $queue / 60 ) || $sel_count_prio > ( $sel / 60 ) ) {
+			$memcache_obj->set( 'RateLimit', min( $rate, $newrate ) );
+		} else {
+			$memcache_obj->set( 'RateLimit', max( $rate, $newrate ) );
+		}
 	} else {
-		echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
-		echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
-		echo '<tr><td>Worker ( Backlog / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
-		echo '<tr><td>EGTB Count ( DTC / DTM ) :</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
-		echo '<tr><td>EGTB File Size ( DTC / DTM ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
+		$memcache_obj->set( 'RateLimit', $newrate );
 	}
-	echo '</table>';
-}
-catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
-	http_response_code(503);
-}
-catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
-	http_response_code(503);
+	if( $isJson ) {
+		header('Content-type: application/json');
+		echo '{"status":"ok","positions":' . $pos_count . ',"queue":{"scoring":' . $queue_count . ',"sieving":' . $sel_count . '},"worker":{"backlog":' . (int)($est * 60) . ',"speed":' . (int)($nps * 1000) . '},"egtb":{"count":{"dtc":' . $egtb_count_dtc . ',"dtm":' . $egtb_count_dtm . '},"size":{"dtc":' . $egtb_size_dtc . ',"dtm":' . $egtb_size_dtm . '}}}';
+	} else {
+		echo '<table class="stats">';
+		if($lang == 0) {
+			echo '<tr><td>局面数量（近似）：</td><td style="text-align: right;">' . number_format( $pos_count ) . '</td></tr>';
+			echo '<tr><td>学习队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $queue_count ) . ' / ' . number_format( $sel_count ) . '</td></tr>';
+			echo '<tr><td>后台计算（剩时 / 速度）：</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps / 1000000, 3, '.', '' ) . ' GNPS</td></tr>';
+			echo '<tr><td>残局库数量（ DTC / DTM ）：</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
+			echo '<tr><td>残局库体积（ DTC / DTM ）：</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
+		} else {
+			echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $pos_count ) . '</td></tr>';
+			echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $queue_count ) . ' / ' . number_format( $sel_count ) . '</td></tr>';
+			echo '<tr><td>Worker ( Backlog / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps / 1000000, 3, '.', '' ) . ' GNPS</td></tr>';
+			echo '<tr><td>EGTB Count ( DTC / DTM ) :</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
+			echo '<tr><td>EGTB File Size ( DTC / DTM ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
+		}
+		echo '</table>';
+	}
 }
 catch (Exception $e) {
-	echo 'Error: ' . $e->getMessage();
+	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }
-

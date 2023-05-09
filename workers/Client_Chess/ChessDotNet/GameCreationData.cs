@@ -86,16 +86,9 @@
             set;
         }
 
-        public int ThreeCheck_ChecksByWhite
-        {
-            get;
-            set;
-        }
-
-        public int ThreeCheck_ChecksByBlack
-        {
-            get;
-            set;
-        }
+        public File InitialWhiteRookFileKingsideCastling { get; set; } = File.None;
+        public File InitialWhiteRookFileQueensideCastling { get; set; } = File.None;
+        public File InitialBlackRookFileKingsideCastling { get; set; } = File.None;
+        public File InitialBlackRookFileQueensideCastling { get; set; } = File.None;
     }
 }
