@@ -17,7 +17,7 @@ br {
 	line-height: 12px;
 }
 body {
-	background: rgb(250, 200, 200); margin: 10px 20px 20px; font: normal 14px/1.2 Tahoma, Pingfang SC, sans-serif;
+	background: rgb(250, 200, 200); margin: 10px 20px 20px; font: normal 14px/1.2 Tahoma, Pingfang SC, "Liberation Sans Narrow", sans-serif;
 	line-height: 16px;
 }
 p {
@@ -53,7 +53,7 @@ div.chess {
 }
 .movelist div {
 	display: inline-block;
-	min-width: 70px;
+	min-width: 68px;
 	cursor: pointer;
 	line-height: 20px;
 	width: max-content;
