@@ -57,23 +57,23 @@
 					<tr>
 						<td>
 							<br>
-							<div style="height: 17px;"><input type="checkbox" name="rulecheck" id="rulecheck" onclick="RefreshAll()" checked="checked" /><label for="rulecheck">&nbsp;棋规裁定</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="rulecheck" id="rulecheck" onclick="RefreshAll()" checked="checked" /><label for="rulecheck">&nbsp;棋规裁定</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 17px;"><input type="checkbox" name="hidescore" id="hidescore" onclick="RefreshInner()" /><label for="hidescore">&nbsp;隐藏结果</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="hidescore" id="hidescore" onclick="RefreshInner()" /><label for="hidescore">&nbsp;隐藏结果</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
 							<br>
-							<div style="height: 17px;"><input type="checkbox" name="bauto" id="bauto" onclick="RefreshInner()" /><label for="bauto">&nbsp;自动走黑</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="bauto" id="bauto" onclick="RefreshInner()" /><label for="bauto">&nbsp;自动走黑</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 17px;"><input type="checkbox" name="wauto" id="wauto" onclick="RefreshInner()" /><label for="wauto">&nbsp;自动走红</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="wauto" id="wauto" onclick="RefreshInner()" /><label for="wauto">&nbsp;自动走红</label></div>
 						</td>
 					</tr>
 					<tr>
@@ -84,13 +84,13 @@
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 18px;"><input type="radio" name="policy" id="pbest" checked="checked" /><label for="pbest">&nbsp;最佳着法</label></div>
-							<div style="height: 18px;"><input type="radio" name="policy" id="prandom" /><label for="prandom">&nbsp;合理着法</label></div>
+							<div style="height: 16px;"><input type="radio" name="policy" id="pbest" checked="checked" /><label for="pbest">&nbsp;最佳着法</label></div>
+							<div style="height: 16px;"><input type="radio" name="policy" id="prandom" /><label for="prandom">&nbsp;合理着法</label></div>
 						</td>
 					</tr>
 					<tr>
 						<td>
-							<div style="height: 17px;"><input type="checkbox" name="localengine" id="localengine" onclick="RefreshInner()" checked="checked" /><label for="localengine">&nbsp;在线计算</label></div>
+							<div style="height: 16px;"><input type="checkbox" name="localengine" id="localengine" onclick="RefreshInner()" checked="checked" /><label for="localengine">&nbsp;在线计算</label></div>
 						</td>
 					</tr>
 					<tr>
@@ -164,7 +164,7 @@
 					</tr>
 					<tr>
 						<td>
-							<table style="margin-top:5px;" cellspacing="5">
+							<table style="margin-top:4px;" cellspacing="5">
 								<tr id="tt1">
 									<td class="unselpiece" id="bkt"><img alt="" onclick="SelectFigure('bk')" src="/file/bk.png"></td>
 									<td class="unselpiece" id="bat"><img alt="" onclick="SelectFigure('ba')" src="/file/ba.png"></td>
@@ -189,7 +189,7 @@
 						</td>
 					</tr>
 					<tr>
-						<td id="stats" style="padding-top:6px;"></td>
+						<td id="stats" style="padding-top:3px;"></td>
 					</tr>
 				</table>
 			</td>
@@ -202,8 +202,8 @@
 		</tr>
 	</table>
 	<a id="img_link" style="display:none"></a>
-	<script src='https://libs.jshub.com/es6-promise/4.1.1/es6-promise.min.js'></script>
-	<script src='https://libs.jshub.com/html2canvas/0.5.0-beta4/html2canvas.min.js'></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/es6-promise/4.2.8/es6-promise.min.js" integrity="sha512-JMK7ImCd/9VxQM7FWvAT3njqo5iGKkWcOax6Bwzuq48xxFd7/jekKcgN+59ZRwBoEpZvv6Jkwh3fDGrBVWX5vA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="file/xiangqi.js"></script>
 </body>
 </html>

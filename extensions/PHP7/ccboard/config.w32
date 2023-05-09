@@ -1,6 +1,0 @@
-ARG_ENABLE("ccboard", "CCBoard Support", "no");
-
-if (PHP_CCBOARD == "yes") {
-	EXTENSION("ccboard", "ccboard.cpp xiangqi.cpp");
-	AC_DEFINE('HAVE_CCBOARD', 1, 'Have CCBoard support', false);
-}
