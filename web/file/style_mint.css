@@ -17,7 +17,7 @@ br {
 	line-height: 12px;
 }
 body {
-	background: rgb(200, 230, 250); margin: 10px 20px 20px; font: normal 14px/1.2 Tahoma, Pingfang SC, sans-serif;
+	background: rgb(200, 230, 250); margin: 10px 20px 20px; font: normal 14px/1.2 Tahoma, Pingfang SC, "Liberation Sans Narrow", sans-serif;
 	line-height: 16px;
 }
 p {
@@ -36,13 +36,13 @@ div.chess {
 	z-index: 6;
 }
 .button {
-	border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(100, 200, 255); min-width: 80px; height: 20px;
+	box-sizing: border-box; border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(100, 200, 255); min-width: 80px; height: 23px;
 }
 .button:hover {
 	border-width: 2px 1px 1px; border-color: black white white black; color: white; background-color: rgb(50, 100, 255);
 }
 .mbutton {
-	border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(100, 200, 255); min-width: 58px!important; height: 16px;
+	box-sizing: border-box; border-width: 1px 1px 2px; border-style: solid; border-color: white black black white; text-align: center; color: black; cursor: pointer; background-color: rgb(100, 200, 255); min-width: 61px!important; height: 19px;
 }
 .mbutton:hover {
 	border-width: 2px 1px 1px; border-color: black white white black; color: white; background-color: rgb(50, 100, 255);
@@ -53,7 +53,7 @@ div.chess {
 }
 .movelist div {
 	display: inline-block;
-	min-width: 70px;
+	min-width: 68px;
 	cursor: pointer;
 	line-height: 20px;
 	width: max-content;
@@ -82,11 +82,11 @@ div.chess {
 }
 .selpiece {
 	background-color: rgb(0, 150, 250);
-	line-height: 13px;
+	line-height: 10px;
 }
 .unselpiece {
 	background-color: rgb(200, 230, 250);
-	line-height: 13px;
+	line-height: 10px;
 }
 table {
 	border-style:none;

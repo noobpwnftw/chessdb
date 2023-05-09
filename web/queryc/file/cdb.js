@@ -1,6 +1,7 @@
 ﻿var PREFIX = '/';
 var apiurl = new String(PREFIX + 'cdb.php');
 var statsurl = new String(PREFIX + 'statsc.php?lang=0');
+var llmurl = new String(PREFIX + 'llm.php?lang=0');
 var f = 0,
 	iif = 0,
 	kk = 0,
@@ -10,12 +11,15 @@ var f = 0,
 	busy = 0,
 	automove = 0,
 	autotimer = 0,
-	curstep = 0;
+	curstep = 0,
+	llmtimer = 0,
+	llmevt = null,
+	token = Math.floor(1e4 * Math.random());
 var fens = new String();
 var desk = new Array(8);
 var movtable = new Array();
 var Vselect, Vbmm, Vwmm, Vout, Vout2, Vstats, Vdesk, Vsecsel, Vfirsel, Vrulecheck, Vnumbar1, Vnumbar2, Vrankbar, Vhidescore, Vbauto, Vwauto, Vautopolicy, Vlocalengine, Vbks, Vbqs, Vwks, Vwqs;
-var chess = new Chess();
+var chess = new Chess960();
 
 var prevmove = new Array();
 desk[0] = new Array(0, 0, 0, 0, 0, 0, 0, 0);
@@ -168,17 +172,15 @@ function Start() {
 	Vwqs = document.getElementById("wqs");
 	Vtheme = document.getElementById("theme");
 
-	var month = new Date().getMonth();
-	if (month >= 11 || month <= 1) {
-		Vtheme.href = "/file/style_candy.css";
-		var snow3d = document.createElement("script");
-		snow3d.src = "/file/snow3d.js";
-		Vtheme.parentElement.appendChild(snow3d);
-	} else if (month >= 5 && month <= 7) {
-		Vtheme.href = "/file/style_mint.css";
-		var snow3d = document.createElement("script");
-		snow3d.src = "/file/snow3d.js";
-		Vtheme.parentElement.appendChild(snow3d);
+	if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+		Vtheme.href = "/file/style_dark.css";
+	} else {
+		var month = new Date().getMonth();
+		if (month >= 11 || month <= 1) {
+			Vtheme.href = "/file/style_candy.css";
+		} else if (month >= 5 && month <= 7) {
+			Vtheme.href = "/file/style_mint.css";
+		}
 	}
 
 	Vrulecheck.checked = Vrulecheck.defaultChecked;
@@ -193,6 +195,7 @@ function Start() {
 	if (inS.length > 0) {
 		inS = inS.substr(1);
 		if (VerifyFEN(inS)) {
+			SyncHistory();
 			SetFen(inS);
 			return;
 		}
@@ -277,6 +280,33 @@ function ChangeMoveOrder(o) {
 	return;
 }
 
+function SyncCastling() {
+	if (chess.castling_flag().b & chess.BITS.KSIDE_CASTLE) {
+		Vbks.checked = 'checked';
+	}
+	else {
+		Vbks.checked = false;
+	}
+	if (chess.castling_flag().b & chess.BITS.QSIDE_CASTLE) {
+		Vbqs.checked = 'checked';
+	}
+	else {
+		Vbqs.checked = false;
+	}
+	if (chess.castling_flag().w & chess.BITS.KSIDE_CASTLE) {
+		Vwks.checked = 'checked';
+	}
+	else {
+		Vwks.checked = false;
+	}
+	if (chess.castling_flag().w & chess.BITS.QSIDE_CASTLE) {
+		Vwqs.checked = 'checked';
+	}
+	else {
+		Vwqs.checked = false;
+	}
+}
+
 function ChangeCastling() {
 	var tokens = chess.fen().split(' ');
 	var flag = '';
@@ -301,7 +331,8 @@ function ChangeCastling() {
 	if (!result['valid'])
 		return false;
 	chess.load(newfen);
-	fens = newfen;
+	fens = chess.fen();
+	SyncCastling();
 	while (prevmove.length)
 		prevmove.pop();
 	curstep = 0;
@@ -329,6 +360,10 @@ function RefreshInner() {
 	if(autotimer) {
 		clearTimeout(autotimer);
 		autotimer = 0;
+	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
 	}
 	ClearDot();
 	while (movtable.length) {
@@ -442,9 +477,9 @@ function PlaceDot(cid) {
 	elem.id = 'waypoint' + cid;
 	elem.style.position = 'absolute';
 	if (desk[k[0]][k[1]] != 0) {
-		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' ondragover='ondover(event)' ondrop='ond(event, \"" + cid + "\")' onstyle='position:absolute;z-index:7' src='/file/chess/cap.gif'>";
+		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' ondragover='ondover(event)' ondragenter='ondenter(event)' ondragleave='ondleave(event)' ondrop='ond(event, \"" + cid + "\")' onmouseenter='ondenter(event)' onmouseleave='ondleave(event)' style='position:absolute;z-index:7' src='/file/chess/cap.gif'>";
 	} else {
-		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' ondragover='ondover(event)' ondrop='ond(event, \"" + cid + "\")' onstyle='position:absolute;z-index:7' src='/file/chess/waypoint.gif'>";
+		elem.innerHTML = "<img alt='' onmousedown='mdown(\"" + cid + "\")' ondragover='ondover(event)' ondragenter='ondenter(event)' ondragleave='ondleave(event)' ondrop='ond(event, \"" + cid + "\")' onmouseenter='ondenter(event)' onmouseleave='ondleave(event)' style='position:absolute;z-index:7' src='/file/chess/waypoint.gif'>";
 	}
 	plaza.appendChild(elem);
 	plaza.lastChild.style.left = a;
@@ -515,7 +550,7 @@ function RequestQueue() {
 
 	var xmlhttpQueue = getXmlHttp();
 
-	xmlhttpQueue.open('GET', apiurl + '?action=queue&board=' + fens, true);
+	xmlhttpQueue.open('POST', apiurl, true);
 	xmlhttpQueue.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	xmlhttpQueue.onreadystatechange = function() {
 		if (xmlhttpQueue.readyState == 4) {
@@ -531,6 +566,10 @@ function RequestQueue() {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">当前局面无效！<\/span>';
 				}
+				else if(xmlhttpQueue.responseText.search(/exceeded/) != -1) {
+					ClearInner();
+					Vout.innerHTML += '<span style="text-align:center; display:block;">查询过于频繁！<\/span>';
+				}
 				else {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">当前局面棋子过少，您可以：<table style="margin-left: auto;margin-right: auto;"><tr><td onClick="AutoMove()" class="button">&nbsp;自动走棋&nbsp;<\/td><\/tr><\/table><\/span>';
@@ -541,7 +580,72 @@ function RequestQueue() {
 			}
 		}
 	};
-	xmlhttpQueue.send(null);
+	var s = fens;
+	function d(n, t) {
+		var r = (65535 & n) + (65535 & t);
+		return (n >> 16) + (t >> 16) + (r >> 16) << 16 | 65535 & r
+	}
+	function f(n, t, r, e, o, c) {
+		return d((u = d(d(t, n), d(e, c))) << (f = o) | u >>> 32 - f, r);
+		var u, f
+	}
+	function l(n, t, r, e, o, c, u) {
+		return f(t & r | ~t & e, n, t, o, c, u)
+	}
+	function m(n, t, r, e, o, c, u) {
+		return f(t & e | r & ~e, n, t, o, c, u)
+	}
+	function v(n, t, r, e, o, c, u) {
+		return f(t ^ r ^ e, n, t, o, c, u)
+	}
+	function g(n, t, r, e, o, c, u) {
+		return f(r ^ (t | ~e), n, t, o, c, u)
+	}
+	function o() {
+		var n, t, r, e;
+		(t = s.concat(token),
+		function(n) {
+			var t, r, e = "0123456789abcdef", o = "";
+			for (r = 0; r < n.length; r += 1)
+				t = n.charCodeAt(r),
+				o += e.charAt(t >>> 4 & 15) + e.charAt(15 & t);
+			return o
+		}((r = t,
+		function(n) {
+			var t, r = "", e = 32 * n.length;
+			for (t = 0; t < e; t += 8)
+				r += String.fromCharCode(n[t >> 5] >>> t % 32 & 255);
+			return r
+		}(function(n, t) {
+			var r, e, o, c, u;
+			n[t >> 5] |= 128 << t % 32,
+			n[14 + (t + 64 >>> 9 << 4)] = t;
+			var f = 1732584193
+			  , a = -271733879
+			  , i = -1732584194
+			  , h = 271733878;
+			for (r = 0; r < n.length; r += 16)
+				a = g(a = g(a = g(a = g(a = v(a = v(a = v(a = v(a = m(a = m(a = m(a = m(a = l(a = l(a = l(a = l(o = a, i = l(c = i, h = l(u = h, f = l(e = f, a, i, h, n[r], 7, -680876936), a, i, n[r + 1], 12, -389564586), f, a, n[r + 2], 17, 606105819), h, f, n[r + 3], 22, -1044525330), i = l(i, h = l(h, f = l(f, a, i, h, n[r + 4], 7, -176418897), a, i, n[r + 5], 12, 1200080426), f, a, n[r + 6], 17, -1473231341), h, f, n[r + 7], 22, -45705983), i = l(i, h = l(h, f = l(f, a, i, h, n[r + 8], 7, 1770035416), a, i, n[r + 9], 12, -1958414417), f, a, n[r + 10], 17, -42063), h, f, n[r + 11], 22, -1990404162), i = l(i, h = l(h, f = l(f, a, i, h, n[r + 12], 7, 1804603682), a, i, n[r + 13], 12, -40341101), f, a, n[r + 14], 17, -1502002290), h, f, n[r + 15], 22, 1236535329), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 1], 5, -165796510), a, i, n[r + 6], 9, -1069501632), f, a, n[r + 11], 14, 643717713), h, f, n[r], 20, -373897302), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 5], 5, -701558691), a, i, n[r + 10], 9, 38016083), f, a, n[r + 15], 14, -660478335), h, f, n[r + 4], 20, -405537848), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 9], 5, 568446438), a, i, n[r + 14], 9, -1019803690), f, a, n[r + 3], 14, -187363961), h, f, n[r + 8], 20, 1163531501), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 13], 5, -1444681467), a, i, n[r + 2], 9, -51403784), f, a, n[r + 7], 14, 1735328473), h, f, n[r + 12], 20, -1926607734), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 5], 4, -378558), a, i, n[r + 8], 11, -2022574463), f, a, n[r + 11], 16, 1839030562), h, f, n[r + 14], 23, -35309556), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 1], 4, -1530992060), a, i, n[r + 4], 11, 1272893353), f, a, n[r + 7], 16, -155497632), h, f, n[r + 10], 23, -1094730640), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 13], 4, 681279174), a, i, n[r], 11, -358537222), f, a, n[r + 3], 16, -722521979), h, f, n[r + 6], 23, 76029189), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 9], 4, -640364487), a, i, n[r + 12], 11, -421815835), f, a, n[r + 15], 16, 530742520), h, f, n[r + 2], 23, -995338651), i = g(i, h = g(h, f = g(f, a, i, h, n[r], 6, -198630844), a, i, n[r + 7], 10, 1126891415), f, a, n[r + 14], 15, -1416354905), h, f, n[r + 5], 21, -57434055), i = g(i, h = g(h, f = g(f, a, i, h, n[r + 12], 6, 1700485571), a, i, n[r + 3], 10, -1894986606), f, a, n[r + 10], 15, -1051523), h, f, n[r + 1], 21, -2054922799), i = g(i, h = g(h, f = g(f, a, i, h, n[r + 8], 6, 1873313359), a, i, n[r + 15], 10, -30611744), f, a, n[r + 6], 15, -1560198380), h, f, n[r + 13], 21, 1309151649), i = g(i, h = g(h, f = g(f, a, i, h, n[r + 4], 6, -145523070), a, i, n[r + 11], 10, -1120210379), f, a, n[r + 2], 15, 718787259), h, f, n[r + 9], 21, -343485551),
+				f = d(f, e),
+				a = d(a, o),
+				i = d(i, c),
+				h = d(h, u);
+			return [f, a, i, h]
+		}(function(n) {
+			var t, r = [];
+			for (r[(n.length >> 2) - 1] = void 0,
+			t = 0; t < r.length; t += 1)
+				r[t] = 0;
+			var e = 8 * n.length;
+			for (t = 0; t < e; t += 8)
+				r[t >> 5] |= (255 & n.charCodeAt(t / 8)) << t % 32;
+			return r
+		}(e = unescape(encodeURIComponent(r))), 8 * e.length))))).substring(0, 2) == Array(3).join("0") ? (xmlhttpQueue.send('action=queue&board=' + s + '&token=' + token)) : setTimeout(function() {
+			token += Math.floor(100 * Math.random()),
+			o()
+		}, 0)
+	}
+	o();
 }
 function AsyncUpdateMoves(e) {
 	var xmlhttp = getXmlHttp();
@@ -550,7 +654,7 @@ function AsyncUpdateMoves(e) {
 	xmlhttp.onreadystatechange = function() {
 		if (xmlhttp.readyState == 4) {
 			if (xmlhttp.status == 200) {
-				var s = xmlhttp.responseText.replace(/[\r\n]/, '');
+				var s = xmlhttp.responseText.replace(/[\r\n]/g, '');
 				GetMoveList(s);
 			} else {
 				ClearInner();
@@ -646,6 +750,10 @@ function PreviousStep() {
 		clearTimeout(autotimer);
 		autotimer = 0;
 	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
+	}
 	Vwauto.checked = false;
 	Vbauto.checked = false;
 	
@@ -710,6 +818,10 @@ function NavStep(pos) {
 		clearTimeout(autotimer);
 		autotimer = 0;
 	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
+	}
 	Vwauto.checked = false;
 	Vbauto.checked = false;
 	if(pos == 0) {
@@ -735,13 +847,13 @@ function NavStep(pos) {
 }
 function SyncHistory()
 {
-	var s2 = '<table cellspacing="0" class="movelist" style="width:100%"><thead style="border-spacing: 2px;"><tr><td onClick="NavStep(\'-\')" id="gbck" class="mbutton">&nbsp;<<&nbsp;<\/td><td onClick="NavStep(\'+\')" id="gfwd" class="mbutton">&nbsp;>>&nbsp;<\/td><td onClick="PreviousStep()" id="undo" class="mbutton">&nbsp;<--&nbsp;<\/td><\/tr><tr><td colspan="3"><div style="margin-top:5px;" onClick="nclick(event, 0)" onContextMenu="ncontext(event)">';
+	var s2 = '<table cellspacing="0" class="movelist" style="width:100%"><thead style="border-spacing: 2px;"><tr><td onClick="NavStep(\'-\')" id="gbck" class="mbutton">&nbsp;<<&nbsp;<\/td><td onClick="NavStep(\'+\')" id="gfwd" class="mbutton">&nbsp;>>&nbsp;<\/td><td onClick="PreviousStep()" id="undo" class="mbutton">&nbsp;<--&nbsp;<\/td><\/tr><tr><td colspan="3" style="text-align:center;"><div style="margin-top:5px;" onClick="nclick(event, 0)" onContextMenu="ncontext(event)">';
 	if(curstep == 0) {
-		s2 = s2 + '<span id="cur">&nbsp;=====&nbsp;历史着法&nbsp;=====&nbsp;<\/span>';
+		s2 = s2 + '<span id="cur"><b>&nbsp;=====&nbsp;历史着法&nbsp;=====&nbsp;<\/b><\/span>';
 	} else {
 		s2 = s2 + '<b>&nbsp;=====&nbsp;历史着法&nbsp;=====&nbsp;<\/b>';
 	}
-	s2 = s2 + '<\/div><\/td><\/tr><\/thead><tbody id="movehis" style="margin-top:2px;">';
+	s2 = s2 + '<\/div><\/td><\/tr><\/thead><tbody id="movehis" style="margin-top:2px;;height:568px;">';
 	if (prevmove.length != 0) {
 		for (var x = 0; x < prevmove.length; x += 2) {
 			s2 = s2 + '<tr style="height: 20px;"><td><span style="display: inline-block; min-width:30px; text-align:right; background-color: inherit;">' + (x / 2 + 1) + '.&nbsp;<\/span><div onClick="nclick(event, ' + (x + 1) + ')" onContextMenu="ncontext(event)">';
@@ -763,12 +875,19 @@ function SyncHistory()
 			s2 = s2 + '<\/td><\/tr>';
 		}
 		s2 = s2 + '<\/tbody><\/table>';
-		Vout2.innerHTML = s2;
 		var Vcontainer = document.getElementById('movehis');
+		var oldScrollTop = Vcontainer.scrollTop;
 		var containerRect = Vcontainer.getBoundingClientRect();
-		var curRect = document.getElementById('cur').getBoundingClientRect();
-		if (curRect.top < containerRect.top || curRect.bottom > containerRect.bottom) {
-			Vcontainer.scrollTop = curRect.top;
+		Vout2.innerHTML = s2;
+		Vcontainer = document.getElementById('movehis');
+		var Vcur = document.getElementById('cur');
+		if (Vcontainer.contains(Vcur)) {
+			var curRect = Vcur.getBoundingClientRect();
+			if (curRect.top < containerRect.top + oldScrollTop || curRect.bottom > containerRect.bottom + oldScrollTop) {
+				Vcontainer.scrollTop = curRect.top - containerRect.top;
+			} else {
+				Vcontainer.scrollTop = oldScrollTop;
+			}
 		}
 	} else {
 		s2 = s2 + '<\/tbody><\/table>';
@@ -837,7 +956,7 @@ function GetMoveList(s) {
 		ml = new String();
 	a = trimNull(s).split('|');
 	if( !Vhidescore.checked ) {
-		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:20px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><tbody style="height:600px">';
+		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:20px;"><td><b>着法<\/b><\/td><td><b>排序<\/b><\/td><td><b>分数<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>备注<\/b><\/td><\/tr><\/thead><tbody style="height:480px">';
 		var skip = 0;
 		for (var x = 0; x < a.length; x++) {
 			vs = a[x];
@@ -868,6 +987,26 @@ function GetMoveList(s) {
 		} else {
 			s = s + '<\/tbody><\/table>';
 			Vout.innerHTML = s;
+			var llmout = document.createElement("span");
+			llmout.style = "display:block;height:111px;width:360px;margin:9px 0px 0px;overflow-y:auto;user-select:text;scrollbar-gutter:stable;line-height:22px;";
+			Vout.appendChild(llmout);
+			if(llmtimer) {
+				clearTimeout(llmtimer);
+			}
+			llmtimer = setTimeout(() => {
+				if(llmevt) {
+					llmevt.close();
+				}
+				llmevt = new EventSource(llmurl + "&action=cllm&board=" + fens);
+				llmevt.onmessage = function(event) {
+					if (event.data === "[DONE]") {
+						llmevt.close();
+						llmevt = null;
+						return;
+					}
+					llmout.textContent += event.data;
+				};
+			}, 1500);
 		}
 	} else {
 		for (var x = 0; x < a.length; x++) {
@@ -895,7 +1034,7 @@ function GetMoveList(s) {
 }
 
 function VerifyFEN(s) {
-	s = s.replace(/[\r\n]/, '');
+	s = s.replace(/[\r\n]/g, '');
 	s = s.replace(/%20/g, ' ');
 	s = s.replace(/\+/g, ' ');
 	s = s.replace(/_/g, ' ');
@@ -929,6 +1068,10 @@ function ResetFen(s) {
 		clearTimeout(autotimer);
 		autotimer = 0;
 	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
+	}
 	Vbauto.checked = Vbauto.defaultChecked;
 	Vwauto.checked = Vwauto.defaultChecked;
 	SetFen(s);
@@ -936,7 +1079,7 @@ function ResetFen(s) {
 
 function SetFen(s) {
 	ClearDesk();
-	s = s.replace(/[\r\n]/, '');
+	s = s.replace(/[\r\n]/g, '');
 	s = s.replace(/%20/g, ' ');
 	s = s.replace(/\+/g, ' ');
 	s = s.replace(/_/g, ' ');
@@ -947,6 +1090,7 @@ function SetFen(s) {
 	s = s.replace(/ moves.*/g, '');
 	fens = s;
 	Initialize();
+	fens = chess.fen();
 	if (mvl.length > 0) {
 		for (var i = 0; i < mvl.length; i++) {
 			var mov = GetFigureMove2(mvl[i]);
@@ -1034,7 +1178,7 @@ function Initialize2() {
 	return;
 }
 
-function FillPV(id) {
+function FillPV(id, stable) {
 	if (busy)
 		return;
 	busy = 1;
@@ -1046,7 +1190,7 @@ function FillPV(id) {
 
 	var xmlhttpPV = getXmlHttp();
 
-	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2], true);
+	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2] + "&stable=" + stable, true);
 	xmlhttpPV.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	xmlhttpPV.onreadystatechange = function() {
 		if (xmlhttpPV.readyState == 4) {
@@ -1080,7 +1224,7 @@ function FillPV(id) {
 function mclick(e, id) {
 	e.preventDefault();
 	if (e.shiftKey) {
-		FillPV(id);
+		FillPV(id, true);
 	}
 	else {
 		ChangeFen(id);
@@ -1090,7 +1234,7 @@ function mclick(e, id) {
 
 function mcontext(e, id) {
 	e.preventDefault();
-	FillPV(id);
+	FillPV(id, e.shiftKey);
 	return false;
 }
 
@@ -1173,30 +1317,7 @@ function Initialize() {
 		document.getElementById('bturn').src = '/file/ooo.gif';
 		document.getElementById('wturn').src = '/file/chess/wturn.png';
 	}
-	if (chess.castling_flag().b & chess.BITS.KSIDE_CASTLE) {
-		Vbks.checked = 'checked';
-	}
-	else {
-		Vbks.checked = false;
-	}
-	if (chess.castling_flag().b & chess.BITS.QSIDE_CASTLE) {
-		Vbqs.checked = 'checked';
-	}
-	else {
-		Vbqs.checked = false;
-	}
-	if (chess.castling_flag().w & chess.BITS.KSIDE_CASTLE) {
-		Vwks.checked = 'checked';
-	}
-	else {
-		Vwks.checked = false;
-	}
-	if (chess.castling_flag().w & chess.BITS.QSIDE_CASTLE) {
-		Vwqs.checked = 'checked';
-	}
-	else {
-		Vwqs.checked = false;
-	}
+	SyncCastling();
 	var x = 0;
 	for (var y = 0; y < 8; y++) {
 		while (x < 8) {
@@ -1322,22 +1443,23 @@ function onmdown(cid) {
 		}
 		return;
 	} else if (f == 3) {
-		var s = place(cid).split(/\./);
-		var src = s[0].split(/,/);
-		var dst = s[1].split(/,/);
-		chess.put(chess.remove(FigureFiles[src[0]] + (8 - src[1])), FigureFiles[dst[0]] + (8 - dst[1]));
-		fens = chess.fen();
-		iif = 0;
-		Vfirsel.src = '/file/oo.gif';
-		Vsecsel.src = '/file/oo.gif';
-		Vselect.style.left = 0;
-		Vselect.style.top = 0;
-		Vselect.src = '/file/oo.gif';
-		while (prevmove.length)
-			prevmove.pop();
-		curstep = 0;
-		Vout2.innerHTML = '';
-		SyncDesk();
+		if (iif != 0)
+		{
+			var s = place(cid).split(/\./);
+			var src = s[0].split(/,/);
+			var dst = s[1].split(/,/);
+			chess.put(chess.remove(FigureFiles[src[0]] + (8 - src[1])), FigureFiles[dst[0]] + (8 - dst[1]));
+			var newfen = chess.fen();
+			chess.load(newfen)
+			fens = chess.fen();
+			Vfirsel.src = '/file/oo.gif';
+			Vsecsel.src = '/file/oo.gif';
+			SyncCastling();
+			while (prevmove.length)
+				prevmove.pop();
+			curstep = 0;
+			SyncDesk();
+		}
 	} else if (f == 0 || f == 2) {
 		if (iif != 0 && iif != 'del') {
 			var dst = cid.split(/,/);
@@ -1348,13 +1470,9 @@ function onmdown(cid) {
 			if(chess.put({ type: iif.charAt(1).toLowerCase(), color: iif.charAt(0) }, FigureFiles[dst[0]] + (8 - dst[1]))) {
 				PlaceFigure(cid);
 				fens = chess.fen();
-				f = 0;
-				iif = 0;
-				unselectpiece();
 				while (prevmove.length)
 					prevmove.pop();
 				curstep = 0;
-				Vout2.innerHTML = '';
 				SyncDesk();
 			}
 		}
@@ -1395,12 +1513,12 @@ function onmdown2(event, id) {
 		else {
 			DeleteFigure(k);
 		}
+		var newfen = chess.fen();
+		chess.load(newfen)
 		fens = chess.fen();
 		Vfirsel.src = '/file/oo.gif';
 		Vsecsel.src = '/file/oo.gif';
-		unselectpiece();
-		f = 0;
-		iif = 0;
+		SyncCastling();
 		while (prevmove.length)
 			prevmove.pop();
 		curstep = 0;
@@ -1526,7 +1644,6 @@ function AsyncGetEngineMove() {
 			movelist = movelist + prevmove[x][2];
 		}
 	}
-
 	function d(n, t) {
 		var r = (65535 & n) + (65535 & t);
 		return (n >> 16) + (t >> 16) + (r >> 16) << 16 | 65535 & r
@@ -1549,7 +1666,7 @@ function AsyncGetEngineMove() {
 	}
 	function o() {
 		var n, t, r, e;
-		(t = s.concat(u),
+		(t = s.concat(movelist).concat(token),
 		function(n) {
 			var t, r, e = "0123456789abcdef", o = "";
 			for (r = 0; r < n.length; r += 1)
@@ -1586,12 +1703,11 @@ function AsyncGetEngineMove() {
 			for (t = 0; t < e; t += 8)
 				r[t >> 5] |= (255 & n.charCodeAt(t / 8)) << t % 32;
 			return r
-		}(e = unescape(encodeURIComponent(r))), 8 * e.length))))).substring(0, 2) == Array(3).join("0") ? xmlhttpMove.send('action=queryengine&board=' + s + '&movelist=' + movelist + '&token=' + u) : setTimeout(function() {
-			u += Math.floor(100 * Math.random()),
+		}(e = unescape(encodeURIComponent(r))), 8 * e.length))))).substring(0, 2) == Array(3).join("0") ? xmlhttpMove.send('action=queryengine&board=' + s + '&movelist=' + movelist + '&token=' + token) : setTimeout(function() {
+			token += Math.floor(100 * Math.random()),
 			o()
 		}, 0)
 	}
-	var u = Math.floor(1e4 * Math.random());
 	o();
 }
 
@@ -1670,6 +1786,10 @@ function AutoMove() {
 		clearTimeout(autotimer);
 		autotimer = 0;
 	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
+	}
 	if(movtable.length) {
 		busy = 1;
 		AsyncGetAutoMove();
@@ -1690,33 +1810,36 @@ function ScreenShot() {
 function ondover(ev) {
 	ev.preventDefault();
 }
+function ondenter(ev) {
+	ev.target.parentElement.style.background = "rgba(180, 180, 180, 0.6)";
+}
+function ondleave(ev) {
+	ev.target.parentElement.style.background = "";
+}
 function ondstart(ev, id) {
-	ev.target.style.opacity = 0;
-	ev.target.ondragover = ondover;
 	ev.dataTransfer.effectAllowed = "move";
-	const img = new Image();
-	img.src = ev.target.src;
-	ev.dataTransfer.setDragImage(img, img.width / 2, img.height / 2);
-	if (iif != id) {
-		if (f != 3) {
-			f = 1;
+	ev.dataTransfer.setDragImage(ev.target, ev.offsetX, ev.offsetY);
+	requestAnimationFrame(() => {
+		ev.target.style.opacity = 0.4;
+		if (iif != id) {
+			if (f != 3) {
+				f = 1;
+			}
+			ClearDot();
+			iif = id;
+			Vselect.style.left = GetIdCoord(id + 'd', 'l') + 'px';
+			Vselect.style.top = GetIdCoord(id + 'd', 't') + 'px';
+			Vselect.src = '/file/chess/select.gif';
+			if (f != 3) {
+				FillDot(GetDeskIDbyFigureID(id));
+			}
 		}
-		ClearDot();
-		iif = id;
-		Vselect.style.left = GetIdCoord(id + 'd', 'l') + 'px';
-		Vselect.style.top = GetIdCoord(id + 'd', 't') + 'px';
-		Vselect.src = '/file/chess/select.gif';
-		if (f != 3) {
-			FillDot(GetDeskIDbyFigureID(id));
-		}
-	}
+	});
 }
 function ondend(ev) {
-	ev.target.ondragover = null;
 	ev.target.style.opacity = 1;
 }
 function ond(ev, cid) {
 	ev.preventDefault();
 	mdown(cid);
 }
-
