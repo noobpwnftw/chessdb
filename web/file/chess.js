@@ -948,7 +948,7 @@ var Chess = function(fen) {
 
     /* if big pawn move, update the en passant square */
     if (move.flags & BITS.BIG_PAWN) {
-      if (turn === 'b') {
+      if (turn === BLACK) {
         ep_square = move.to - 16;
       } else {
         ep_square = move.to + 16;
@@ -1623,6 +1623,25 @@ var Chess = function(fen) {
 
     turn: function() {
       return turn;
+    },
+
+    do_null_move: function() {
+      half_moves++;
+      if (turn === BLACK) {
+        move_number++;
+      }
+      turn = swap_color(turn);
+      undo_ep_square = ep_square;
+      ep_square = EMPTY;
+    },
+
+    undo_null_move: function() {
+      half_moves--;
+      if (turn === WHITE) {
+        move_number--;
+      }
+      turn = swap_color(turn);
+      ep_square = undo_ep_square;
     },
 
     move: function(move, options) {

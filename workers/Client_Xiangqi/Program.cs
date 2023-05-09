@@ -34,11 +34,11 @@ namespace ChessDBClient
         }
         private Piece[] sq = new Piece[90];
         private bool isblack = false;
-        public void init()
+        public void Init()
         {
-            init("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w");
+            Init("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w");
         }
-        public void init(string fen)
+        public void Init(string fen)
         {
             bool hasturn = false;
             int index = 0;
@@ -112,7 +112,7 @@ namespace ChessDBClient
                 }
             }
         }
-        public void makemove(string move)
+        public void MakeMove(string move)
         {
             int src = move[0] - 'a' + (9 - (move[1] - '0')) * 9;
             int dst = move[2] - 'a' + (9 - (move[3] - '0')) * 9;
@@ -120,7 +120,7 @@ namespace ChessDBClient
             sq[src] = Piece.Blank;
             isblack = !isblack;
         }
-        public string getfen()
+        public string GetFen()
         {
             string fen = "";
             int blank = 0;
@@ -338,12 +338,13 @@ namespace ChessDBClient
                         {
                             Console.WriteLine("[" + strThreadId + "] 正在计算...");
                             String[] outdata = fen.Split(' ');
-                            board.init(outdata[0] + ' ' + outdata[1]);
+                            board.Init(outdata[0] + ' ' + outdata[1]);
                             if (outdata.Length > 2)
                             {
-                                board.makemove(outdata[3]);
+                                board.MakeMove(outdata[3]);
                             }
-                            EngineStreamWriter.WriteLine("fen " + board.getfen());
+                            String nextfen = board.GetFen();
+                            EngineStreamWriter.WriteLine("fen " + nextfen);
                             EngineStreamWriter.WriteLine(ConfigurationManager.AppSettings["GoCommand"]);
                             String outstr = EngineStreamReader.ReadLine();
                             bool hasBestMove = false;
@@ -442,14 +443,12 @@ namespace ChessDBClient
                                                 if (result == "tokenerror")
                                                     throw new Exception("AccessToken错误。");
                                             }
-                                            board.init(outdata[0] + ' ' + outdata[1]);
-                                            board.makemove(outdata[3]);
                                             int tmpscore = -score;
                                             if (tmpscore < -10000)
                                                 tmpscore--;
                                             else if (tmpscore > 10000)
                                                 tmpscore++;
-                                            req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + board.getfen() + "&move=" + bestmove + "&score=" + tmpscore.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + board.getfen() + bestmove + tmpscore.ToString()));
+                                            req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + nextfen + "&move=" + bestmove + "&score=" + tmpscore.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + nextfen + bestmove + tmpscore.ToString()));
                                             using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                             {
                                                 if (response.StatusCode != HttpStatusCode.OK)
@@ -565,6 +564,7 @@ namespace ChessDBClient
             {
                 ThreadCount = 1;
             }
+            ServicePointManager.DefaultConnectionLimit = 64;
             List<Thread> workerThreads = new List<Thread>();
             for (int i = 0; i < ThreadCount; i++)
             {
