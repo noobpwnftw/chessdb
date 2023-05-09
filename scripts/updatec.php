@@ -9,28 +9,37 @@ function count_pieces( $fen ) {
 	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
 }
 function getthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
-		$throttle = $maxscore - 1;
+	$upper_max = 75;
+	$upper_min = 50;
+	$lower_max = -30;
+	$lower_min = -50;
+	if( $maxscore >= $upper_max ) {
+		$throttle = $maxscore;
 	}
-	else if( $maxscore >= -30 ) {
-		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
+	else if( $maxscore >= $lower_max ) {
+		$throttle = $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) );
+		if( $maxscore > $upper_min ) {
+			$throttle = $throttle + ( ( $maxscore - $upper_min ) / ( $upper_max - $upper_min ) ) * ( $maxscore - $throttle );
+		}
+	}
+	else if( $maxscore > $lower_min ) {
+		$throttle = $lower_max - 10 / ( 1 + exp( -abs( $lower_max ) / 10 ) );
+		$throttle = $lower_min + ( $maxscore - $lower_min ) / ( $lower_max - $lower_min ) * ( $throttle - $lower_min );
 	}
 	else {
-		$throttle = -50;
+		$throttle = $lower_min;
 	}
-	return $throttle;
+	return ( int )$throttle;
 }
-function getHexFenStorage( $hexfenarr ) {
+function getBinFenStorage( $hexfenarr ) {
 	asort( $hexfenarr );
 	$minhexfen = reset( $hexfenarr );
-	return array( $minhexfen, key( $hexfenarr ) );
+	return array( hex2bin( $minhexfen ), key( $hexfenarr ) );
 }
-function getAllScores( $redis, $row ) {
+function getAllScores( $redis, $minbinfen, $minindex ) {
 	$moves = array();
 	$finals = array();
-	$BWfen = cbgetBWfen( $row );
-	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
-	$doc = $redis->hGetAll( hex2bin( $minhexfen ) );
+	$doc = $redis->hGetAll( $minbinfen );
 	if( $doc === FALSE )
 		throw new RedisException( 'Server operation error.' );
 	if( $minindex == 0 ) {
@@ -65,17 +74,14 @@ function getAllScores( $redis, $row ) {
 	}
 	return array( $moves, $finals );
 }
-function updatePly( $redis, $row, $ply ) {
-	$BWfen = cbgetBWfen( $row );
-	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
-	$redis->hSet( hex2bin($minhexfen), 'a0a0', $ply );
+function updatePly( $redis, $minbinfen, $ply ) {
+	if( $redis->hSet( $minbinfen, 'a0a0', $ply ) === FALSE )
+		throw new RedisException( 'Server operation error.' );
 	$GLOBALS['counter_ply']++;
 }
-function updateScore( $redis, $row, $updatemoves ) {
-	$BWfen = cbgetBWfen( $row );
-	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+function updateScore( $redis, $minbinfen, $minindex, $updatemoves ) {
 	if( $minindex == 0 ) {
-		if( $redis->hMSet( hex2bin($minhexfen), $updatemoves ) === FALSE )
+		if( $redis->hMSet( $minbinfen, $updatemoves ) === FALSE )
 			throw new RedisException( 'Server operation error.' );
 	}
 	else if( $minindex == 1 ) {
@@ -83,25 +89,29 @@ function updateScore( $redis, $row, $updatemoves ) {
 		foreach( $updatemoves as $key => $newscore ) {
 			$newmoves[cbgetBWmove( $key )] = $newscore;
 		}
-		if( $redis->hMSet( hex2bin($minhexfen), $newmoves ) === FALSE )
+		if( $redis->hMSet( $minbinfen, $newmoves ) === FALSE )
 			throw new RedisException( 'Server operation error.' );
 	}
 	$GLOBALS['counter_update']++;
 }
-function delScore( $redis, $row, $updatemoves ) {
-	$BWfen = cbgetBWfen( $row );
-	list( $minhexfen, $minindex ) = getHexFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+function delScore( $redis, $minbinfen, $minindex, $updatemoves ) {
 	if( $minindex == 0 ) {
-		if( $redis->hDel( hex2bin($minhexfen), $updatemoves ) === FALSE )
+		if( $redis->hDel( $minbinfen, $updatemoves ) === FALSE )
 			throw new RedisException( 'Server operation error.' );
 	}
 	else if( $minindex == 1 ) {
 		foreach( $updatemoves as $key => $newscore ) {
-			if( $redis->hDel( hex2bin($minhexfen), cbgetBWmove( $key ) ) === FALSE )
+			if( $redis->hDel( $minbinfen, cbgetBWmove( $key ) ) === FALSE )
 				throw new RedisException( 'Server operation error.' );
 		}
 	}
-	$GLOBALS['counter_update']++;
+}
+function updateExists( $redis, $minbinfen ) {
+	if( $redis->set( $minbinfen, '' ) === FALSE )
+		throw new RedisException( 'Server operation error.' );
+}
+function checkExists( $redis, $minbinfen ) {
+	return $redis->get( $minbinfen ) !== FALSE;
 }
 function shuffle_assoc(&$array) {
 	$keys = array_keys($array);
@@ -113,29 +123,31 @@ function shuffle_assoc(&$array) {
 	$array = $new;
 	return true;
 }
-
-function getMoves( $redis, $row, $depth ) {
-	list( $moves1, $finals ) = getAllScores( $redis, $row );
+function getMoves( $redis, $redis2, $row, $frc, $depth, $progress, $total ) {
 	$BWfen = cbgetBWfen( $row );
-	$current_hash = abs( xxhash64( $row ) );
-	$current_hash_bw = abs( xxhash64( $BWfen ) );
+	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
+	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
 
 	$recurse = false;
+	$dedup = $depth < 24 ? true : false;
 	if( isset($moves1['ply']) )
 	{
 		if( $moves1['ply'] < 0 || $moves1['ply'] > $depth )
-			updatePly( $redis, $row, $depth );
+		{
+			updatePly( $redis, $minbinfen, $depth );
+			$dedup = false;
+		}
 	}
 	else if( count( $moves1 ) > 0 )
-		updatePly( $redis, $row, $depth );
+		updatePly( $redis, $minbinfen, $depth );
 	else
 		return $moves1;
 
 	if( !isset($moves1['ply']) || $moves1['ply'] < 0 || $moves1['ply'] >= $depth )
 	{
-		if( !isset( $GLOBALS['boardtt'][$current_hash] ) )
+		if( !isset( $GLOBALS['boardtt'][abs( xxhash64( $row ) )] ) )
 		{
-			if( !isset( $GLOBALS['boardtt'][$current_hash_bw] ) )
+			if( !isset( $GLOBALS['boardtt'][abs( xxhash64( $BWfen ) )] ) )
 			{
 				$recurse = true;
 			}
@@ -143,7 +155,7 @@ function getMoves( $redis, $row, $depth ) {
 	}
 	else
 	{
-		if( isset( $GLOBALS['historytt'][$current_hash] ) || isset( $GLOBALS['historytt'][$current_hash_bw] ) )
+		if( isset( $GLOBALS['historytt'][$row] ) || isset( $GLOBALS['historytt'][$BWfen] ) )
 		{
 			$recurse = true;
 		}
@@ -153,48 +165,64 @@ function getMoves( $redis, $row, $depth ) {
 	if( $recurse && $depth < 30000 )
 	{
 /*
-		$errors = array_diff_key( $moves1, cbmovegen( $row ) );
+		$errors = array_diff_key( $moves1, cbmovegen( $row, $frc ) );
 		if( count( $errors ) ) {
 			echo $row . "\n";
-			delScore( $redis, $row, $errors );
-			$moves1 = array_intersect_key( $moves1, cbmovegen( $row ) );
+			delScore( $redis, $minbinfen, $minindex, $errors );
+			$moves1 = array_intersect_key( $moves1, cbmovegen( $row, $frc ) );
 		}
 */
 		$updatemoves = array();
 		$isloop = true;
-		if( !isset( $GLOBALS['historytt'][$current_hash] ) )
+		if( !isset( $GLOBALS['historytt'][$row] ) )
 		{
-			if( !isset( $GLOBALS['historytt'][$current_hash_bw] ) )
+			if( !isset( $GLOBALS['historytt'][$BWfen] ) )
 			{
 				$isloop = false;
 			}
 			else
 			{
-				$loop_hash_start = $current_hash_bw;
 				$loop_fen_start = $BWfen;
 			}
 		}
 		else
 		{
-			$loop_hash_start = $current_hash;
 			$loop_fen_start = $row;
 		}
 
 		if( !$isloop )
 		{
-			//if( $depth < 20 )
+			if( $depth == 0 || !$dedup || !checkExists( $redis2, $minbinfen ) )
 			{
+				if( $depth < 12 ) {
+					$progress = $progress * count( $moves1 );
+					$total = ( $total + 1 ) * count( $moves1 );
+				}
+				//asort( $moves1 );
 				shuffle_assoc( $moves1 );
 				foreach( $moves1 as $key => $item ) {
-					if( $depth == 0 )
+					if( $depth == 0 ) {
+/*
+						$redis->close();
+						$redis2->close();
+						$pid = pcntl_fork();
+						if( $pid > 0 ) {
+							continue;
+						} else {
+							$redis->pconnect('dbserver.internal', 8888);
+							$redis2->pconnect('dbserver.internal', 8890);
+						}
+						$total = 1;
+*/
 						$GLOBALS['curmove'] = $key;
+					}
 					if( isset( $finals[ $key ] ) )
 						continue;
-					$nextfen = cbmovemake( $row, $key );
+					list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 					if( count_pieces( $nextfen ) <= 7 ) {
-						if( abs( $item ) < 10000 ) {
-							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
-							if( $egtbresult !== FALSE ) {
+						if( $nextfrc == 0 && abs( $item ) < 10000 ) {
+							$egtbresult = json_decode( file_get_contents( 'http://tbserver.internal:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
+							if( $egtbresult !== NULL ) {
 								if( $egtbresult['checkmate'] ) {
 								}
 								else if( $egtbresult['stalemate'] ) {
@@ -214,14 +242,14 @@ function getMoves( $redis, $row, $depth ) {
 											if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 												$nextscore = 20000 - $step;
 											else
-												$nextscore = 30000 - $step;
+												$nextscore = 25000 - $step;
 										}
 										else {
 											$step = $bestmove['dtz'];
 											if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 												$nextscore = $step - 20000;
 											else
-												$nextscore = $step - 30000;
+												$nextscore = $step - 25000;
 										}
 										$moves1[ $key ] = -$nextscore;
 										$updatemoves[ $key ] = $nextscore;
@@ -233,13 +261,16 @@ function getMoves( $redis, $row, $depth ) {
 						else
 							continue;
 					}
-					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
-					$GLOBALS['historytt'][$current_hash]['move'] = $key;
-					$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
-					unset( $GLOBALS['historytt'][$current_hash] );
+					$GLOBALS['historytt'][$row]['fen'] = $nextfen;
+					$GLOBALS['historytt'][$row]['move'] = $key;
+					$nextmoves = getMoves( $redis, $redis2, $nextfen, $nextfrc, $depth + 1, $progress, $total );
+					unset( $GLOBALS['historytt'][$row] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
-						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
+						$GLOBALS['looptt'][$row][$key] = $GLOBALS['loopcheck'];
 						unset( $GLOBALS['loopcheck'] );
+					}
+					if( $depth < 12 ) {
+						$progress++;
 					}
 					if( count( $nextmoves ) > 0 ) {
 						arsort( $nextmoves );
@@ -259,14 +290,15 @@ function getMoves( $redis, $row, $depth ) {
 						}
 						if( abs( $nextscore ) < 10000 ) {
 							if( $nextcount > 1 )
-								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-							else if( $nextcount == 1 ) {
+								$nextscore = ( int )round( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+							else {
 								if( count( $nextmoves ) > 1 ) {
-									if( $nextscore >= -50 )
-										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+									if( $nextscore > 0 && $nextscore < 50 )
+										$nextscore = ( int )round( ( $nextscore * 4 + $throttle ) / 5 );
 								}
-								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-									$nextscore = ( int )( $nextscore * 9 / 10 );
+								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 100 ) {
+									$t = max( 0, ( abs( $nextscore ) - 50 ) / ( 100 - 50 ) );
+									$nextscore = ( int )round( $nextscore * ( 0.9 + 0.1 * $t ) );
 								}
 							}
 						}
@@ -275,37 +307,55 @@ function getMoves( $redis, $row, $depth ) {
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
+/*
+					if( $depth == 0 ) {
+						if( $pid <= 0 ) {
+							$fp = fopen( 'chess_' . $GLOBALS['curmove'] . '.txt', 'w' );
+							fwrite( $fp, implode("\t", array( $GLOBALS['counter'], number_format( $progress * 100 / $total, 2, '.', '' ) . "%", $GLOBALS['counter_dup'], number_format( $GLOBALS['counter_dup'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['counter_update'], number_format( $GLOBALS['counter_update'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['counter_ply'], number_format( $GLOBALS['counter_ply'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['curmove'] ) ) . "\tdone\n" );
+							fclose( $fp );
+							break;
+						}
+					}
+*/
 				}
+/*
+				if( $depth == 0 ) {
+					if( $pid > 0 ) {
+						while( pcntl_wait($status) >= 0 ) {
+						}
+					}
+				}
+				if( $dedup )
+					updateExists( $redis2, $minbinfen );
+*/
 			}
 		}
 		else
 		{
-			$loop_hash = $loop_hash_start;
+			$loop_fen = $loop_fen_start;
 			$loopmoves = array();
 			do
 			{
-				array_push( $loopmoves, $GLOBALS['historytt'][$loop_hash]['move'] );
-				$loopfen = $GLOBALS['historytt'][$loop_hash]['fen'];
-				$loop_hash = abs( xxhash64( $loopfen ) );
-				if( !isset( $GLOBALS['historytt'][$loop_hash] ) )
+				array_push( $loopmoves, $GLOBALS['historytt'][$loop_fen]['move'] );
+				$loop_fen = $GLOBALS['historytt'][$loop_fen]['fen'];
+				if( !isset( $GLOBALS['historytt'][$loop_fen] ) )
 					break;
 			}
-			while( $loop_hash != $current_hash && $loop_hash != $current_hash_bw );
+			while( $loop_fen != $row && $loop_fen != $BWfen );
 			$loopstatus = 1;
 			if( $loopstatus > 0 )
-				$GLOBALS['looptt'][$loop_hash_start][$GLOBALS['historytt'][$loop_hash_start]['move']] = $loopstatus;
+				$GLOBALS['looptt'][$loop_fen_start][$GLOBALS['historytt'][$loop_fen_start]['move']] = $loopstatus;
 		}
-
 		$loopinfo = array();
-		if( isset( $GLOBALS['looptt'][$current_hash] ) )
+		if( isset( $GLOBALS['looptt'][$row] ) )
 		{
-			foreach( $GLOBALS['looptt'][$current_hash] as $key => $entry ) {
+			foreach( $GLOBALS['looptt'][$row] as $key => $entry ) {
 				$loopinfo[$key] = $entry;
 			}
 		}
-		if( isset( $GLOBALS['looptt'][$current_hash_bw] ) )
+		if( isset( $GLOBALS['looptt'][$BWfen] ) )
 		{
-			foreach( $GLOBALS['looptt'][$current_hash_bw] as $key => $entry ) {
+			foreach( $GLOBALS['looptt'][$BWfen] as $key => $entry ) {
 				$loopinfo[cbgetBWmove( $key )] = $entry;
 			}
 		}
@@ -319,28 +369,37 @@ function getMoves( $redis, $row, $depth ) {
 				asort( $moves1 );
 				$bestscore = end( $moves1 );
 				foreach( array_keys( array_intersect_key( $moves1, $loopdraws ) ) as $key ) {
-					if( $moves1[$key] == $bestscore && abs( $bestscore ) < 10000 ) {
+					if( $moves1[$key] == $bestscore ) {
 						$moves1[$key] = 0;
-						//if( !$isloop )
-						//	$updatemoves[$key] = 0;
 					}
 				}
 			}
 
-			unset( $GLOBALS['looptt'][$current_hash] );
-			unset( $GLOBALS['looptt'][$current_hash_bw] );
+			if( !$isloop ) {
+				unset( $GLOBALS['looptt'][$row] );
+				unset( $GLOBALS['looptt'][$BWfen] );
+			}
 		} else if( !$isloop ) {
 			$GLOBALS['counter']++;
-			$GLOBALS['boardtt'][$current_hash] = 1;
+			$GLOBALS['boardtt'][abs( xxhash64( $row ) )] = 1;
 			if( $GLOBALS['counter'] % 10000 == 0 ) {
 				gc_collect_cycles();
-				echo implode(' ', array( $GLOBALS['counter'], $GLOBALS['counter_dup'], $GLOBALS['counter_update'], $GLOBALS['counter_ply'], $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_update'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ), count( $GLOBALS['looptt'] ), $GLOBALS['boardtt']->memoryUsage() ) ) . "\n";
-				$GLOBALS['last_counter'] = $GLOBALS['counter'] + $GLOBALS['counter_update'];
+				echo implode(' ', array( $GLOBALS['counter'], number_format( $progress * 100 / $total, 2, '.', '' ) . "%", $GLOBALS['counter_dup'], number_format( $GLOBALS['counter_dup'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['counter_update'], number_format( $GLOBALS['counter_update'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['counter_ply'], number_format( $GLOBALS['counter_ply'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_dup'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ), count( $GLOBALS['looptt'] ) ) ) . "\n";
+/*
+				$fp = fopen( 'chess_' . $GLOBALS['curmove'] . '.txt', 'w' );
+				fwrite( $fp, implode("\t", array( $GLOBALS['counter'], number_format( $progress * 100 / $total, 2, '.', '' ) . "%", $GLOBALS['counter_dup'], number_format( $GLOBALS['counter_dup'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['counter_update'], number_format( $GLOBALS['counter_update'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['counter_ply'], number_format( $GLOBALS['counter_ply'] * 100 / $GLOBALS['counter'], 2, '.', '' ) . "%", $GLOBALS['curmove'], $depth, intval( ( $GLOBALS['counter'] + $GLOBALS['counter_dup'] - $GLOBALS['last_counter'] ) / ( time() - $GLOBALS['last_ts'] + 1 ) ), count( $GLOBALS['looptt'] ) ) ) . "\n" );
+				fclose( $fp );
+*/
+				$GLOBALS['last_counter'] = $GLOBALS['counter'] + $GLOBALS['counter_dup'];
 				$GLOBALS['last_ts'] = time();
+/*
+				if( $GLOBALS['boardtt']->memoryUsage() > 2147483648 )
+					$GLOBALS['boardtt']->free();
+*/
 			}
 		}
 		if( count( $updatemoves ) > 0 )
-			updateScore( $redis, $row, $updatemoves );
+			updateScore( $redis, $minbinfen, $minindex, $updatemoves );
 	}
 	else
 		$GLOBALS['counter_dup']++;
@@ -360,7 +419,9 @@ function getMoves( $redis, $row, $depth ) {
 
 try{
 	$redis = new Redis();
-	$redis->pconnect('192.168.1.2', 8888);
+	$redis->pconnect('dbserver.internal', 8888);
+	$redis2 = new Redis();
+	//$redis2->pconnect('dbserver.internal', 8890);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['counter_dup'] = 0;
 	$GLOBALS['counter_update'] = 0;
@@ -369,7 +430,7 @@ try{
 	$GLOBALS['last_counter'] = 0;
 	$GLOBALS['looptt'] = array();
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
-	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
+	getMoves( $redis, $redis2, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', false, 0, 0, 0 );
 	echo 'ok' . "\n";
 
 }
