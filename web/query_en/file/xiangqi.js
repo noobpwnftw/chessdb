@@ -186,14 +186,8 @@ function Start() {
 	var month = new Date().getMonth();
 	if (month >= 11 || month <= 1) {
 		Vtheme.href = "/file/style_candy.css";
-		var snow3d = document.createElement("script");
-		snow3d.src = "/file/snow3d.js";
-		Vtheme.parentElement.appendChild(snow3d);
 	} else if (month >= 5 && month <= 7) {
 		Vtheme.href = "/file/style_mint.css";
-		var snow3d = document.createElement("script");
-		snow3d.src = "/file/snow3d.js";
-		Vtheme.parentElement.appendChild(snow3d);
 	}
 
 	Vrulecheck.checked = Vrulecheck.defaultChecked;
@@ -616,7 +610,7 @@ function RequestQueue() {
 
 	var xmlhttpQueue = getXmlHttp();
 
-	xmlhttpQueue.open('GET', apiurl + '?action=queue&board=' + fens, true);
+	xmlhttpQueue.open('POST', apiurl, true);
 	xmlhttpQueue.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	xmlhttpQueue.onreadystatechange = function() {
 		if (xmlhttpQueue.readyState == 4) {
@@ -632,6 +626,10 @@ function RequestQueue() {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">Invalid board!<\/span>';
 				}
+				else if(xmlhttpQueue.responseText.search(/exceeded/) != -1) {
+					ClearInner();
+					Vout.innerHTML += '<span style="text-align:center; display:block;">Query rate limit exceeded!<\/span>';
+				}
 				else {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">Too few pieces on the board, you can:<table style="margin-left: auto;margin-right: auto;"><tr><td onClick="AutoMove()" class="button">&nbsp;AI move&nbsp;<\/td><\/tr><\/table><\/span>';
@@ -642,7 +640,73 @@ function RequestQueue() {
 			}
 		}
 	};
-	xmlhttpQueue.send(null);
+	var s = fens;
+	function d(n, t) {
+		var r = (65535 & n) + (65535 & t);
+		return (n >> 16) + (t >> 16) + (r >> 16) << 16 | 65535 & r
+	}
+	function f(n, t, r, e, o, c) {
+		return d((u = d(d(t, n), d(e, c))) << (f = o) | u >>> 32 - f, r);
+		var u, f
+	}
+	function l(n, t, r, e, o, c, u) {
+		return f(t & r | ~t & e, n, t, o, c, u)
+	}
+	function m(n, t, r, e, o, c, u) {
+		return f(t & e | r & ~e, n, t, o, c, u)
+	}
+	function v(n, t, r, e, o, c, u) {
+		return f(t ^ r ^ e, n, t, o, c, u)
+	}
+	function g(n, t, r, e, o, c, u) {
+		return f(r ^ (t | ~e), n, t, o, c, u)
+	}
+	function o() {
+		var n, t, r, e;
+		(t = s.concat(u),
+		function(n) {
+			var t, r, e = "0123456789abcdef", o = "";
+			for (r = 0; r < n.length; r += 1)
+				t = n.charCodeAt(r),
+				o += e.charAt(t >>> 4 & 15) + e.charAt(15 & t);
+			return o
+		}((r = t,
+		function(n) {
+			var t, r = "", e = 32 * n.length;
+			for (t = 0; t < e; t += 8)
+				r += String.fromCharCode(n[t >> 5] >>> t % 32 & 255);
+			return r
+		}(function(n, t) {
+			var r, e, o, c, u;
+			n[t >> 5] |= 128 << t % 32,
+			n[14 + (t + 64 >>> 9 << 4)] = t;
+			var f = 1732584193
+			  , a = -271733879
+			  , i = -1732584194
+			  , h = 271733878;
+			for (r = 0; r < n.length; r += 16)
+				a = g(a = g(a = g(a = g(a = v(a = v(a = v(a = v(a = m(a = m(a = m(a = m(a = l(a = l(a = l(a = l(o = a, i = l(c = i, h = l(u = h, f = l(e = f, a, i, h, n[r], 7, -680876936), a, i, n[r + 1], 12, -389564586), f, a, n[r + 2], 17, 606105819), h, f, n[r + 3], 22, -1044525330), i = l(i, h = l(h, f = l(f, a, i, h, n[r + 4], 7, -176418897), a, i, n[r + 5], 12, 1200080426), f, a, n[r + 6], 17, -1473231341), h, f, n[r + 7], 22, -45705983), i = l(i, h = l(h, f = l(f, a, i, h, n[r + 8], 7, 1770035416), a, i, n[r + 9], 12, -1958414417), f, a, n[r + 10], 17, -42063), h, f, n[r + 11], 22, -1990404162), i = l(i, h = l(h, f = l(f, a, i, h, n[r + 12], 7, 1804603682), a, i, n[r + 13], 12, -40341101), f, a, n[r + 14], 17, -1502002290), h, f, n[r + 15], 22, 1236535329), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 1], 5, -165796510), a, i, n[r + 6], 9, -1069501632), f, a, n[r + 11], 14, 643717713), h, f, n[r], 20, -373897302), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 5], 5, -701558691), a, i, n[r + 10], 9, 38016083), f, a, n[r + 15], 14, -660478335), h, f, n[r + 4], 20, -405537848), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 9], 5, 568446438), a, i, n[r + 14], 9, -1019803690), f, a, n[r + 3], 14, -187363961), h, f, n[r + 8], 20, 1163531501), i = m(i, h = m(h, f = m(f, a, i, h, n[r + 13], 5, -1444681467), a, i, n[r + 2], 9, -51403784), f, a, n[r + 7], 14, 1735328473), h, f, n[r + 12], 20, -1926607734), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 5], 4, -378558), a, i, n[r + 8], 11, -2022574463), f, a, n[r + 11], 16, 1839030562), h, f, n[r + 14], 23, -35309556), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 1], 4, -1530992060), a, i, n[r + 4], 11, 1272893353), f, a, n[r + 7], 16, -155497632), h, f, n[r + 10], 23, -1094730640), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 13], 4, 681279174), a, i, n[r], 11, -358537222), f, a, n[r + 3], 16, -722521979), h, f, n[r + 6], 23, 76029189), i = v(i, h = v(h, f = v(f, a, i, h, n[r + 9], 4, -640364487), a, i, n[r + 12], 11, -421815835), f, a, n[r + 15], 16, 530742520), h, f, n[r + 2], 23, -995338651), i = g(i, h = g(h, f = g(f, a, i, h, n[r], 6, -198630844), a, i, n[r + 7], 10, 1126891415), f, a, n[r + 14], 15, -1416354905), h, f, n[r + 5], 21, -57434055), i = g(i, h = g(h, f = g(f, a, i, h, n[r + 12], 6, 1700485571), a, i, n[r + 3], 10, -1894986606), f, a, n[r + 10], 15, -1051523), h, f, n[r + 1], 21, -2054922799), i = g(i, h = g(h, f = g(f, a, i, h, n[r + 8], 6, 1873313359), a, i, n[r + 15], 10, -30611744), f, a, n[r + 6], 15, -1560198380), h, f, n[r + 13], 21, 1309151649), i = g(i, h = g(h, f = g(f, a, i, h, n[r + 4], 6, -145523070), a, i, n[r + 11], 10, -1120210379), f, a, n[r + 2], 15, 718787259), h, f, n[r + 9], 21, -343485551),
+				f = d(f, e),
+				a = d(a, o),
+				i = d(i, c),
+				h = d(h, u);
+			return [f, a, i, h]
+		}(function(n) {
+			var t, r = [];
+			for (r[(n.length >> 2) - 1] = void 0,
+			t = 0; t < r.length; t += 1)
+				r[t] = 0;
+			var e = 8 * n.length;
+			for (t = 0; t < e; t += 8)
+				r[t >> 5] |= (255 & n.charCodeAt(t / 8)) << t % 32;
+			return r
+		}(e = unescape(encodeURIComponent(r))), 8 * e.length))))).substring(0, 2) == Array(3).join("0") ? (xmlhttpQueue.send('action=queue&board=' + s + '&token=' + u)) : setTimeout(function() {
+			u += Math.floor(100 * Math.random()),
+			o()
+		}, 0)
+	}
+	var u = Math.floor(1e4 * Math.random());
+	o();
 }
 function AsyncUpdateMoves(e) {
 	var xmlhttp = getXmlHttp();
@@ -1142,7 +1206,7 @@ function ChangeFen(id) {
 	return;
 }
 
-function FillPV(id) {
+function FillPV(id, stable) {
 	if (busy)
 		return;
 	busy = 1;
@@ -1154,7 +1218,7 @@ function FillPV(id) {
 
 	var xmlhttpPV = getXmlHttp();
 
-	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2], true);
+	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2] + "&stable=" + stable, true);
 	xmlhttpPV.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	xmlhttpPV.onreadystatechange = function() {
 		if (xmlhttpPV.readyState == 4) {
@@ -1187,7 +1251,7 @@ function FillPV(id) {
 function mclick(e, id) {
 	e.preventDefault();
 	if (e.shiftKey) {
-		FillPV(id);
+		FillPV(id, true);
 	}
 	else {
 		ChangeFen(id);
@@ -1197,7 +1261,7 @@ function mclick(e, id) {
 
 function mcontext(e, id) {
 	e.preventDefault();
-	FillPV(id);
+	FillPV(id, e.shiftKey);
 	return false;
 }
 
@@ -1432,18 +1496,21 @@ function onmdown(cid) {
 		}
 		return;
 	} else if (f == 3) {
-		place(cid);
-		iif = 0;
-		Vfirsel.src = '/file/oo.gif';
-		Vsecsel.src = '/file/oo.gif';
-		Vselect.style.left = 0;
-		Vselect.style.top = 0;
-		Vselect.src = '/file/oo.gif';
-		while (prevmove.length)
-			prevmove.pop();
-		curstep = 0;
-		Vout2.innerHTML = '';
-		SyncDesk();
+		if (iif != 0)
+		{
+			place(cid);
+			iif = 0;
+			Vfirsel.src = '/file/oo.gif';
+			Vsecsel.src = '/file/oo.gif';
+			Vselect.style.left = 0;
+			Vselect.style.top = 0;
+			Vselect.src = '/file/oo.gif';
+			while (prevmove.length)
+				prevmove.pop();
+			curstep = 0;
+			Vout2.innerHTML = '';
+			SyncDesk();
+		}
 	} else if (f == 0 || f == 2) {
 		if (iif != 0 && iif != 'del') {
 			PlaceFigure(cid);
@@ -1603,7 +1670,6 @@ function AsyncGetEngineMove() {
 			}
 		}
 	};
-
 	var s = fens;
 	var movelist = new String();
 	if (curstep > 0) {
