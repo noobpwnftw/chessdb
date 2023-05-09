@@ -1,0 +1,6 @@
+ARG_ENABLE("cboard", "CBoard Support", "no");
+
+if (PHP_CBOARD == "yes") {
+	EXTENSION("cboard", "cboard.cpp", PHP_CBOARD_SHARED, "/std:c++17");
+	AC_DEFINE('HAVE_CBOARD', 1, 'Have CBoard support', false);
+}
