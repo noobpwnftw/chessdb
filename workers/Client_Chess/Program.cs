@@ -146,7 +146,8 @@ namespace ChessDBClient
                             {
                                 board.MakeMove(outdata[5]);
                             }
-                            EngineStreamWriter.WriteLine("position fen " + board.GetFen());
+                            String nextfen = board.GetFen();
+                            EngineStreamWriter.WriteLine("position fen " + nextfen);
                             EngineStreamWriter.WriteLine(ConfigurationManager.AppSettings["GoCommand"]);
                             String outstr = EngineStreamReader.ReadLine();
                             bool hasBestMove = false;
@@ -248,14 +249,12 @@ namespace ChessDBClient
                                                 if (result == "tokenerror")
                                                     throw new Exception("AccessToken错误。");
                                             }
-                                            board = new ChessDotNet.ChessGame(outdata[0] + ' ' + outdata[1] + ' ' + outdata[2] + ' ' + outdata[3]);
-                                            board.MakeMove(outdata[5]);
                                             int tmpscore = -score;
                                             if (tmpscore < -10000)
                                                 tmpscore--;
                                             else if (tmpscore > 10000)
                                                 tmpscore++;
-                                            req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + board.GetFen() + "&move=" + bestmove + "&score=" + tmpscore.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + board.GetFen() + bestmove + tmpscore.ToString()));
+                                            req = (HttpWebRequest)WebRequest.Create(ConfigurationManager.AppSettings["CloudBookURL"] + "?action=store&board=" + nextfen + "&move=" + bestmove + "&score=" + tmpscore.ToString() + "&token=" + StringToMD5Hash(ConfigurationManager.AppSettings["AccessToken"] + nextfen + bestmove + tmpscore.ToString()));
                                             using (HttpWebResponse response = (HttpWebResponse)req.GetResponse())
                                             {
                                                 if (response.StatusCode != HttpStatusCode.OK)
@@ -371,6 +370,7 @@ namespace ChessDBClient
             {
                 ThreadCount = 1;
             }
+            ServicePointManager.DefaultConnectionLimit = 64;
             List<Thread> workerThreads = new List<Thread>();
             for (int i = 0; i < ThreadCount; i++)
             {
