@@ -394,14 +394,14 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 								if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 									$nextscore = 20000 - $step;
 								else
-									$nextscore = 30000 - $step;
+									$nextscore = 25000 - $step;
 							}
 							else {
 								$step = $bestmove['dtz'];
 								if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 									$nextscore = $step - 20000;
 								else
-									$nextscore = $step - 30000;
+									$nextscore = $step - 25000;
 							}
 							$moves1[ $key ] = -$nextscore;
 							$updatemoves[ $key ] = $nextscore;
@@ -631,14 +631,14 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 											$nextscore = 20000 - $step;
 										else
-											$nextscore = 30000 - $step;
+											$nextscore = 25000 - $step;
 									}
 									else {
 										$step = $bestmove['dtz'];
 										if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 											$nextscore = $step - 20000;
 										else
-											$nextscore = $step - 30000;
+											$nextscore = $step - 25000;
 									}
 									$moves1[ $key ] = -$nextscore;
 									$updatemoves[ $key ] = $nextscore;
@@ -927,14 +927,14 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 											$nextscore = 20000 - $step;
 										else
-											$nextscore = 30000 - $step;
+											$nextscore = 25000 - $step;
 									}
 									else {
 										$step = $bestmove['dtz'];
 										if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 											$nextscore = $step - 20000;
 										else
-											$nextscore = $step - 30000;
+											$nextscore = $step - 25000;
 									}
 									$moves1[ $key ] = -$nextscore;
 									$updatemoves[ $key ] = $nextscore;
@@ -1336,7 +1336,7 @@ try{
 											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
 												$score = 20000 - $step;
 											else
-												$score = 30000 - $step;
+												$score = 25000 - $step;
 											if( $move['zeroing'] || $move['checkmate'] )
 												$step = 0;
 											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
@@ -1381,7 +1381,7 @@ try{
 											if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
 												$score = $step - 20000;
 											else
-												$score = $step - 30000;
+												$score = $step - 25000;
 											if( $move['zeroing'] || $move['checkmate'] )
 												$step = 0;
 											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
@@ -1425,7 +1425,7 @@ try{
 											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
 												$score = 20000 - $step;
 											else
-												$score = 30000 - $step;
+												$score = 25000 - $step;
 											if( $move['zeroing'] || $move['checkmate'] )
 												$step = 0;
 											if( $isJson )
@@ -1438,7 +1438,7 @@ try{
 											if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
 												$score = $step - 20000;
 											else
-												$score = $step - 30000;
+												$score = $step - 25000;
 											if( $move['zeroing'] || $move['checkmate'] )
 												$step = 0;
 											if( $isJson )
@@ -1538,7 +1538,7 @@ try{
 									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 										$score = 20000 - $step;
 									else
-										$score = 30000 - $step;
+										$score = 25000 - $step;
 								}
 								else if( $bestmove['category'] == 'draw' ) {
 									$score = 0;
@@ -1548,7 +1548,7 @@ try{
 									if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 										$score = $step - 20000;
 									else
-										$score = $step - 30000;
+										$score = $step - 25000;
 								}
 								if( $isJson )
 									echo '"status":"ok","score":' . $score . ',"depth":' . $bestmove['dtz'] . ',"pv":["' . $bestmove['uci'] . '"],"pvSAN":["' . $bestmove['san'] . '"]';
@@ -1582,7 +1582,7 @@ try{
 									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 										$score = 20000 - $step;
 									else
-										$score = 30000 - $step;
+										$score = 25000 - $step;
 								}
 								else if( $bestmove['category'] == 'draw' ) {
 									$score = 0;
@@ -1592,7 +1592,7 @@ try{
 									if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 										$score = $step - 20000;
 									else
-										$score = $step - 30000;
+										$score = $step - 25000;
 								}
 								if( $isJson )
 									echo '"status":"ok","eval":' . $score;

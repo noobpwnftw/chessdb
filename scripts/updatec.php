@@ -214,14 +214,14 @@ function getMoves( $redis, $row, $depth ) {
 											if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
 												$nextscore = 20000 - $step;
 											else
-												$nextscore = 30000 - $step;
+												$nextscore = 25000 - $step;
 										}
 										else {
 											$step = $bestmove['dtz'];
 											if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
 												$nextscore = $step - 20000;
 											else
-												$nextscore = $step - 30000;
+												$nextscore = $step - 25000;
 										}
 										$moves1[ $key ] = -$nextscore;
 										$updatemoves[ $key ] = $nextscore;
