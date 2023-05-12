@@ -1954,11 +1954,11 @@ try{
 							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
-									if( $isJson )
-										echo '"status":"ok","search_moves":[{';
 									arsort( $statmoves );
 									$maxscore = reset( $statmoves );
 									if( $maxscore >= -50 ) {
+										if( $isJson )
+											echo '"status":"ok","search_moves":[{';
 										$throttle = getthrottle( $maxscore );
 										$isfirst = true;
 										foreach( $statmoves as $key => $entry ) {
