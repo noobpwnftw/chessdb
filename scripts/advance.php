@@ -61,7 +61,6 @@ class MyRWLock {
 }
 
 $readwrite_queue = new MyRWLock( "ChessDBLockQueue" );
-$readwrite_sel = new MyRWLock( "ChessDBLockSel" );
 
 function count_pieces( $fen ) {
 	@list( $board, $color ) = explode( " ", $fen );
@@ -443,7 +442,6 @@ function updateQueue( $row, $key, $priority ) {
 	}
 }
 function updateSel( $row, $priority ) {
-	global $readwrite_sel;
 	$m = new MongoClient('mongodb://localhost');
 	$collection = $m->selectDB('ccdbsel')->selectCollection('seldb');
 	$LRfen = ccbgetLRfen( $row );
@@ -457,7 +455,6 @@ function updateSel( $row, $priority ) {
 		} else {
 			$doc = array();
 		}
-		$readwrite_sel->readlock();
 		do {
 			try {
 				$tryAgain = false;
@@ -467,7 +464,6 @@ function updateSel( $row, $priority ) {
 				$tryAgain = true;
 			}
 		} while($tryAgain);
-		$readwrite_sel->readunlock();
 	}
 	else {
 		list( $minhexfen, $minindex ) = getHexFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
@@ -476,7 +472,6 @@ function updateSel( $row, $priority ) {
 		} else {
 			$doc = array();
 		}
-		$readwrite_sel->readlock();
 		do {
 			try {
 				$tryAgain = false;
@@ -486,7 +481,6 @@ function updateSel( $row, $priority ) {
 				$tryAgain = true;
 			}
 		} while($tryAgain);
-		$readwrite_sel->readunlock();
 	}
 }
 function getMoves( $redis, $row, $depth ) {

@@ -61,7 +61,6 @@ class MyRWLock {
 }
 
 $readwrite_queue = new MyRWLock( "ChessDBLockQueue2" );
-$readwrite_sel = new MyRWLock( "ChessDBLockSel2" );
 
 function count_pieces( $fen ) {
 	@list( $board, $color ) = explode( " ", $fen );
@@ -205,7 +204,6 @@ function updateQueue( $row, $key, $priority ) {
 	}
 }
 function updateSel( $row, $priority ) {
-	global $readwrite_sel;
 	$m = new MongoClient('mongodb://localhost');
 	$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
 	$BWfen = cbgetBWfen( $row );
@@ -215,7 +213,6 @@ function updateSel( $row, $priority ) {
 	} else {
 		$doc = array();
 	}
-	$readwrite_sel->readlock();
 	do {
 		try {
 			$tryAgain = false;
@@ -225,7 +222,6 @@ function updateSel( $row, $priority ) {
 			$tryAgain = true;
 		}
 	} while($tryAgain);
-	$readwrite_sel->readunlock();
 }
 function getMoves( $redis, $row, $depth ) {
 	list( $moves1, $finals ) = getAllScores( $redis, $row );

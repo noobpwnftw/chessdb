@@ -80,7 +80,6 @@ class MyRWLock {
 }
 
 $readwrite_queue = new MyRWLock( "ChessDBLockQueue2" );
-$readwrite_sel = new MyRWLock( "ChessDBLockSel2" );
 
 function getWinRate( $score ) {
 	return number_format( 100 / ( 1 + exp( -$score / 330 ) ), 2 );
@@ -249,7 +248,6 @@ function updateQueue( $row, $key, $priority ) {
 	}
 }
 function updateSel( $row, $priority ) {
-	global $readwrite_sel;
 	$m = new MongoClient('mongodb://localhost');
 	$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
 	$BWfen = cbgetBWfen( $row );
@@ -259,7 +257,6 @@ function updateSel( $row, $priority ) {
 	} else {
 		$doc = array( '$set' => array( 'e' => new MongoDate() ) );
 	}
-	$readwrite_sel->readlock();
 	do {
 		try {
 			$tryAgain = false;
@@ -269,7 +266,6 @@ function updateSel( $row, $priority ) {
 			$tryAgain = true;
 		}
 	} while($tryAgain);
-	$readwrite_sel->readunlock();
 }
 function updatePly( $redis, $row, $ply ) {
 	$BWfen = cbgetBWfen( $row );
@@ -2281,7 +2277,7 @@ try{
 			if( !empty( $doc ) && isset( $doc['data'] ) ) {
 				echo $doc['data'];
 			}
-			else if( $readwrite_sel->trywritelock() )
+			else
 			{
 				$collection2 = $m->selectDB('cdbsel')->selectCollection('seldb');
 				$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => -1 ) )->limit(10);
@@ -2309,7 +2305,6 @@ try{
 					$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
 					echo $selout;
 				}
-				$readwrite_sel->writeunlock();
 			}
 		}
 		else {
