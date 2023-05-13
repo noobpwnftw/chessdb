@@ -94,12 +94,12 @@ try{
 
 	$m = new MongoClient();
 	$collection = $m->selectDB('cdbqueue')->selectCollection('queuedb');
-	$cursor = $collection->find();
+	$cursor = $collection->find( array( 'p' => 1 ) );
 	$count2 = $cursor->count();
 	$cursor->reset();
 
 	$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
-	$cursor = $collection->find();
+	$cursor = $collection->find( array( 'p' => 1 ) );
 	$count3 = $cursor->count();
 	$cursor->reset();
 
