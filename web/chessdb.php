@@ -1475,7 +1475,8 @@ function getEngineMove( $row, $movelist, $maxtime ) {
 		$writefd = NULL;
 		$errfd = NULL;
 		stream_set_blocking( $pipes[1], FALSE );
-		while( ( $res = stream_select( $readfd, $writefd, $errfd, 1 ) ) !== FALSE ) {
+		while( true ) {
+			$res = @stream_select( $readfd, $writefd, $errfd, 1 );
 			if( $res > 0 && ( $out = fgets( $pipes[1] ) ) ) {
 				if( $move = strstr( $out, 'bestmove' ) ) {
 					$result = substr( $move, 9, 4 );
