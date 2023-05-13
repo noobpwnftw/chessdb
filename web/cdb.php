@@ -519,7 +519,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 				$throttle = getthrottle( end( $moves1 ) );
 				$moves2 = array();
 				foreach( $moves1 as $key => $item ) {
-					if( ( $ply == 0 && $resetlimit && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
+					if( ( $ply == 0 && $resetlimit && $item > -10000 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
 						$moves2[ $key ] = $item;
 					}
 				}
@@ -827,7 +827,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 				$throttle = getthrottle( end( $moves1 ) );
 				$moves2 = array();
 				foreach( $moves1 as $key => $item ) {
-					if( ( $ply == 0 && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
+					if( ( $ply == 0 && $item > -10000 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
 						$moves2[ $key ] = $item;
 					}
 				}

@@ -858,7 +858,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
 						$knownmoves[ccbgetLRmove( $key )] = 0;
 					}
-					if( ( $ply == 0 && $resetlimit && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
+					if( ( $ply == 0 && $resetlimit && $item > -10000 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
 						$moves2[ $key ] = $item;
 					}
 				}
@@ -1231,7 +1231,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					if( !$hasLRmirror && $key != ccbgetLRmove( $key ) ) {
 						$knownmoves[ccbgetLRmove( $key )] = 0;
 					}
-					if( ( $ply == 0 && $item > -150 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
+					if( ( $ply == 0 && $item > -10000 ) || ( $item >= $throttle || $item == end( $moves1 ) ) ) {
 						$moves2[ $key ] = $item;
 					}
 				}
