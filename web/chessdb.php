@@ -2494,11 +2494,17 @@ try{
 				$selout = '';
 				foreach( $cursor as $doc ) {
 					$fen = ccbhexfen2fen(bin2hex($doc['_id']->bin));
-					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 && $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
+					if( count_pieces( $fen ) >= 10 && count_attackers( $fen ) >= 4 )
 					{
 						if( isset( $doc['p'] ) && $doc['p'] > 0 )
-							$selout .= '!' . $fen . "\n";
-						else
+						{
+							if( $memcache_obj->add( 'SelHistory::!' . $fen, 1, 0, 300 ) )
+							{
+								$memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 );
+								$selout .= '!' . $fen . "\n";
+							}
+						}
+						else if( $memcache_obj->add( 'SelHistory::' . $fen, 1, 0, 300 ) )
 							$selout .= $fen . "\n";
 						$thisminute = date('i');
 						$memcache_obj->add( 'SelCount::' . $thisminute, 0, 0, 150 );

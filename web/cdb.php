@@ -2286,16 +2286,19 @@ try{
 				$selout = '';
 				foreach( $cursor as $doc ) {
 					$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
-					if( $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
+					if( isset( $doc['p'] ) && $doc['p'] > 0 )
 					{
-						if( isset( $doc['p'] ) && $doc['p'] > 0 )
+						if( $memcache_obj->add( 'SelHistory2::!' . $fen, 1, 0, 300 ) )
+						{
+							$memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 );
 							$selout .= '!' . $fen . "\n";
-						else
-							$selout .=  $fen . "\n";
-						$thisminute = date('i');
-						$memcache_obj->add( 'SelCount2::' . $thisminute, 0, 0, 150 );
-						$memcache_obj->increment( 'SelCount2::' . $thisminute );
+						}
 					}
+					else if( $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
+						$selout .=  $fen . "\n";
+					$thisminute = date('i');
+					$memcache_obj->add( 'SelCount2::' . $thisminute, 0, 0, 150 );
+					$memcache_obj->increment( 'SelCount2::' . $thisminute );
 					$docs[] = $doc['_id'];
 				}
 				$cursor->reset();
