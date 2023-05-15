@@ -370,7 +370,7 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 			else if( abs( $moves1[$key] ) <= 10000 )
 			{
 				$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
-				if( $egtbresult !== FALSE ) {
+				if( $egtbresult !== NULL ) {
 					if( $egtbresult['checkmate'] ) {
 					}
 					else if( $egtbresult['stalemate'] ) {
@@ -607,7 +607,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					else if( abs( $moves1[$key] ) <= 10000 )
 					{
 						$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
-						if( $egtbresult !== FALSE ) {
+						if( $egtbresult !== NULL ) {
 							if( $egtbresult['checkmate'] ) {
 							}
 							else if( $egtbresult['stalemate'] ) {
@@ -648,7 +648,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					$allmoves = cbmovegen( $row );
 					if( count( $allmoves ) > count( $moves1 ) ) {
 						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
-							updateSel( $row, false );
+							updateSel( $row, $ply == 0 ? true : false );
 						}
 						if( $ply == 0 ) {
 							$memcache_obj = new Memcache();
@@ -903,7 +903,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					else if( abs( $moves1[$key] ) <= 10000 )
 					{
 						$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
-						if( $egtbresult !== FALSE ) {
+						if( $egtbresult !== NULL ) {
 							if( $egtbresult['checkmate'] ) {
 							}
 							else if( $egtbresult['stalemate'] ) {
@@ -944,7 +944,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					$allmoves = cbmovegen( $row );
 					if( count( $allmoves ) > count( $moves1 ) ) {
 						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
-							updateSel( $row, false );
+							updateSel( $row, $ply == 0 ? true : false );
 						}
 						if( $ply == 0 ) {
 							$memcache_obj = new Memcache();
@@ -1247,395 +1247,396 @@ try{
 						$memcache_obj->add( 'QLimit::' . $_SERVER['REMOTE_ADDR'], 0, 0, 86400 );
 						$memcache_obj->increment( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
 					}
-					if( count_pieces( $row ) <= 7 && $action != 'queue' ) {
-						$egtbresult = $memcache_obj->get( 'EGTB_DTZ::' . $row );
-						if( $egtbresult === FALSE ) {
+					if( count_pieces( $row ) <= 7 ) {
+						$egtbresult = NULL;
+						if( $action == 'queryall' || $action == 'query' || $action == 'querybest' || $action == 'querylearn' || $action == 'querysearch' || $action == 'queryscore' || $action == 'querypv' ) {
 							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $row ) ), TRUE );
-							if( $egtbresult !== FALSE ) {
-								$memcache_obj->add( 'EGTB_DTZ::' . $row, $egtbresult, 0, 30 );
-							}
+							if( $egtbresult === NULL )
+								throw new Exception( 'Tablebase error.' );
 						}
-						if( $action == 'queryall' ) {
-							if( $egtbresult['checkmate'] ) {
-								if( $isJson )
-									echo '"status":"checkmate"';
-								else
-									echo 'checkmate';
-							}
-							else if( $egtbresult['stalemate'] ) {
-								if( $isJson )
-									echo '"status":"stalemate"';
-								else
-									echo 'stalemate';
-							}
-							else if( $egtbresult['category'] == 'unknown' ) {
-								$allmoves = cbmovegen( $row );
-								if( count( $allmoves ) > 0 ) {
-									if( $showall ) {
-										if( $isJson )
-											echo '"status":"ok","moves":[{';
-										$isfirst = true;
-										foreach( $allmoves as $record => $score ) {
-											if( !$isfirst ) {
-												if( $isJson )
-													echo '},{';
+						if( $egtbresult !== NULL ) {
+							if( $action == 'queryall' ) {
+								if( $egtbresult['checkmate'] ) {
+									if( $isJson )
+										echo '"status":"checkmate"';
+									else
+										echo 'checkmate';
+								}
+								else if( $egtbresult['stalemate'] ) {
+									if( $isJson )
+										echo '"status":"stalemate"';
+									else
+										echo 'stalemate';
+								}
+								else if( $egtbresult['category'] == 'unknown' ) {
+									$allmoves = cbmovegen( $row );
+									if( count( $allmoves ) > 0 ) {
+										if( $showall ) {
+											if( $isJson )
+												echo '"status":"ok","moves":[{';
+											$isfirst = true;
+											foreach( $allmoves as $record => $score ) {
+												if( !$isfirst ) {
+													if( $isJson )
+														echo '},{';
+													else
+														echo '|';
+												}
 												else
-													echo '|';
+													$isfirst = false;
+												if( $isJson )
+													echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
+												else
+													echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
+											}
+											if( $isJson )
+												echo '}]';
+										}
+										else {
+											if( $isJson )
+												echo '"status":"unknown"';
+											else
+												echo 'unknown';
+										}
+									}
+									else {
+										if( cbincheck( $row ) ) {
+											if( $isJson )
+												echo '"status":"checkmate"';
+											else
+												echo 'checkmate';
+										}
+										else {
+											if( $isJson )
+												echo '"status":"stalemate"';
+											else
+												echo 'stalemate';
+										}
+									}
+								}
+								else
+								{
+									if( $isJson )
+										echo '"status":"ok","moves":[{';
+									$bestmove = reset( $egtbresult['moves'] );
+									$isfirst = true;
+									foreach( $egtbresult['moves'] as $move ) {
+										if( !$isfirst ) {
+											if( $bestmove['category'] == 'unknown' || $move['category'] == 'unknown' ) {
+												if( $isJson )
+													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":"??","rank":0,"note":"? (??-??)"';
+												else
+													echo '|move:' . $move['uci'] . ',score:??,rank:0,note:? (??-??)';
+											}
+											else if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
+												$step = -$move['dtz'];
+												if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
+													$score = 20000 - $step;
+												else
+													$score = 25000 - $step;
+												if( $move['zeroing'] || $move['checkmate'] )
+													$step = 0;
+												if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":1,"note":"* (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:1,note:* (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+												}
+											}
+											else if( $move['category'] == 'draw' ) {
+												$step = 0;
+												$score = 0;
+												if( $bestmove['category'] == 'draw' ) {
+													if( $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
+														if( $isJson )
+															echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+														else
+															echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+													}
+													else {
+														if( $isJson )
+															echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":1,"note":"* (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+														else
+															echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:1,note:* (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+													}
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":0,"note":"? (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:0,note:? (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+												}
+											}
+											else {
+												$step = $move['dtz'];
+												if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
+													$score = $step - 20000;
+												else
+													$score = $step - 25000;
+												if( $move['zeroing'] || $move['checkmate'] )
+													$step = 0;
+												if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else if( $bestmove['category'] == 'win' || $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' ) {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":1,"note":"* (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:1,note:* (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":0,"note":"? (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:0,note:? (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+												}
+											}
+										}
+										else {
+											$isfirst = false;
+											if( $bestmove['category'] == 'unknown' || $move['category'] == 'unknown' ) {
+												if( $isJson )
+													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":"??","rank":0,"note":"? (??-??)"';
+												else
+													echo 'move:' . $move['uci'] . ',score:??,rank:0,note:? (??-??)';
+											}
+											else if( $bestmove['category'] == 'draw' && $move['category'] == 'draw' ) {
+												$step = 0;
+												$score = 0;
+												if( $isJson )
+													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+												else
+													echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+											}
+											else if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
+												$step = -$move['dtz'];
+												if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
+													$score = 20000 - $step;
+												else
+													$score = 25000 - $step;
+												if( $move['zeroing'] || $move['checkmate'] )
+													$step = 0;
+												if( $isJson )
+													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+												else
+												echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+											}
+											else {
+												$step = $move['dtz'];
+												if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
+													$score = $step - 20000;
+												else
+													$score = $step - 25000;
+												if( $move['zeroing'] || $move['checkmate'] )
+													$step = 0;
+												if( $isJson )
+													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
+												else
+													echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+											}
+										}
+									}
+									if( $isJson )
+										echo '}]';
+								}
+							}
+							else if( $action == 'query' || $action == 'querybest' || $action == 'querylearn' || $action == 'querysearch' )
+							{
+								if( $egtbresult['checkmate'] || $egtbresult['stalemate'] || $egtbresult['category'] == 'unknown' ) {
+									if( $isJson )
+										echo '"status":"nobestmove"';
+									else
+										echo 'nobestmove';
+								}
+								else {
+									$bestmove = reset( $egtbresult['moves'] );
+									if( $bestmove['category'] != 'draw' ) {
+										$finals = array();
+										$finalcount = 0;
+										foreach( $egtbresult['moves'] as $move ) {
+											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] )
+												$finals[$finalcount++] = $move['uci'];
+											else
+												break;
+										}
+										shuffle( $finals );
+										if( $isJson )
+											echo '"status":"ok","egtb":"' . end( $finals ) . '"';
+										else
+											echo 'egtb:' . end( $finals );
+									}
+									else if( $bestmove['category'] == 'draw' )
+									{
+										if( $isJson )
+											echo '"status":"ok","search_moves":[{';
+										$isfirst = true;
+										foreach( $egtbresult['moves'] as $move ) {
+											if( $move['category'] == 'draw' ) {
+												if( !$isfirst ) {
+													if( $isJson )
+														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '"';
+													else
+														echo '|search:' . $move['uci'];
+												}
+												else {
+													$isfirst = false;
+													if( $isJson )
+														echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '"';
+													else
+														echo 'search:' . $move['uci'];
+												}
 											}
 											else
-												$isfirst = false;
-											if( $isJson )
-												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
-											else
-												echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
+												break;
 										}
 										if( $isJson )
 											echo '}]';
 									}
 									else {
 										if( $isJson )
-											echo '"status":"unknown"';
+											echo '"status":"nobestmove"';
 										else
-											echo 'unknown';
-									}
-								}
-								else {
-									if( cbincheck( $row ) ) {
-										if( $isJson )
-											echo '"status":"checkmate"';
-										else
-											echo 'checkmate';
-									}
-									else {
-										if( $isJson )
-											echo '"status":"stalemate"';
-										else
-											echo 'stalemate';
+											echo 'nobestmove';
 									}
 								}
 							}
-							else
-							{
-								if( $isJson )
-									echo '"status":"ok","moves":[{';
-								$bestmove = reset( $egtbresult['moves'] );
-								$isfirst = true;
-								foreach( $egtbresult['moves'] as $move ) {
-									if( !$isfirst ) {
-										if( $bestmove['category'] == 'unknown' || $move['category'] == 'unknown' ) {
-											if( $isJson )
-												echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":"??","rank":0,"note":"? (??-??)"';
-											else
-												echo '|move:' . $move['uci'] . ',score:??,rank:0,note:? (??-??)';
-										}
-										else if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
-											$step = -$move['dtz'];
-											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
-												$score = 20000 - $step;
-											else
-												$score = 25000 - $step;
-											if( $move['zeroing'] || $move['checkmate'] )
-												$step = 0;
-											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-											else {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":1,"note":"* (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:1,note:* (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-										}
-										else if( $move['category'] == 'draw' ) {
-											$step = 0;
-											$score = 0;
-											if( $bestmove['category'] == 'draw' ) {
-												if( $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
-													if( $isJson )
-														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-													else
-														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-												}
+							else if( $action == 'querypv' ) {
+								if( $egtbresult['checkmate'] ) {
+									if( $isJson )
+										echo '"status":"checkmate"';
+									else
+										echo 'checkmate';
+								}
+								else if( $egtbresult['stalemate'] ) {
+									if( $isJson )
+										echo '"status":"stalemate"';
+									else
+										echo 'stalemate';
+								}
+								else if( $egtbresult['category'] == 'unknown' ) {
+									if( $isJson )
+										echo '"status":"unknown"';
+									else
+										echo 'unknown';
+								}
+								else {
+									$bestmove = reset( $egtbresult['moves'] );
+									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
+										$step = -$bestmove['dtz'];
+										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
+											$score = 20000 - $step;
+										else
+											$score = 25000 - $step;
+									}
+									else if( $bestmove['category'] == 'draw' ) {
+										$score = 0;
+									}
+									else {
+										$step = $bestmove['dtz'];
+										if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
+											$score = $step - 20000;
+										else
+											$score = $step - 25000;
+									}
+									if( $isJson )
+										echo '"status":"ok","score":' . $score . ',"depth":' . $bestmove['dtz'] . ',"pv":["' . $bestmove['uci'] . '"],"pvSAN":["' . $bestmove['san'] . '"]';
+									else
+										echo 'score:' . $score . ',depth:' . $bestmove['dtz'] . ',pv:' . $bestmove['uci'];
+								}
+							}
+							else if( $action == 'queryscore' ) {
+								if( $egtbresult['checkmate'] ) {
+									if( $isJson )
+										echo '"status":"checkmate"';
+									else
+										echo 'checkmate';
+								}
+								else if( $egtbresult['stalemate'] ) {
+									if( $isJson )
+										echo '"status":"stalemate"';
+									else
+										echo 'stalemate';
+								}
+								else if( $egtbresult['category'] == 'unknown' ) {
+									if( $isJson )
+										echo '"status":"unknown"';
+									else
+										echo 'unknown';
+								}
+								else {
+									$bestmove = reset( $egtbresult['moves'] );
+									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
+										$step = -$bestmove['dtz'];
+										if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
+											$score = 20000 - $step;
+										else
+											$score = 25000 - $step;
+									}
+									else if( $bestmove['category'] == 'draw' ) {
+										$score = 0;
+									}
+									else {
+										$step = $bestmove['dtz'];
+										if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
+											$score = $step - 20000;
+										else
+											$score = $step - 25000;
+									}
+									if( $isJson )
+										echo '"status":"ok","eval":' . $score;
+									else
+										echo 'eval:' . $score;
+								}
+							}
+							else if( $action == 'queryengine' ) {
+								if( isset( $_REQUEST['token'] ) && !empty( $_REQUEST['token'] ) && substr( md5( $_REQUEST['board'] . $_REQUEST['token'] ), 0, 2 ) == '00' ) {
+									$movelist = array();
+									$isvalid = true;
+									if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
+										$movelist = explode( "|", $_REQUEST['movelist'] );
+										$nextfen = $row;
+										$movecount = count( $movelist );
+										if( $movecount > 0 && $movecount < 2047 ) {
+											foreach( $movelist as $entry ) {
+												$validmoves = cbmovegen( $nextfen );
+												if( isset( $validmoves[$entry] ) )
+													$nextfen = cbmovemake( $nextfen, $entry );
 												else {
-													if( $isJson )
-														echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":1,"note":"* (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-													else
-														echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:1,note:* (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
+													$isvalid = false;
+													break;
 												}
 											}
-											else {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":0,"note":"? (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:0,note:? (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-										}
-										else {
-											$step = $move['dtz'];
-											if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
-												$score = $step - 20000;
-											else
-												$score = $step - 25000;
-											if( $move['zeroing'] || $move['checkmate'] )
-												$step = 0;
-											if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] ) {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-											else if( $bestmove['category'] == 'win' || $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' ) {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":1,"note":"* (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:1,note:* (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-											else {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":0,"note":"? (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-												else
-													echo '|move:' . $move['uci'] . ',score:' . $score . ',rank:0,note:? (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-											}
-										}
-									}
-									else {
-										$isfirst = false;
-										if( $bestmove['category'] == 'unknown' || $move['category'] == 'unknown' ) {
-											if( $isJson )
-												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":"??","rank":0,"note":"? (??-??)"';
-											else
-												echo 'move:' . $move['uci'] . ',score:??,rank:0,note:? (??-??)';
-										}
-										else if( $bestmove['category'] == 'draw' && $move['category'] == 'draw' ) {
-											$step = 0;
-											$score = 0;
-											if( $isJson )
-												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-											else
-												echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (D-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-										}
-										else if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' || $move['category'] == 'loss' ) {
-											$step = -$move['dtz'];
-											if( $move['category'] == 'blessed-loss' || $move['category'] == 'maybe-loss' )
-												$score = 20000 - $step;
-											else
-												$score = 25000 - $step;
-											if( $move['zeroing'] || $move['checkmate'] )
-												$step = 0;
-											if( $isJson )
-												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-											else
-											echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (W-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-										}
-										else {
-											$step = $move['dtz'];
-											if( $move['category'] == 'maybe-win' || $move['category'] == 'cursed-win' )
-												$score = $step - 20000;
-											else
-												$score = $step - 25000;
-											if( $move['zeroing'] || $move['checkmate'] )
-												$step = 0;
-											if( $isJson )
-												echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '","score":' . $score . ',"rank":2,"note":"! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')"';
-											else
-												echo 'move:' . $move['uci'] . ',score:' . $score . ',rank:2,note:! (L-' . str_pad( $step, 4, '0', STR_PAD_LEFT ) . ')';
-										}
-									}
-								}
-								if( $isJson )
-									echo '}]';
-							}
-						}
-						else if( $action == 'query' || $action == 'querybest' || $action == 'querylearn' || $action == 'querysearch' )
-						{
-							if( $egtbresult['checkmate'] || $egtbresult['stalemate'] || $egtbresult['category'] == 'unknown' ) {
-								if( $isJson )
-									echo '"status":"nobestmove"';
-								else
-									echo 'nobestmove';
-							}
-							else {
-								$bestmove = reset( $egtbresult['moves'] );
-								if( $bestmove['category'] != 'draw' ) {
-									$finals = array();
-									$finalcount = 0;
-									foreach( $egtbresult['moves'] as $move ) {
-										if( $move['dtz'] == $bestmove['dtz'] && $move['zeroing'] == $bestmove['zeroing'] && $move['checkmate'] == $bestmove['checkmate'] )
-											$finals[$finalcount++] = $move['uci'];
-										else
-											break;
-									}
-									shuffle( $finals );
-									if( $isJson )
-										echo '"status":"ok","egtb":"' . end( $finals ) . '"';
-									else
-										echo 'egtb:' . end( $finals );
-								}
-								else if( $bestmove['category'] == 'draw' )
-								{
-									if( $isJson )
-										echo '"status":"ok","search_moves":[{';
-									$isfirst = true;
-									foreach( $egtbresult['moves'] as $move ) {
-										if( $move['category'] == 'draw' ) {
-											if( !$isfirst ) {
-												if( $isJson )
-													echo '},{"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '"';
-												else
-													echo '|search:' . $move['uci'];
-											}
-											else {
-												$isfirst = false;
-												if( $isJson )
-													echo '"uci":"' . $move['uci'] . '","san":"' . $move['san'] . '"';
-												else
-													echo 'search:' . $move['uci'];
-											}
 										}
 										else
-											break;
+											$isvalid = false;
 									}
-									if( $isJson )
-										echo '}]';
-								}
-								else {
-									if( $isJson )
-										echo '"status":"nobestmove"';
-									else
-										echo 'nobestmove';
-								}
-							}
-						}
-						else if( $action == 'querypv' ) {
-							if( $egtbresult['checkmate'] ) {
-								if( $isJson )
-									echo '"status":"checkmate"';
-								else
-									echo 'checkmate';
-							}
-							else if( $egtbresult['stalemate'] ) {
-								if( $isJson )
-									echo '"status":"stalemate"';
-								else
-									echo 'stalemate';
-							}
-							else if( $egtbresult['category'] == 'unknown' ) {
-								if( $isJson )
-									echo '"status":"unknown"';
-								else
-									echo 'unknown';
-							}
-							else {
-								$bestmove = reset( $egtbresult['moves'] );
-								if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
-									$step = -$bestmove['dtz'];
-									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
-										$score = 20000 - $step;
-									else
-										$score = 25000 - $step;
-								}
-								else if( $bestmove['category'] == 'draw' ) {
-									$score = 0;
-								}
-								else {
-									$step = $bestmove['dtz'];
-									if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
-										$score = $step - 20000;
-									else
-										$score = $step - 25000;
-								}
-								if( $isJson )
-									echo '"status":"ok","score":' . $score . ',"depth":' . $bestmove['dtz'] . ',"pv":["' . $bestmove['uci'] . '"],"pvSAN":["' . $bestmove['san'] . '"]';
-								else
-									echo 'score:' . $score . ',depth:' . $bestmove['dtz'] . ',pv:' . $bestmove['uci'];
-							}
-						}
-						else if( $action == 'queryscore' ) {
-							if( $egtbresult['checkmate'] ) {
-								if( $isJson )
-									echo '"status":"checkmate"';
-								else
-									echo 'checkmate';
-							}
-							else if( $egtbresult['stalemate'] ) {
-								if( $isJson )
-									echo '"status":"stalemate"';
-								else
-									echo 'stalemate';
-							}
-							else if( $egtbresult['category'] == 'unknown' ) {
-								if( $isJson )
-									echo '"status":"unknown"';
-								else
-									echo 'unknown';
-							}
-							else {
-								$bestmove = reset( $egtbresult['moves'] );
-								if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' || $bestmove['category'] == 'loss' ) {
-									$step = -$bestmove['dtz'];
-									if( $bestmove['category'] == 'blessed-loss' || $bestmove['category'] == 'maybe-loss' )
-										$score = 20000 - $step;
-									else
-										$score = 25000 - $step;
-								}
-								else if( $bestmove['category'] == 'draw' ) {
-									$score = 0;
-								}
-								else {
-									$step = $bestmove['dtz'];
-									if( $bestmove['category'] == 'maybe-win' || $bestmove['category'] == 'cursed-win' )
-										$score = $step - 20000;
-									else
-										$score = $step - 25000;
-								}
-								if( $isJson )
-									echo '"status":"ok","eval":' . $score;
-								else
-									echo 'eval:' . $score;
-							}
-						}
-						else if( $action == 'queryengine' ) {
-							if( isset( $_REQUEST['token'] ) && !empty( $_REQUEST['token'] ) && substr( md5( $_REQUEST['board'] . $_REQUEST['token'] ), 0, 2 ) == '00' ) {
-								$movelist = array();
-								$isvalid = true;
-								if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
-									$movelist = explode( "|", $_REQUEST['movelist'] );
-									$nextfen = $row;
-									$movecount = count( $movelist );
-									if( $movecount > 0 && $movecount < 2047 ) {
-										foreach( $movelist as $entry ) {
-											$validmoves = cbmovegen( $nextfen );
-											if( isset( $validmoves[$entry] ) )
-												$nextfen = cbmovemake( $nextfen, $entry );
-											else {
-												$isvalid = false;
-												break;
-											}
+									if( $isvalid ) {
+										$memcache_obj->add( 'EngineCount2', 0 );
+										$engcount = $memcache_obj->increment( 'EngineCount2' );
+										$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
+										$memcache_obj->decrement( 'EngineCount2' );
+										if( !empty( $result ) ) {
+											echo 'move:' . $result;
+										}
+										else {
+											echo 'nobestmove';
 										}
 									}
 									else
-										$isvalid = false;
+										echo 'invalid movelist';
 								}
-								if( $isvalid ) {
-									$memcache_obj->add( 'EngineCount2', 0 );
-									$engcount = $memcache_obj->increment( 'EngineCount2' );
-									$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
-									$memcache_obj->decrement( 'EngineCount2' );
-									if( !empty( $result ) ) {
-										echo 'move:' . $result;
-									}
-									else {
-										echo 'nobestmove';
-									}
+								else {
+									echo 'invalid parameters';
 								}
-								else
-									echo 'invalid movelist';
-							}
-							else {
-								echo 'invalid parameters';
 							}
 						}
 					}
@@ -2341,17 +2342,17 @@ try{
 	}
 }
 catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
 	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }
 catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
 	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }
 catch (Exception $e) {
-	echo 'Error: ' . $e->getMessage();
 	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }

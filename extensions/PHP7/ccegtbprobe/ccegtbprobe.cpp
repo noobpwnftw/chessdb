@@ -289,22 +289,22 @@ PHP_FUNCTION(ccegtbprobe)
 					{
 						free(pprobe_structs[i]);
 					}
-					RETURN_FALSE;
+					RETURN_NULL();
 				}
 			}
 			else
 			{
-				RETURN_FALSE;
+				RETURN_NULL();
 			}
 		}
 		else
 		{
-			RETURN_FALSE;
+			RETURN_NULL();
 		}
 	}
 	else
 	{
-		RETURN_FALSE;
+		RETURN_NULL();
 	}
 }
 

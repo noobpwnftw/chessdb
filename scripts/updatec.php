@@ -194,7 +194,7 @@ function getMoves( $redis, $row, $depth ) {
 					if( count_pieces( $nextfen ) <= 7 ) {
 						if( abs( $item ) < 10000 ) {
 							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
-							if( $egtbresult !== FALSE ) {
+							if( $egtbresult !== NULL ) {
 								if( $egtbresult['checkmate'] ) {
 								}
 								else if( $egtbresult['stalemate'] ) {

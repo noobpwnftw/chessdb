@@ -941,7 +941,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					$allmoves = ccbmovegen( $row );
 					if( count( $allmoves ) > count( $knownmoves ) ) {
 						if( count( $knownmoves ) > 0 && count( $knownmoves ) < 5 ) {
-							updateSel( $row, false );
+							updateSel( $row, $ply == 0 ? true : false );
 						}
 						if( $ply == 0 ) {
 							$memcache_obj = new Memcache();
@@ -1302,7 +1302,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					$allmoves = ccbmovegen( $row );
 					if( count( $allmoves ) > count( $knownmoves ) ) {
 						if( count( $knownmoves ) > 0 && count( $knownmoves ) < 5 ) {
-							updateSel( $row, false );
+							updateSel( $row, $ply == 0 ? true : false );
 						}
 						if( $ply == 0 ) {
 							$memcache_obj = new Memcache();
@@ -1811,23 +1811,23 @@ try{
 						$memcache_obj->add( 'QLimit::' . $_SERVER['REMOTE_ADDR'], 0, 0, 86400 );
 						$memcache_obj->increment( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
 					}
-					if( $dtmtb )
-						$egtbresult = $memcache_obj->get( 'EGTB_DTM::' . $row );
-					else
-						$egtbresult = $memcache_obj->get( 'EGTB_DTC::' . $row );
-					if( $egtbresult === FALSE && $action != 'queue' ) {
-//						$egtblock = new MyRWLock( "EGTBLock" );
-//						$egtblock->writelock();
-						$egtbresult = ccegtbprobe( $row, $dtmtb );
-//						$egtblock->writeunlock();
-						if( $egtbresult !== FALSE ) {
-							if( $dtmtb )
-								$memcache_obj->add( 'EGTB_DTM::' . $row, $egtbresult, 0, 30 );
-							else
-								$memcache_obj->add( 'EGTB_DTC::' . $row, $egtbresult, 0, 30 );
+					$egtbresult = NULL;
+					if( $action == 'queryall' || $action == 'query' || $action == 'querybest' || $action == 'querylearn' || $action == 'querysearch' || $action == 'queryscore' || $action == 'querypv' ) {
+						if( $dtmtb )
+							$egtbresult = $memcache_obj->get( 'EGTB_DTM::' . $row );
+						else
+							$egtbresult = $memcache_obj->get( 'EGTB_DTC::' . $row );
+						if( $egtbresult === FALSE ) {
+							$egtbresult = ccegtbprobe( $row, $dtmtb );
+							if( $egtbresult !== NULL ) {
+								if( $dtmtb )
+									$memcache_obj->add( 'EGTB_DTM::' . $row, $egtbresult, 0, 30 );
+								else
+									$memcache_obj->add( 'EGTB_DTC::' . $row, $egtbresult, 0, 30 );
+							}
 						}
 					}
-					if( $egtbresult !== FALSE ) {
+					if( $egtbresult !== NULL ) {
 						if( !$dtmtb ) {
 							$GLOBALS['order'] = array_pop( $egtbresult );
 						}
@@ -2549,17 +2549,17 @@ try{
 	}
 }
 catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
 	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }
 catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
 	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }
 catch (Exception $e) {
-	echo 'Error: ' . $e->getMessage();
 	error_log( $e->getMessage(), 0 );
 	http_response_code(503);
+	echo 'Error: ' . $e->getMessage();
 }
