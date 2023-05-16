@@ -1691,13 +1691,6 @@ try{
 									$score = -30000;
 								}
 							}
-							else if( abs( $score ) > 10000 )
-							{
-								if( $score < 0 && $score > -30000 )
-									$score = $score - 1;
-								else if( $score > 0 && $score < 30000 )
-									$score = $score + 1;
-							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
 							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, ccbmovemake( $row, $move ) ) == 0 ) {
