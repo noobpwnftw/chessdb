@@ -738,7 +738,6 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 						}
 					}
 				}
-
 				unset( $GLOBALS['looptt'][$current_hash] );
 				unset( $GLOBALS['looptt'][$current_hash_bw] );
 			}
