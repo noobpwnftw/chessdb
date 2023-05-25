@@ -731,10 +731,8 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					asort( $moves1 );
 					$bestscore = end( $moves1 );
 					foreach( array_keys( array_intersect_key( $moves1, $loopdraws ) ) as $key ) {
-						if( $moves1[$key] == $bestscore && abs( $bestscore ) < 10000 ) {
+						if( $moves1[$key] == $bestscore ) {
 							$moves1[$key] = 0;
-							//if( !$isloop )
-							//	$updatemoves[$key] = 0;
 						}
 					}
 				}
@@ -1010,10 +1008,8 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					asort( $moves1 );
 					$bestscore = end( $moves1 );
 					foreach( array_keys( array_intersect_key( $moves1, $loopdraws ) ) as $key ) {
-						if( $moves1[$key] == $bestscore && abs( $bestscore ) < 10000 ) {
+						if( $moves1[$key] == $bestscore ) {
 							$moves1[$key] = 0;
-							//if( !$isloop )
-							//	$updatemoves[$key] = 0;
 						}
 					}
 				}
