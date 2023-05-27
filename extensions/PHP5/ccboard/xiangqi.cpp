@@ -2463,15 +2463,7 @@ int Position::check_move_catch()
 			{
 				if (move_to(list.move(i)) == move_to(me_move))
 				{
-					if (sq_piece_type(move_from(list.move(i))) == Rook)
-					{
-						if (!sq_is_protected(move_to(me_move), move_from(list.move(i))))
-						{
-							opp_ban = false;
-							break;
-						}
-					}
-					else if (sq_piece_type(move_to(me_move)) == Rook || !sq_is_protected(move_to(me_move), move_from(list.move(i))))
+					if (!sq_is_protected(move_to(me_move), move_from(list.move(i))))
 					{
 						opp_ban = false;
 						break;
@@ -2497,15 +2489,7 @@ int Position::check_move_catch()
 			{
 				if (move_to(list.move(i)) == move_from(opp_move))
 				{
-					if (sq_piece_type(move_from(list.move(i))) == Rook)
-					{
-						if (!sq_is_protected(move_from(opp_move), move_from(list.move(i))))
-						{
-							me_ban = false;
-							break;
-						}
-					}
-					else if (sq_piece_type(move_from(opp_move)) == Rook || !sq_is_protected(move_from(opp_move), move_from(list.move(i))))
+					if (!sq_is_protected(move_from(opp_move), move_from(list.move(i))))
 					{
 						me_ban = false;
 						break;
@@ -2624,7 +2608,7 @@ bool Position::move_attack_sq(int move, int sq, bool passive)
 				else if (!sq_is_pinned(a_sq) && (type == Rook || !sq_is_protected(sq, a_sq)))
 				{
 				Check_Cannon_Attack:
-					if (type != Rook)
+					if (type != Rook || passive)
 						return true;
 					rep_move_undo(move);
 					if (!(cannon_attack_bb(a_sq, blockers) & sq_2_bb(sq)))
@@ -2663,7 +2647,7 @@ bool Position::move_attack_sq(int move, int sq, bool passive)
 				&& !sq_is_pinned(a_sq)
 				&& (type == Rook || !sq_is_protected(sq, a_sq)))
 			{
-				if (type != Rook)
+				if (type != Rook || passive)
 					return true;
 				rep_move_undo(move);
 				if (square[knight_legal_leg(a_sq, sq)])
@@ -2691,9 +2675,9 @@ bool Position::move_attack_sq(int move, int sq, bool passive)
 			int a_sq = bb.pop_1st_sq();
 			if (!sq_is_pinned(a_sq) && (type == Rook || !sq_is_protected(sq, a_sq)))
 			{
-				if (type != Rook)
+				if (type != Rook || passive)
 					return true;
-				if (a_sq == att_sq && (!passive || (type == Rook && sq_knight_pinned(sq))))
+				if (a_sq == att_sq)
 					return true;
 				rep_move_undo(move);
 				if (square[(a_sq + sq) / 2])
@@ -2721,9 +2705,9 @@ bool Position::move_attack_sq(int move, int sq, bool passive)
 			int a_sq = bb.pop_1st_sq();
 			if (!sq_is_pinned(a_sq) && (type == Rook || !sq_is_protected(sq, a_sq)))
 			{
-				if (type != Rook)
+				if (type != Rook || passive)
 					return true;
-				if (a_sq == att_sq && (!passive || (type == Rook && sq_knight_pinned(sq))))
+				if (a_sq == att_sq)
 					return true;
 				rep_move_undo(move);
 				if (sq_is_pinned(a_sq))
@@ -2760,7 +2744,7 @@ int Position::check_static_catch(int flag)
 			catch_me_ban = false;
 
 		if (!catch_me_ban && !catch_opp_ban)
-			return Flag_Rep_None;
+			return flag;
 
 		me_move = stack[ix].move;
 		opp_move = stack[ix + 1].move;
@@ -2925,15 +2909,7 @@ int Position::me_static_catch(int sq)
 		{
 			if (move_to(list.move(i)) == sq)
 			{
-				if (sq_piece_type(move_from(list.move(i))) == Rook)
-				{
-					if (!sq_is_protected(sq, move_from(list.move(i))))
-					{
-						ban = 0;
-						break;
-					}
-				}
-				else if (sq_piece_type(sq) == Rook || !sq_is_protected(sq, move_from(list.move(i))))
+				if (!sq_is_protected(sq, move_from(list.move(i))))
 				{
 					ban = 0;
 					break;
@@ -2986,15 +2962,7 @@ int Position::opp_static_catch(int sq)
 		{
 			if (move_to(list.move(i)) == sq)
 			{
-				if (sq_piece_type(move_from(list.move(i))) == Rook)
-				{
-					if (!sq_is_protected(sq, move_from(list.move(i))))
-					{
-						ban = 0;
-						break;
-					}
-				}
-				else if (sq_piece_type(sq) == Rook || !sq_is_protected(sq, move_from(list.move(i))))
+				if (!sq_is_protected(sq, move_from(list.move(i))))
 				{
 					ban = 0;
 					break;
@@ -3401,15 +3369,7 @@ bool Position::is_chase(int move)
 			{
 				if (move_to(list.move(i)) == target)
 				{
-					if (sq_piece_type(move_from(list.move(i))) == Rook)
-					{
-						if (!sq_is_protected(target, move_from(list.move(i))))
-						{
-							ban = false;
-							break;
-						}
-					}
-					else if (sq_piece_type(target) == Rook || !sq_is_protected(target, move_from(list.move(i))))
+					if (!sq_is_protected(target, move_from(list.move(i))))
 					{
 						ban = false;
 						break;

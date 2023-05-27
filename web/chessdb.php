@@ -861,7 +861,9 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 
 				if( $ply == 0 ) {
 					$GLOBALS['movecnt'] = array();
+					$isfirst = true;
 				}
+
 				foreach( $moves2 as $key => $item ) {
 					if( $resetlimit )
 						$GLOBALS['counter'] = 0;
@@ -886,8 +888,13 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 						$GLOBALS['looptt'][$current_hash][$key] = $GLOBALS['loopcheck'];
 						unset( $GLOBALS['loopcheck'] );
 					}
-					if( $ply == 0 )
+					if( $ply == 0 ) {
 						$GLOBALS['movecnt'][$key] = $GLOBALS['counter1'];
+						if( $resetlimit && $isfirst ) {
+							$enumlimit = ( int )( $enumlimit / count( $moves2 ) ) + 10;
+							$isfirst = false;
+						}
+					}
 
 					if( count( $nextmoves ) > 0 ) {
 						arsort( $nextmoves );
@@ -2312,7 +2319,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 100, true, true, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 200, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								echo 'ok';
 							}

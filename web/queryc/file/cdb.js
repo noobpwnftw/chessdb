@@ -947,6 +947,7 @@ function SetFen(s) {
 	s = s.replace(/ moves.*/g, '');
 	fens = s;
 	Initialize();
+	fens = chess.fen();
 	if (mvl.length > 0) {
 		for (var i = 0; i < mvl.length; i++) {
 			var mov = GetFigureMove2(mvl[i]);
