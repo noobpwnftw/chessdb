@@ -1323,22 +1323,25 @@ function onmdown(cid) {
 		}
 		return;
 	} else if (f == 3) {
-		var s = place(cid).split(/\./);
-		var src = s[0].split(/,/);
-		var dst = s[1].split(/,/);
-		chess.put(chess.remove(FigureFiles[src[0]] + (8 - src[1])), FigureFiles[dst[0]] + (8 - dst[1]));
-		fens = chess.fen();
-		iif = 0;
-		Vfirsel.src = '/file/oo.gif';
-		Vsecsel.src = '/file/oo.gif';
-		Vselect.style.left = 0;
-		Vselect.style.top = 0;
-		Vselect.src = '/file/oo.gif';
-		while (prevmove.length)
-			prevmove.pop();
-		curstep = 0;
-		Vout2.innerHTML = '';
-		SyncDesk();
+		if (iif != 0)
+		{
+			var s = place(cid).split(/\./);
+			var src = s[0].split(/,/);
+			var dst = s[1].split(/,/);
+			chess.put(chess.remove(FigureFiles[src[0]] + (8 - src[1])), FigureFiles[dst[0]] + (8 - dst[1]));
+			fens = chess.fen();
+			iif = 0;
+			Vfirsel.src = '/file/oo.gif';
+			Vsecsel.src = '/file/oo.gif';
+			Vselect.style.left = 0;
+			Vselect.style.top = 0;
+			Vselect.src = '/file/oo.gif';
+			while (prevmove.length)
+				prevmove.pop();
+			curstep = 0;
+			Vout2.innerHTML = '';
+			SyncDesk();
+		}
 	} else if (f == 0 || f == 2) {
 		if (iif != 0 && iif != 'del') {
 			var dst = cid.split(/,/);
