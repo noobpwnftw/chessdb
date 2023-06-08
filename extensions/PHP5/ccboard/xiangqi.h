@@ -921,7 +921,7 @@ struct Position
 	//move_legal.cpp
 	bool move_is_pseudo(int move)const;
 	bool pseudo_is_legal(int move)const;
-	bool move_is_legal(int move)const;
+	bool pseudo_is_legal_incheck(int move)const;
 
 	void move_do(int move);
 	void move_undo();
@@ -978,6 +978,8 @@ struct Position
 	bool is_chase(int move);
 
 	void gen_moves(Move_List& list)const;
+	bool move_connect(int first, int second, bool is_cap = false)const;
+	void gen_chase_legals(Move_List& list)const;
 	void gen_legals(Move_List& list)const;
 };
 

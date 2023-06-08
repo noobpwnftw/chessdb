@@ -574,7 +574,7 @@ PHP_FUNCTION(ccbrulecheck)
 		for(zend_hash_internal_pointer_reset_ex(arr_hash, &pointer); zend_hash_get_current_data_ex(arr_hash, (void**) &data, &pointer) == SUCCESS; zend_hash_move_forward_ex(arr_hash, &pointer)) {
 			if (Z_TYPE_PP(data) == IS_STRING) {
 				int move = move_from_string(Z_STRVAL_PP(data));
-				if(!verify || (pos.move_is_pseudo(move) && pos.move_is_legal(move)))
+				if(!verify || (pos.move_is_pseudo(move) && (pos.in_check(pos.turn) ? pos.pseudo_is_legal_incheck(move) : pos.pseudo_is_legal(move))))
 					pos.move_do(move);
 				else
 					RETURN_NULL();

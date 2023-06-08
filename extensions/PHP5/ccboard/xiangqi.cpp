@@ -1595,6 +1595,80 @@ bool Position::move_is_pseudo(int move)const
 	return false;
 }
 
+bool Position::move_connect(int first, int second, bool is_cap)const
+{
+	S8 f1 = move_from(first), t1 = move_to(first);
+	S8 f2 = move_from(second), t2 = move_to(second);
+
+	if (sq_equal_file(f2, t2))
+	{
+		if (!sq_equal_file(f1, t1))
+		{
+			if (sq_equal_file(f2, f1) && Mid(f1, f2, t2))
+			{
+				return true;
+			}
+			if (sq_equal_file(f2, t1) && Mid(t1, f2, t2))
+			{
+				return true;
+			}
+		}
+		else
+		{
+			if (sq_equal_file(f2, f1))
+			{
+				if (Mid(f1, f2, t2) && (!Mid(t1, f2, t2) || is_cap))
+				{
+					return true;
+				}
+			}
+		}
+	}
+	if (sq_equal_rank(f2, t2))
+	{
+		if (!sq_equal_rank(f1, t1))
+		{
+			if (sq_equal_rank(f2, f1) && Mid(f1, f2, t2))
+			{
+				return true;
+			}
+			if (sq_equal_rank(f2, t1) && Mid(t1, f2, t2))
+			{
+				return true;
+			}
+		}
+		else
+		{
+			if (sq_equal_rank(f2, f1))
+			{
+				if (Mid(f1, f2, t2) && (!Mid(t1, f2, t2) || is_cap))
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	if (knight_att_no_mask(f2) & sq_2_bb(t2))
+	{
+		if (knight_legal_leg(f2, t2) == f1)
+		{
+			return true;
+		}
+	}
+	if (is_bishop_pos(f2) && is_bishop_pos(t2))
+	{
+		if (bishop_att_no_mask(f2) & sq_2_bb(t2))
+		{
+			if ((f2 + t2) / 2 == f1)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool Position::pseudo_is_legal(int move)const
 {
 
@@ -1688,26 +1762,54 @@ bool Position::pseudo_is_legal(int move)const
 					return true;
 				if (sq_rank_mask(king_pos)[me] & piece_bb(opp, Cannon)[me])
 				{
-					if (cannon_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Cannon)[me] & ~(sq_2_bb(to)[me]))
-						return false;
+					U64 bits = cannon_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Cannon)[me] & ~(sq_2_bb(to)[me]);
+					while (bits)
+					{
+						int s = pop_1st_sq(bits, me);
+						if (move_connect(move, move_make(s, king_pos), true))
+						{
+							return false;
+						}
+					}
 				}
 				if (sq_piece_type(from) == Cannon && (sq_rank_mask(king_pos)[me] & piece_bb(opp, Rook)[me]))
 				{
-					if (rook_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Rook)[me])
-						return false;
+					U64 bits = rook_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Rook)[me];
+					while (bits)
+					{
+						int s = pop_1st_sq(bits, me);
+						if (move_connect(move, move_make(s, king_pos), true))
+						{
+							return false;
+						}
+					}
 				}
 			}
 			else
 			{
 				if (sq_rank_mask(king_pos)[me] & piece_bb(opp, Rook)[me])
 				{
-					if (rook_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Rook)[me])
-						return false;
+					U64 bits = rook_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Rook)[me];
+					while (bits)
+					{
+						int s = pop_1st_sq(bits, me);
+						if (move_connect(move, move_make(s, king_pos)))
+						{
+							return false;
+						}
+					}
 				}
 				if (sq_rank_mask(king_pos)[me] & piece_bb(opp, Cannon)[me])
 				{
-					if (cannon_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Cannon)[me])
-						return false;
+					U64 bits = cannon_rank_attack_bb(king_pos, blockers ^ sq_2_bb(from))[me] & piece_bb(opp, Cannon)[me];
+					while (bits)
+					{
+						int s = pop_1st_sq(bits, me);
+						if (move_connect(move, move_make(s, king_pos)))
+						{
+							return false;
+						}
+					}
 				}
 			}
 		}
@@ -1719,26 +1821,54 @@ bool Position::pseudo_is_legal(int move)const
 					return true;
 				if (sq_file_mask(king_pos) & piece_bb(opp, Cannon))
 				{
-					if (cannon_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & piece_bb(opp, Cannon) & ~sq_2_bb(to))
-						return false;
+					BITBOARD bb = cannon_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & piece_bb(opp, Cannon) & ~sq_2_bb(to);
+					while (bb)
+					{
+						int s = bb.pop_1st_sq();
+						if (move_connect(move, move_make(s, king_pos), true))
+						{
+							return false;
+						}
+					}
 				}
 				if (sq_piece_type(from) == Cannon && (sq_file_mask(king_pos) & (piece_bb(opp, Rook) | piece_bb(opp, King))))
 				{
-					if (rook_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & (piece_bb(opp, Rook) | piece_bb(opp, King)))
-						return false;
+					BITBOARD bb = rook_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & (piece_bb(opp, Rook) | piece_bb(opp, King));
+					while (bb)
+					{
+						int s = bb.pop_1st_sq();
+						if (move_connect(move, move_make(s, king_pos), true))
+						{
+							return false;
+						}
+					}
 				}
 			}
 			else
 			{
 				if (sq_file_mask(king_pos) & (piece_bb(opp, Rook) | piece_bb(opp, King)))
 				{
-					if (rook_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & (piece_bb(opp, Rook) | piece_bb(opp, King)))
-						return false;
+					BITBOARD bb = rook_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & (piece_bb(opp, Rook) | piece_bb(opp, King));
+					while (bb)
+					{
+						int s = bb.pop_1st_sq();
+						if (move_connect(move, move_make(s, king_pos)))
+						{
+							return false;
+						}
+					}
 				}
 				if (sq_file_mask(king_pos) & piece_bb(opp, Cannon))
 				{
-					if (cannon_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & piece_bb(opp, Cannon))
-						return false;
+					BITBOARD bb = cannon_file_attack_bb(king_pos, blockers ^ sq_2_bb(from)) & piece_bb(opp, Cannon);
+					while (bb)
+					{
+						int s = bb.pop_1st_sq();
+						if (move_connect(move, move_make(s, king_pos)))
+						{
+							return false;
+						}
+					}
 				}
 			}
 		}
@@ -1757,20 +1887,34 @@ bool Position::pseudo_is_legal(int move)const
 		{
 			if (sq_equal_rank(to, king_pos))
 			{
-				if (cannon_rank_attack_bb(king_pos, blockers ^ sq_2_bb(to))[me] & piece_bb(opp, Cannon)[me])
-					return false;
+				U64 bits = cannon_rank_attack_bb(king_pos, blockers ^ sq_2_bb(to))[me] & piece_bb(opp, Cannon)[me];
+				while (bits)
+				{
+					int s = pop_1st_sq(bits, me);
+					if (move_connect(move, move_make(s, king_pos)))
+					{
+						return false;
+					}
+				}
 			}
 			else if (sq_equal_file(to, king_pos))
 			{
-				if (cannon_file_attack_bb(king_pos, blockers ^ sq_2_bb(to)) & piece_bb(opp, Cannon))
-					return false;
+				BITBOARD bb = cannon_file_attack_bb(king_pos, blockers ^ sq_2_bb(to)) & piece_bb(opp, Cannon);
+				while (bb)
+				{
+					int s = bb.pop_1st_sq();
+					if (move_connect(move, move_make(s, king_pos)))
+					{
+						return false;
+					}
+				}
 			}
 		}
 	}
 	return true;
 }
 
-bool Position::move_is_legal(int move)const
+bool Position::pseudo_is_legal_incheck(int move)const
 {
 	S8 from = move_from(move);
 	S8 to = move_to(move);
@@ -2458,7 +2602,7 @@ int Position::check_move_catch()
 		if (opp_ban)
 		{
 			turn ^= 1;
-			gen_legals(list);
+			gen_chase_legals(list);
 			for (int i = 0; i < list.size(); ++i)
 			{
 				if (move_to(list.move(i)) == move_to(me_move))
@@ -2484,7 +2628,7 @@ int Position::check_move_catch()
 
 		if (me_ban)
 		{
-			gen_legals(list);
+			gen_chase_legals(list);
 			for (int i = 0; i < list.size(); ++i)
 			{
 				if (move_to(list.move(i)) == move_from(opp_move))
@@ -2673,9 +2817,9 @@ bool Position::move_attack_sq(int move, int sq, bool passive)
 		while (bb)
 		{
 			int a_sq = bb.pop_1st_sq();
-			if (!sq_is_pinned(a_sq) && (type == Rook || !sq_is_protected(sq, a_sq)))
+			if (!sq_is_pinned(a_sq) && !sq_is_protected(sq, a_sq))
 			{
-				if (type != Rook || passive)
+				if (passive)
 					return true;
 				if (a_sq == att_sq)
 					return true;
@@ -2703,9 +2847,9 @@ bool Position::move_attack_sq(int move, int sq, bool passive)
 		while (bb)
 		{
 			int a_sq = bb.pop_1st_sq();
-			if (!sq_is_pinned(a_sq) && (type == Rook || !sq_is_protected(sq, a_sq)))
+			if (!sq_is_pinned(a_sq) && !sq_is_protected(sq, a_sq))
 			{
-				if (type != Rook || passive)
+				if (passive)
 					return true;
 				if (a_sq == att_sq)
 					return true;
@@ -2883,6 +3027,8 @@ int Position::me_static_catch(int sq)
 	U16 me_move, opp_move;
 	int me = turn;
 	Move_List list;
+	bool incheck;
+	S8 type;
 
 	for (int ix = ply - 2; ix >= 0; ix -= 2)
 	{
@@ -2904,12 +3050,15 @@ int Position::me_static_catch(int sq)
 		if (sq_piece_type(sq) == Rook && sq_knight_pinned(sq))
 			ban = 2;
 
-		gen_legals(list);
+		incheck = in_check(turn);
+
+		gen_chase_legals(list);
 		for (int i = 0; i < list.size(); ++i)
 		{
 			if (move_to(list.move(i)) == sq)
 			{
-				if (!sq_is_protected(sq, move_from(list.move(i))))
+				type = sq_piece_type(move_from(list.move(i)));
+				if (incheck || (sq_piece_type(sq) == Rook && type != Rook && type != Bishop && type != Advisor) || !sq_is_protected(sq, move_from(list.move(i))))
 				{
 					ban = 0;
 					break;
@@ -2937,6 +3086,8 @@ int Position::opp_static_catch(int sq)
 	U16 me_move, opp_move;
 	int me = turn;
 	Move_List list;
+	bool incheck;
+	S8 type;
 
 	for (int ix = ply - 2; ix >= 0; ix -= 2)
 	{
@@ -2957,12 +3108,15 @@ int Position::opp_static_catch(int sq)
 		if (sq_piece_type(sq) == Rook && sq_knight_pinned(sq))
 			ban = 2;
 
-		gen_legals(list);
+		incheck = in_check(turn);
+
+		gen_chase_legals(list);
 		for (int i = 0; i < list.size(); ++i)
 		{
 			if (move_to(list.move(i)) == sq)
 			{
-				if (!sq_is_protected(sq, move_from(list.move(i))))
+				type = sq_piece_type(move_from(list.move(i)));
+				if (incheck || (sq_piece_type(sq) == Rook && type != Rook && type != Bishop && type != Advisor) || !sq_is_protected(sq, move_from(list.move(i))))
 				{
 					ban = 0;
 					break;
@@ -3352,7 +3506,7 @@ bool Position::is_chase(int move)
 	BITBOARD pieces_bb = piece_block(opp);
 	Move_List list;
 
-	gen_legals(list);
+	gen_chase_legals(list);
 
 	rep_move_do(move);
 
@@ -4290,7 +4444,7 @@ void Position::gen_moves(Move_List& list)const
 	}
 }
 
-void Position::gen_legals(Move_List& list)const
+void Position::gen_chase_legals(Move_List& list)const
 {
 	int pos = 0;
 	int move;
@@ -4301,7 +4455,25 @@ void Position::gen_legals(Move_List& list)const
 	for (int i = 0; i < list.size(); ++i)
 	{
 		move = list.move(i);
-		if (move_is_legal(move))
+		if (pseudo_is_legal(move))
+			list.moves[pos++] = move;
+	}
+	list.cnt = pos;
+}
+
+void Position::gen_legals(Move_List& list)const
+{
+	int pos = 0;
+	int move;
+	bool incheck = in_check(turn);
+
+	list.clear();
+	gen_moves(list);
+
+	for (int i = 0; i < list.size(); ++i)
+	{
+		move = list.move(i);
+		if (incheck ? pseudo_is_legal_incheck(move) : pseudo_is_legal(move))
 			list.moves[pos++] = move;
 	}
 	list.cnt = pos;
