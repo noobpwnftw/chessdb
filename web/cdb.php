@@ -743,8 +743,10 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 						}
 					}
 				}
-				unset( $GLOBALS['looptt'][$current_hash] );
-				unset( $GLOBALS['looptt'][$current_hash_bw] );
+				if( !$isloop ) {
+					unset( $GLOBALS['looptt'][$current_hash] );
+					unset( $GLOBALS['looptt'][$current_hash_bw] );
+				}
 			}
 			else if( !$isloop )
 				$GLOBALS['boardtt'][$current_hash] = 1;
@@ -1020,8 +1022,10 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 						}
 					}
 				}
-				unset( $GLOBALS['looptt'][$current_hash] );
-				unset( $GLOBALS['looptt'][$current_hash_bw] );
+				if( !$isloop ) {
+					unset( $GLOBALS['looptt'][$current_hash] );
+					unset( $GLOBALS['looptt'][$current_hash_bw] );
+				}
 			}
 			else if( !$isloop )
 				$GLOBALS['boardtt'][$current_hash] = 1;

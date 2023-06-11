@@ -325,8 +325,10 @@ function getMoves( $redis, $row, $depth ) {
 				}
 			}
 
-			unset( $GLOBALS['looptt'][$current_hash] );
-			unset( $GLOBALS['looptt'][$current_hash_bw] );
+			if( !$isloop ) {
+				unset( $GLOBALS['looptt'][$current_hash] );
+				unset( $GLOBALS['looptt'][$current_hash_bw] );
+			}
 		} else if( !$isloop ) {
 			$GLOBALS['counter']++;
 			$GLOBALS['boardtt'][$current_hash] = 1;

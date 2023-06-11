@@ -1089,12 +1089,14 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					$GLOBALS['loopcheck'] = 2;
 				}
 
-				unset( $GLOBALS['looptt'][$current_hash] );
-				unset( $GLOBALS['looptt'][$current_hash_bw] );
-				if( $hasLRmirror )
-				{
-					unset( $GLOBALS['looptt'][$current_hash_lr] );
-					unset( $GLOBALS['looptt'][$current_hash_lrbw] );
+				if( !$isloop ) {
+					unset( $GLOBALS['looptt'][$current_hash] );
+					unset( $GLOBALS['looptt'][$current_hash_bw] );
+					if( $hasLRmirror )
+					{
+						unset( $GLOBALS['looptt'][$current_hash_lr] );
+						unset( $GLOBALS['looptt'][$current_hash_lrbw] );
+					}
 				}
 			}
 			else if( !$isloop )
@@ -1432,12 +1434,14 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					$GLOBALS['loopcheck'] = 2;
 				}
 
-				unset( $GLOBALS['looptt'][$current_hash] );
-				unset( $GLOBALS['looptt'][$current_hash_bw] );
-				if( $hasLRmirror )
-				{
-					unset( $GLOBALS['looptt'][$current_hash_lr] );
-					unset( $GLOBALS['looptt'][$current_hash_lrbw] );
+				if( !$isloop ) {
+					unset( $GLOBALS['looptt'][$current_hash] );
+					unset( $GLOBALS['looptt'][$current_hash_bw] );
+					if( $hasLRmirror )
+					{
+						unset( $GLOBALS['looptt'][$current_hash_lr] );
+						unset( $GLOBALS['looptt'][$current_hash_lrbw] );
+					}
 				}
 			}
 			else if( !$isloop )
