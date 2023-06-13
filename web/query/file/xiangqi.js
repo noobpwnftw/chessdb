@@ -181,14 +181,6 @@ function Start() {
 	Vwauto = document.getElementById("wauto");
 	Vautopolicy = document.getElementById("prandom");
 	Vlocalengine = document.getElementById("localengine");
-	Vtheme = document.getElementById("theme");
-
-	var month = new Date().getMonth();
-	if (month >= 11 || month <= 1) {
-		Vtheme.href = "/file/style_candy.css";
-	} else if (month >= 5 && month <= 7) {
-		Vtheme.href = "/file/style_mint.css";
-	}
 
 	Vrulecheck.checked = Vrulecheck.defaultChecked;
 	Vhidescore.checked = Vhidescore.defaultChecked;
