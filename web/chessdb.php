@@ -1805,12 +1805,10 @@ try{
 				if( !$memcache_obj )
 					throw new Exception( 'Memcache error.' );
 				$querylimit = $memcache_obj->get( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
-				if( $querylimit === FALSE || $querylimit < 1000000 )
+				if( $querylimit === FALSE || $querylimit < 100 )
 				{
-					if( $action != 'querylearn' && $action != 'queue' ) {
-						$memcache_obj->add( 'QLimit::' . $_SERVER['REMOTE_ADDR'], 0, 0, 86400 );
-						$memcache_obj->increment( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
-					}
+					$memcache_obj->add( 'QLimit::' . $_SERVER['REMOTE_ADDR'], 0, 0, 1 );
+					$memcache_obj->increment( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
 					$egtbresult = NULL;
 					if( $action == 'queryall' || $action == 'query' || $action == 'querybest' || $action == 'querylearn' || $action == 'querysearch' || $action == 'queryscore' || $action == 'querypv' ) {
 						if( $dtmtb )
