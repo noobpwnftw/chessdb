@@ -626,6 +626,10 @@ function RequestQueue() {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">Invalid board!<\/span>';
 				}
+				else if(xmlhttpQueue.responseText.search(/exceeded/) != -1) {
+					ClearInner();
+					Vout.innerHTML += '<span style="text-align:center; display:block;">Query rate limit exceeded!<\/span>';
+				}
 				else {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">Too few pieces on the board, you can:<table style="margin-left: auto;margin-right: auto;"><tr><td onClick="AutoMove()" class="button">&nbsp;AI move&nbsp;<\/td><\/tr><\/table><\/span>';

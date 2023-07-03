@@ -525,6 +525,10 @@ function RequestQueue() {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">当前局面无效！<\/span>';
 				}
+				else if(xmlhttpQueue.responseText.search(/exceeded/) != -1) {
+					ClearInner();
+					Vout.innerHTML += '<span style="text-align:center; display:block;">查询过于频繁！<\/span>';
+				}
 				else {
 					ClearInner();
 					Vout.innerHTML += '<span style="text-align:center; display:block;">当前局面棋子过少，您可以：<table style="margin-left: auto;margin-right: auto;"><tr><td onClick="AutoMove()" class="button">&nbsp;自动走棋&nbsp;<\/td><\/tr><\/table><\/span>';
