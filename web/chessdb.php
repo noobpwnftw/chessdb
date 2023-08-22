@@ -1121,7 +1121,7 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 	}
 	return $moves1;
 }
-function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $learn, $depth, &$pv ) {
+function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $learn, $depth, &$pv, $stable ) {
 	list( $moves1, $finals ) = getAllScores( $redis, $row );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
@@ -1236,8 +1236,53 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 						$moves2[ $key ] = $item;
 					}
 				}
-				shuffle_assoc( $moves2 );
-				arsort( $moves2 );
+				if( !$stable )
+				{
+					shuffle_assoc( $moves2 );
+					arsort( $moves2 );
+				}
+				else
+				{
+					$moves3 = array();
+					foreach( $moves2 as $key => $item ) {
+						$moves3[ $key ][0] = 0;
+						$moves3[ $key ][1] = 0;
+						if( isset( $finals[ $key ] ) )
+							continue;
+						$nextfen = ccbmovemake( $row, $key );
+						list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, array(), false, false, false, $depth );
+						if( count( $nextmoves ) > 0 ) {
+							arsort( $nextmoves );
+							$nextscore = reset( $nextmoves );
+							$throttle = getthrottle( $nextscore );
+							$nextsum = 0;
+							$nextcount = 0;
+							$totalvalue = 0;
+							foreach( $nextmoves as $record => $score ) {
+								if( $score >= $throttle ) {
+									$nextcount++;
+									$nextsum = $nextsum + $score;
+									$totalvalue = $totalvalue + $nextsum;
+								}
+								else
+									break;
+							}
+							$moves3[ $key ][0] = count( $nextmoves );
+							$moves3[ $key ][1] = $nextcount;
+						}
+					}
+					uksort( $moves2, function ( $a, $b ) use ( $moves2, $moves3 ) {
+						if( $moves2[$a] != $moves2[$b] ) {
+							return $moves2[$b] - $moves2[$a];
+						} else if( $moves3[$a][1] != $moves3[$b][1] ) {
+							return $moves3[$a][1] - $moves3[$b][1];
+						} else if( $moves3[$a][0] != $moves3[$b][0] ) {
+							return $moves3[$b][0] - $moves3[$a][0];
+						} else {
+							return $a - $b;
+						}
+					} );
+				}
 				foreach( $moves2 as $key => $item ) {
 					$GLOBALS['counter']++;
 					if( $isbest ) {
@@ -1250,7 +1295,7 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					$nextfen = ccbmovemake( $row, $key );
 					$GLOBALS['historytt'][$current_hash]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$current_hash]['move'] = $key;
-					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $ply + 1, $enumlimit, $isbest, false, $depth, $pv );
+					$nextmoves = getAnalysisPath( $redis, $nextfen, array(), $ply + 1, $enumlimit, $isbest, false, $depth, $pv, $stable );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$current_hash] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
@@ -2123,8 +2168,12 @@ try{
 								uksort( $statmoves, function ( $a, $b ) use ( $statmoves, $variations ) {
 									if( $statmoves[$a] != $statmoves[$b] ) {
 										return $statmoves[$b] - $statmoves[$a];
-									} else {
+									} else if( $variations[$a][1] != $variations[$b][1] ) {
 										return $variations[$a][1] - $variations[$b][1];
+									} else if( $variations[$a][0] != $variations[$b][0] ) {
+										return $variations[$b][0] - $variations[$a][0];
+									} else {
+										return $a - $b;
 									}
 								} );
 								$maxscore = reset( $statmoves );
@@ -2275,11 +2324,17 @@ try{
 						}
 						else if( $action == 'querypv' ) {
 							$pv = array();
+							if( isset( $_REQUEST['stable'] ) ) {
+								$stable = is_true( $_REQUEST['stable'] );
+							}
+							else {
+								$stable = false;
+							}
 							$GLOBALS['counter'] = 0;
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
-							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 200, true, $learn, 0, $pv );
+							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 200, true, $learn, 0, $pv, $stable );
 							if( count( $statmoves ) > 0 ) {
 								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}

@@ -1033,7 +1033,7 @@ function Initialize2() {
 	return;
 }
 
-function FillPV(id) {
+function FillPV(id, stable) {
 	if (busy)
 		return;
 	busy = 1;
@@ -1045,7 +1045,7 @@ function FillPV(id) {
 
 	var xmlhttpPV = getXmlHttp();
 
-	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2], true);
+	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2] + "&stable=" + stable, true);
 	xmlhttpPV.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	xmlhttpPV.onreadystatechange = function() {
 		if (xmlhttpPV.readyState == 4) {
@@ -1079,7 +1079,7 @@ function FillPV(id) {
 function mclick(e, id) {
 	e.preventDefault();
 	if (e.shiftKey) {
-		FillPV(id);
+		FillPV(id, true);
 	}
 	else {
 		ChangeFen(id);
@@ -1089,7 +1089,7 @@ function mclick(e, id) {
 
 function mcontext(e, id) {
 	e.preventDefault();
-	FillPV(id);
+	FillPV(id, e.shiftKey);
 	return false;
 }
 
