@@ -1682,8 +1682,19 @@ try{
 		exit(0);
 	}
 	$action = $_REQUEST['action'];
+	if( isset( $_REQUEST['json'] ) ) {
+		$isJson = is_true( $_REQUEST['json'] );
+	}
+	else {
+		$isJson = false;
+	}
+	if( $isJson )
+		header('Content-type: application/json');
 
 	if( isset( $_REQUEST['board'] ) && !empty( $_REQUEST['board'] ) ) {
+		if( $isJson )
+			echo '{';
+
 		$row = ccbgetfen( $_REQUEST['board'] );
 		if( isset( $row ) && !empty( $row ) ) {
 			$banmoves = array();
@@ -1767,7 +1778,10 @@ try{
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
 							if( !scoreExists( $redis, $row, $move ) || countAllScores( $redis, ccbmovemake( $row, $move ) ) == 0 ) {
 								updateQueue( $row, $move, $priority );
-								echo 'ok';
+								if( $isJson )
+									echo '"status":"ok"';
+								else
+									echo 'ok';
 							}
 						}
 					}
@@ -1893,45 +1907,92 @@ try{
 
 						if( $action == 'queryall' ) {
 							if( count( $moves ) > 0 ) {
+								if( $isJson )
+									echo '"status":"ok","moves":[{';
 								$bestmove = reset( $moves );
 								$isfirst = true;
 								if( $dtmtb ) {
 									foreach( array_keys( $moves ) as $record ) {
 										if( !$isfirst ) {
 											if( $moves[$record]['score'] > 0 ) {
-												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-												else
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] ) {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":1,"note":"* (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
 											}
 											else if( $moves[$record]['score'] == 0 ) {
 												if( $bestmove['score'] == 0 ) {
-													if( $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-													else
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+													if( $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] ) {
+														if( $isJson )
+															echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+														else
+															echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+													}
+													else {
+														if( $isJson )
+															echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":1,"note":"* (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+														else
+															echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+													}
 												}
-												else
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":0,"note":"? (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
 											}
 											else {
-												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-												else if( $bestmove['score'] < 0 )
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-												else
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] ) {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else if( $bestmove['score'] < 0 ) {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":1,"note":"* (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":0,"note":"? (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
 											}
 										}
 										else {
 											$isfirst = false;
-											if( $bestmove['score'] == 0 && $moves[$record]['score'] == 0 )
-												echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
-											else
-												if( $moves[$record]['score'] > 0 )
-													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+											if( $bestmove['score'] == 0 && $moves[$record]['score'] == 0 ) {
+												if( $isJson )
+													echo '"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
 												else
-													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+											}
+											else {
+												if( $moves[$record]['score'] > 0 ) {
+													if( $isJson )
+														echo '"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-M-' . str_pad( $moves[$record]['step'], 4, '0', STR_PAD_LEFT ) . ')';
+												}
+											}
 										}
 									}
 								}
@@ -1939,53 +2000,111 @@ try{
 									foreach( array_keys( $moves ) as $record ) {
 										if( !$isfirst ) {
 											if( $moves[$record]['score'] > 0 ) {
-												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['order'] == $bestmove['order'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
-												else
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['order'] == $bestmove['order'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] ) {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":1,"note":"* (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
 											}
 											else if( $moves[$record]['score'] == 0 ) {
 												if( $bestmove['score'] == 0 ) {
-													if( $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:* (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
-													else
-														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+													if( $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] ) {
+														if( $isJson )
+															echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+														else
+															echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+													}
+													else {
+														if( $isJson )
+															echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":1,"note":"* (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+														else
+															echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+													}
 												}
-												else
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":0,"note":"? (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
 											}
 											else {
-												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['order'] == $bestmove['order'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] )
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
-												else if( $bestmove['score'] < 0 )
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
-												else
-													echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												if( $moves[$record]['score'] == $bestmove['score'] && $moves[$record]['order'] == $bestmove['order'] && $moves[$record]['cap'] == $bestmove['cap'] && $moves[$record]['check'] == $bestmove['check'] ) {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
+												else if( $bestmove['score'] < 0 ) {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":1,"note":"* (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:1,note:* (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '},{"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":0,"note":"? (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo '|move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:0,note:? (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
 											}
 										}
 										else {
 											$isfirst = false;
-											if( $bestmove['score'] == 0 && $moves[$record]['score'] == 0 )
-												echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:* (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
-											else
-												if( $moves[$record]['score'] > 0 )
-													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+											if( $bestmove['score'] == 0 && $moves[$record]['score'] == 0 ) {
+												if( $isJson )
+													echo '"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
 												else
-													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+													echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:* (D-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+											}
+											else {
+												if( $moves[$record]['score'] > 0 ) {
+													if( $isJson )
+														echo '"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (W-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
+												else {
+													if( $isJson )
+														echo '"uci":"' . $record . '","score":' . $moves[$record]['score'] . ',"rank":2,"note":"! (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')"';
+													else
+														echo 'move:' . $record . ',score:' . $moves[$record]['score'] . ',rank:2,note:! (L-' . str_pad( $moves[$record]['order'], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $moves[$record]['step'], 3, '0', STR_PAD_LEFT ) . ')';
+												}
+											}
 										}
 									}
 								}
+								if( $isJson )
+									echo '}]';
 							}
 							else {
 								$allmoves = ccbmovegen( $row );
-								if( count( $allmoves ) > 0 )
-									echo 'unknown';
-								else {
-									if( ccbincheck( $row ) )
-										echo 'checkmate';
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
 									else
-										echo 'stalemate';
+										echo 'unknown';
+								}
+								else {
+									if( ccbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
 								}
 							}
 						}
@@ -2013,7 +2132,10 @@ try{
 										}
 									}
 									shuffle( $finals );
-									echo 'egtb:' . end( $finals );
+									if( $isJson )
+										echo '"status":"ok","egtb":"' . end( $finals ) . '"';
+									else
+										echo 'egtb:' . end( $finals );
 								}
 								else if( $bestmove['score'] == 0 )
 								{
@@ -2021,59 +2143,107 @@ try{
 									//	echo 'move:' . reset( array_keys( $moves ) );
 									//}
 									//else {
+										if( $isJson )
+											echo '"status":"ok","search_moves":[{';
 										$isfirst = true;
 										foreach( $moves as $key => $entry ) {
 											if( $entry['score'] == 0 ) {
 												if( !$isfirst ) {
-													echo '|search:' . $key;
+													if( $isJson )
+														echo '},{"uci":"' . $key . '"';
+													else
+														echo '|search:' . $key;
 												}
 												else {
 													$isfirst = false;
-													echo 'search:' . $key;
+													if( $isJson )
+														echo '"uci":"' . $key . '"';
+													else
+														echo 'search:' . $key;
 												}
 											}
 											else
 												break;
 										}
+										if( $isJson )
+											echo '}]';
 									//}
 								}
+								else {
+									if( $isJson )
+										echo '"status":"nobestmove"';
+									else
+										echo 'nobestmove';
+								}
+							}
+							else {
+								if( $isJson )
+									echo '"status":"nobestmove"';
 								else
 									echo 'nobestmove';
 							}
-							else
-								echo 'nobestmove';
 						}
 						else if( $action == 'querypv' ) {
 							if( count( $moves ) > 0 ) {
 								$bestmove = reset( $moves );
-								echo 'score:' . $bestmove['score'] . ',depth:' . $bestmove['step'] . ',pv:' . key( $moves );
+								if( $isJson )
+									echo '"status":"ok","score":' . $bestmove['score'] . ',"depth":' . $bestmove['step'] . ',"pv":["' . key( $moves ) . '"]';
+								else
+									echo 'score:' . $bestmove['score'] . ',depth:' . $bestmove['step'] . ',pv:' . key( $moves );
 							}
 							else {
 								$allmoves = ccbmovegen( $row );
-								if( count( $allmoves ) > 0 )
-									echo 'unknown';
-								else {
-									if( ccbincheck( $row ) )
-										echo 'checkmate';
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
 									else
-										echo 'stalemate';
+										echo 'unknown';
+								}
+								else {
+									if( ccbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
 								}
 							}
 						}
 						else if( $action == 'queryscore' ) {
 							if( count( $moves ) > 0 ) {
 								$bestmove = reset( $moves );
-								echo 'eval:' . $bestmove['score'];
+								if( $isJson )
+									echo '"status":"ok","eval":' . $bestmove['score'];
+								else
+									echo 'eval:' . $bestmove['score'];
 							}
 							else {
 								$allmoves = ccbmovegen( $row );
-								if( count( $allmoves ) > 0 )
-									echo 'unknown';
-								else {
-									if( ccbincheck( $row ) )
-										echo 'checkmate';
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
 									else
-										echo 'stalemate';
+										echo 'unknown';
+								}
+								else {
+									if( ccbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
 								}
 							}
 						}
@@ -2100,23 +2270,38 @@ try{
 												break;
 										}
 										shuffle( $finals );
-										echo 'move:' . end( $finals );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( $finals ) . '"';
+										else
+											echo 'move:' . end( $finals );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 								else {
 									if( end( $statmoves ) >= -50 ) {
-										echo 'move:' . end( array_keys( $statmoves ) );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+										else
+											echo 'move:' . end( array_keys( $statmoves ) );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 							}
 							else {
-								echo 'nobestmove';
+								if( $isJson )
+									echo '"status":"nobestmove"';
+								else
+									echo 'nobestmove';
 							}
 						}
 						else if( $action == 'query' ) {
@@ -2141,23 +2326,38 @@ try{
 												break;
 										}
 										shuffle( $finals );
-										echo 'move:' . end( $finals );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( $finals ) . '"';
+										else
+											echo 'move:' . end( $finals );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 								else {
 									if( end( $statmoves ) >= -50 ) {
-										echo 'move:' . end( array_keys( $statmoves ) );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+										else
+											echo 'move:' . end( array_keys( $statmoves ) );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 							}
 							else {
-								echo 'nobestmove';
+								if( $isJson )
+									echo '"status":"nobestmove"';
+								else
+									echo 'nobestmove';
 							}
 						}
 						else if( $action == 'queryall' ) {
@@ -2165,6 +2365,9 @@ try{
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
 							list( $statmoves, $variations ) = getMoves( $redis, $row, $banmoves, true, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
+								if( $isJson )
+									echo '"status":"ok","moves":[{';
+
 								uksort( $statmoves, function ( $a, $b ) use ( $statmoves, $variations ) {
 									if( $statmoves[$a] != $statmoves[$b] ) {
 										return $statmoves[$b] - $statmoves[$a];
@@ -2179,26 +2382,44 @@ try{
 								$maxscore = reset( $statmoves );
 								$throttle = getthrottle( $maxscore );
 								$isfirst = true;
+
 								foreach( $statmoves as $record => $score ) {
 									$winrate = '';
-									if( abs( $score ) < 10000 )
-										$winrate = ',winrate:' . getWinRate( $score );
+									if( abs( $score ) < 10000 ) {
+										if( $isJson )
+											$winrate = ',"winrate":"' . getWinRate( $score ) . '"';
+										else
+											$winrate = ',winrate:' . getWinRate( $score );
+									}
 
-									if( !$isfirst && ( $learn || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) )
-										echo '|';
+									if( !$isfirst && ( $learn || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) ) {
+										if( $isJson )
+											echo '},{';
+										else
+											echo '|';
+									}
 									if( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) {
-										echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
+										if( $isJson )
+											echo '"uci":"' . $record . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+										else
+											echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
 									else if( $score >= $throttle ) {
 										if( $isfirst || $learn ) {
-											echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
+											if( $isJson )
+												echo '"uci":"' . $record . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											else
+												echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 										}
 										else
 											unset( $statmoves[$record] );
 									}
 									else {
 										if( $isfirst || $learn ) {
-											echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
+											if( $isJson )
+												echo '"uci":"' . $record . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											else
+												echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 										}
 										else
 											unset( $statmoves[$record] );
@@ -2209,8 +2430,27 @@ try{
 									$allmoves = ccbmovegen( $row );
 									foreach( $allmoves as $record => $score ) {
 										if( !isset( $statmoves[$record] ) ) {
-											echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
+											if( $isJson )
+												echo '},{"uci":"' . $record . '","score":"??","rank":0,"note":"? (??-??)"';
+											else
+												echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
 										}
+									}
+								}
+								if( $isJson ) {
+									echo '}]';
+									if( isset( $variations['ply'] ) ) {
+										$ply = $variations['ply'];
+										$side = substr( $row, strpos( $row, ' ' ) + 1, 1 );
+										if( $side == 'w' ) {
+											if( $ply & 1 )
+												$ply++;
+										}
+										else {
+											if( ( $ply & 1 ) == 0 )
+												$ply++;
+										}
+										echo ',"ply":' . $ply;
 									}
 								}
 							}
@@ -2218,23 +2458,46 @@ try{
 								$allmoves = ccbmovegen( $row );
 								if( count( $allmoves ) > 0 ) {
 									if( $showall ) {
+										if( $isJson )
+											echo '"status":"ok","moves":[{';
 										$isfirst = true;
 										foreach( $allmoves as $record => $score ) {
-											if( !$isfirst )
-												echo '|';
+											if( !$isfirst ) {
+												if( $isJson )
+													echo '},{';
+												else
+													echo '|';
+											}
 											else
 												$isfirst = false;
-											echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
+											if( $isJson )
+												echo '"uci":"' . $record . '","score":"??","rank":0,"note":"? (??-??)"';
+											else
+												echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
 										}
+										if( $isJson )
+											echo '}]';
 									}
-									else
-										echo 'unknown';
+									else {
+										if( $isJson )
+											echo '"status":"unknown"';
+										else
+											echo 'unknown';
+									}
 								}
 								else {
-									if( ccbincheck( $row ) )
-										echo 'checkmate';
-									else
-										echo 'stalemate';
+									if( ccbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
 								}
 							}
 						}
@@ -2259,23 +2522,38 @@ try{
 												break;
 										}
 										shuffle( $finals );
-										echo 'move:' . end( $finals );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( $finals ) . '"';
+										else
+											echo 'move:' . end( $finals );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 								else {
 									if( end( $statmoves ) >= -75 ) {
-										echo 'move:' . end( array_keys( $statmoves ) );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+										else
+											echo 'move:' . end( array_keys( $statmoves ) );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 							}
 							else {
-								echo 'nobestmove';
+								if( $isJson )
+									echo '"status":"nobestmove"';
+								else
+									echo 'nobestmove';
 							}
 						}
 						else if( $action == 'querysearch' ) {
@@ -2289,37 +2567,59 @@ try{
 									arsort( $statmoves );
 									$maxscore = reset( $statmoves );
 									if( $maxscore >= -50 ) {
+										if( $isJson )
+											echo '"status":"ok","search_moves":[{';
 										$throttle = getthrottle( $maxscore );
 										$isfirst = true;
 										foreach( $statmoves as $key => $entry ) {
 											if( $entry >= $throttle ) {
 												if( !$isfirst ) {
-													echo '|search:' . $key;
+													if( $isJson )
+														echo '},{"uci":"' . $key . '"';
+													else
+														echo '|search:' . $key;
 												}
 												else {
 													$isfirst = false;
-													echo 'search:' . $key;
+													if( $isJson )
+														echo '"uci":"' . $key . '"';
+													else
+														echo 'search:' . $key;
 												}
 											}
 											else
 												break;
 										}
+										if( $isJson )
+											echo '}]';
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 								else {
 									if( end( $statmoves ) >= -50 ) {
-										echo 'move:' . end( array_keys( $statmoves ) );
+										if( $isJson )
+											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+										else
+											echo 'move:' . end( array_keys( $statmoves ) );
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
 							}
 							else {
-								echo 'nobestmove';
+								if( $isJson )
+									echo '"status":"nobestmove"';
+								else
+									echo 'nobestmove';
 							}
 						}
 						else if( $action == 'querypv' ) {
@@ -2336,17 +2636,32 @@ try{
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
 							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 200, true, $learn, 0, $pv, $stable );
 							if( count( $statmoves ) > 0 ) {
-								echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
+								if( $isJson )
+									echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"]';
+								else
+									echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}
 							else {
 								$allmoves = ccbmovegen( $row );
-								if( count( $allmoves ) > 0 )
-									echo 'unknown';
-								else {
-									if( ccbincheck( $row ) )
-										echo 'checkmate';
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
 									else
-										echo 'stalemate';
+										echo 'unknown';
+								}
+								else {
+									if( ccbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
 								}
 							}
 						}
@@ -2357,17 +2672,47 @@ try{
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
-								echo 'eval:' . $maxscore;
+								if( $isJson ) {
+									if( isset( $variations['ply'] ) ) {
+										$ply = $variations['ply'];
+										$side = substr( $row, strpos( $row, ' ' ) + 1, 1 );
+										if( $side == 'w' ) {
+											if( $ply & 1 )
+												$ply++;
+										}
+										else {
+											if( ( $ply & 1 ) == 0 )
+												$ply++;
+										}
+										echo '"status":"ok","eval":' . $maxscore . ',"ply":' . $ply;
+									} else {
+										echo '"status":"ok","eval":' . $maxscore;
+									}
+								}
+								else
+									echo 'eval:' . $maxscore;
 							}
 							else {
 								$allmoves = ccbmovegen( $row );
-								if( count( $allmoves ) > 0 )
-									echo 'unknown';
-								else {
-									if( ccbincheck( $row ) )
-										echo 'checkmate';
+								if( count( $allmoves ) > 0 ) {
+									if( $isJson )
+										echo '"status":"unknown"';
 									else
-										echo 'stalemate';
+										echo 'unknown';
+								}
+								else {
+									if( ccbincheck( $row ) ) {
+										if( $isJson )
+											echo '"status":"checkmate"';
+										else
+											echo 'checkmate';
+									}
+									else {
+										if( $isJson )
+											echo '"status":"stalemate"';
+										else
+											echo 'stalemate';
+									}
 								}
 							}
 						}
@@ -2378,11 +2723,17 @@ try{
 							$redis->pconnect('192.168.1.2', 8889, 1.0);
 							$statmoves = getMovesWithCheck( $redis, $row, array(), 0, 200, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
-								echo 'ok';
+								if( $isJson )
+									echo '"status":"ok"';
+								else
+									echo 'ok';
 							}
 							else if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( ccbmovegen( $row ) ) > 0 ) {
 								updateSel( $row, true );
-								echo 'ok';
+								if( $isJson )
+									echo '"status":"ok"';
+								else
+									echo 'ok';
 							}
 						}
 						else if( $action == 'queryengine' ) {
@@ -2430,14 +2781,23 @@ try{
 				}
 				else {
 					//$memcache_obj->delete( 'QLimit::' . $_SERVER['REMOTE_ADDR'] );
-					echo 'rate limit exceeded';
+					if( $isJson )
+						echo '"status":"rate limit exceeded"';
+					else
+						echo 'rate limit exceeded';
 				}
 			}
 		}
 		else {
-			echo 'invalid board';
+			if( $isJson )
+				echo '"status":"invalid board"';
+			else
+				echo 'invalid board';
 		}
-		echo "\0";
+		if( $isJson )
+			echo '}';
+		else
+			echo "\0";
 	}
 	else if( $action == 'getqueue' ) {
 		if( isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) ) {
@@ -2598,7 +2958,10 @@ try{
 		echo $_SERVER['REMOTE_ADDR'];
 	}
 	else {
-		echo 'invalid parameters';
+		if( $isJson )
+			echo '{"status":"invalid parameters"}';
+		else
+			echo 'invalid parameters';
 	}
 }
 catch (MongoException $e) {

@@ -1986,7 +1986,7 @@ try{
 										if( $isJson )
 											echo '"status":"nobestmove"';
 										else
-										echo 'nobestmove';
+											echo 'nobestmove';
 									}
 								}
 							}
