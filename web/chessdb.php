@@ -616,6 +616,9 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 	}
 	unset( $moves1['ply'] );
 
+	if( $depth > 0 )
+		$moves2['ply'] = $depth - 1;
+
 	if( $update )
 	{
 		$knownmoves = array();
