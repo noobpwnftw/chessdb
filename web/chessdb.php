@@ -1826,6 +1826,8 @@ try{
 					if( $isvalid ) {
 						$allmoves = ccbmovegen( $nextfen );
 						if( count( $allmoves ) > 0 ) {
+							if( $isJson )
+								echo '"status":"ok","moves":[{';
 							$isfirst = true;
 							foreach( $allmoves as $key => $entry ) {
 								array_push( $movelist, $key );
@@ -1838,23 +1840,44 @@ try{
 								else if( $ruleresult == 3 ) {
 									$rulestr = 'ban';
 								}
-								if( !$isfirst )
-									echo '|move:' . $key . ',rule:' . $rulestr;
+								if( !$isfirst ) {
+									if( $isJson )
+										echo '},{"uci":"' . $key . '","rule":"' . $rulestr . '"';
+									else
+										echo '|move:' . $key . ',rule:' . $rulestr;
+								}
 								else {
-									echo 'move:' . $key . ',rule:' . $rulestr;
+									if( $isJson )
+										echo '"uci":"' . $key . '","rule":"' . $rulestr . '"';
+									else
+										echo 'move:' . $key . ',rule:' . $rulestr;
 									$isfirst = false;
 								}
 							}
+							if( $isJson )
+								echo '}]';
 						}
 						else {
-							if( ccbincheck( $nextfen ) )
-								echo 'checkmate';
-							else
-								echo 'stalemate';
+							if( ccbincheck( $nextfen ) ) {
+								if( $isJson )
+									echo '"status":"checkmate"';
+								else
+									echo 'checkmate';
+							}
+							else {
+								if( $isJson )
+									echo '"status":"stalemate"';
+								else
+									echo 'stalemate';
+							}
 						}
 					}
-					else
-						echo 'invalid movelist';
+					else {
+						if( $isJson )
+							echo '"status":"invalid movelist"';
+						else
+							echo 'invalid movelist';
+					}
 				}
 			}
 			else
