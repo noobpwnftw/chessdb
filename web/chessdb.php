@@ -1069,12 +1069,12 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 				if( count( $loopmebans ) > 0 ) {
 					$moves2 = array_diff_key( $moves1, $loopmebans );
 					if( count( $moves2 ) > 0 ) {
-						asort( $moves2 );
-						$bestscore = end( $moves2 );
-						foreach( array_keys( array_intersect_key( $moves1, $loopmebans ) ) as $key ) {
-							$moves1[$key] = $bestscore;
-							if( !$isloop )
-								$updatemoves[$key] = -$bestscore;
+						if( $isloop ) {
+							asort( $moves2 );
+							$bestscore = end( $moves2 );
+							foreach( array_keys( array_intersect_key( $moves1, $loopmebans ) ) as $key ) {
+								$moves1[$key] = $bestscore;
+							}
 						}
 					}
 					else {
@@ -1450,12 +1450,12 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 				if( count( $loopmebans ) > 0 ) {
 					$moves2 = array_diff_key( $moves1, $loopmebans );
 					if( count( $moves2 ) > 0 ) {
-						asort( $moves2 );
-						$bestscore = end( $moves2 );
-						foreach( array_keys( array_intersect_key( $moves1, $loopmebans ) ) as $key ) {
-							$moves1[$key] = $bestscore;
-							if( !$isloop )
-								$updatemoves[$key] = -$bestscore;
+						if( $isloop ) {
+							asort( $moves2 );
+							$bestscore = end( $moves2 );
+							foreach( array_keys( array_intersect_key( $moves1, $loopmebans ) ) as $key ) {
+								$moves1[$key] = $bestscore;
+							}
 						}
 					}
 					else {

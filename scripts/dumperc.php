@@ -175,8 +175,6 @@ function getMoves( $redis, $row, $depth ) {
 		}
 		if( count( $loopinfo ) > 0 ) {
 			$loopdraws = array();
-			$loopmebans = array();
-			$loopoppbans = array();
 			foreach( $loopinfo as $key => $entry ) {
 				if( $entry == 1 )
 					$loopdraws[$key] = 1;
