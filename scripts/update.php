@@ -405,7 +405,7 @@ function getMoves( $redis, $redis2, $row, $depth, $progress, $total ) {
 							continue;
 						} else {
 							$redis->pconnect('192.168.1.2', 8889);
-							$redis2->pconnect('192.168.1.2', 8890);
+							$redis2->pconnect('192.168.1.2', 8891);
 						}
 						$total = 1;
 */
@@ -429,20 +429,30 @@ function getMoves( $redis, $redis2, $row, $depth, $progress, $total ) {
 						arsort( $nextmoves );
 						$nextscore = reset( $nextmoves );
 						$throttle = getthrottle( $nextscore );
-						$normalize = 0;
+						$nextsum = 0;
 						$nextcount = 0;
-						$average = 0;
+						$totalvalue = 0;
 						foreach( $nextmoves as $record => $score ) {
-							if( $score >= $throttle )
+							if( $score >= $throttle ) {
 								$nextcount++;
-							if( abs( $nextscore ) < 10000 ) {
-								$weight = exp( ( $score - $nextscore ) / 10 );
-								$normalize += $weight;
-								$average += ( $score - $nextscore ) * $weight;
+								$nextsum = $nextsum + $score;
+								$totalvalue = $totalvalue + $nextsum;
 							}
+							else
+								break;
 						}
 						if( abs( $nextscore ) < 10000 ) {
-							$nextscore = ( int )round( $nextscore + $average / $normalize );
+							if( $nextcount > 1 )
+								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+							else if( $nextcount == 1 ) {
+								if( count( $nextmoves ) > 1 ) {
+									if( $nextscore >= -50 )
+										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+								}
+								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
+									$nextscore = ( int )( $nextscore * 9 / 10 );
+								}
+							}
 						}
 						if( $item != -$nextscore ) {
 							$moves1[ $key ] = -$nextscore;
@@ -607,7 +617,7 @@ try{
 	$redis = new Redis();
 	$redis->pconnect('192.168.1.2', 8889);
 	$redis2 = new Redis();
-	//$redis2->pconnect('192.168.1.2', 8890);
+	//$redis2->pconnect('192.168.1.2', 8891);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['counter_dup'] = 0;
 	$GLOBALS['counter_update'] = 0;
