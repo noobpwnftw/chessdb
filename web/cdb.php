@@ -95,8 +95,11 @@ function count_attackers( $fen ) {
 	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
 }
 function getthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
+	if( $maxscore >= 100 ) {
 		$throttle = $maxscore;
+	}
+	else if( $maxscore >= 50 ) {
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -107,8 +110,11 @@ function getthrottle( $maxscore ) {
 	return $throttle;
 }
 function getbestthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
+	if( $maxscore >= 100 ) {
 		$throttle = $maxscore;
+	}
+	else if( $maxscore >= 50 ) {
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 5 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
@@ -119,8 +125,11 @@ function getbestthrottle( $maxscore ) {
 	return $throttle;
 }
 function getlearnthrottle( $maxscore ) {
-	if( $maxscore >= 50 ) {
+	if( $maxscore >= 100 ) {
 		$throttle = $maxscore;
+	}
+	else if( $maxscore >= 50 ) {
+		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
