@@ -100,11 +100,8 @@ function count_attacker_pieces( $fen ) {
 	return strlen( $board ) - strlen( str_replace( str_split( $pieces ), '', $board ) );
 }
 function getthrottle( $maxscore ) {
-	if( $maxscore >= 100 ) {
+	if( $maxscore >= 50 ) {
 		$throttle = $maxscore;
-	}
-	else if( $maxscore >= 50 ) {
-		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -115,11 +112,8 @@ function getthrottle( $maxscore ) {
 	return $throttle;
 }
 function getbestthrottle( $maxscore ) {
-	if( $maxscore >= 100 ) {
+	if( $maxscore >= 50 ) {
 		$throttle = $maxscore;
-	}
-	else if( $maxscore >= 50 ) {
-		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 5 / ( 1 + exp( -abs( $maxscore ) / 20 ) ) );
@@ -130,11 +124,8 @@ function getbestthrottle( $maxscore ) {
 	return $throttle;
 }
 function getlearnthrottle( $maxscore ) {
-	if( $maxscore >= 100 ) {
+	if( $maxscore >= 50 ) {
 		$throttle = $maxscore;
-	}
-	else if( $maxscore >= 50 ) {
-		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -669,14 +660,14 @@ function getMoves( $redis, $row, $banmoves, $update, $mirror, $learn, $depth ) {
 				$moves2[ $key ][1] = $nextcount;
 				if( abs( $nextscore ) < 10000 ) {
 					if( $nextcount > 1 )
-						$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-					else if( $nextcount == 1 ) {
+						$nextscore = ( int )round( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+					else {
 						if( count( $nextmoves ) > 1 ) {
-							if( $nextscore >= -50 )
-								$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+							if( abs( $nextscore ) < 50 )
+								$nextscore = ( int )round( ( $nextscore * 2 + $throttle ) / 3 );
 						}
 						else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-							$nextscore = ( int )( $nextscore * 9 / 10 );
+							$nextscore = ( int )round( $nextscore * 9 / 10 );
 						}
 					}
 				}
@@ -931,14 +922,14 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 						}
 						if( abs( $nextscore ) < 10000 ) {
 							if( $nextcount > 1 )
-								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-							else if( $nextcount == 1 ) {
+								$nextscore = ( int )round( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+							else {
 								if( count( $nextmoves ) > 1 ) {
-									if( $nextscore >= -50 )
-										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+									if( abs( $nextscore ) < 50 )
+										$nextscore = ( int )round( ( $nextscore * 2 + $throttle ) / 3 );
 								}
 								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-									$nextscore = ( int )( $nextscore * 9 / 10 );
+									$nextscore = ( int )round( $nextscore * 9 / 10 );
 								}
 							}
 						}
@@ -1316,14 +1307,14 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 						}
 						if( abs( $nextscore ) < 10000 ) {
 							if( $nextcount > 1 )
-								$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-							else if( $nextcount == 1 ) {
+								$nextscore = ( int )round( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+							else {
 								if( count( $nextmoves ) > 1 ) {
-									if( $nextscore >= -50 )
-										$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+									if( abs( $nextscore ) < 50 )
+										$nextscore = ( int )round( ( $nextscore * 2 + $throttle ) / 3 );
 								}
 								else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-									$nextscore = ( int )( $nextscore * 9 / 10 );
+									$nextscore = ( int )round( $nextscore * 9 / 10 );
 								}
 							}
 						}
