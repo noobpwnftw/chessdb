@@ -73,11 +73,8 @@ function count_attackers( $fen ) {
 	return strlen( $board ) - strlen( str_ireplace( str_split( $pieces ), '', $board ) );
 }
 function getthrottle( $maxscore ) {
-	if( $maxscore >= 100 ) {
+	if( $maxscore >= 50 ) {
 		$throttle = $maxscore;
-	}
-	else if( $maxscore >= 50 ) {
-		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 10 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
@@ -276,14 +273,14 @@ function getMoves( $redis, $row, $depth ) {
 								break;
 						}
 						if( $nextcount > 1 )
-							$nextscore = ( int )( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
-						else if( $nextcount == 1 ) {
+							$nextscore = ( int )round( ( $nextscore * 3 + $totalvalue / ( ( $nextcount + 1 ) * $nextcount / 2 ) * 2 ) / 5 );
+						else {
 							if( count( $nextmoves ) > 1 ) {
-								if( $nextscore >= -50 )
-									$nextscore = ( int )( ( $nextscore * 2 + $throttle ) / 3 );
+								if( $nextscore > 0 && $nextscore < 50 )
+									$nextscore = ( int )round( ( $nextscore * 4 + $throttle ) / 5 );
 							}
 							else if( abs( $nextscore ) > 20 && abs( $nextscore ) < 75 ) {
-								$nextscore = ( int )( $nextscore * 9 / 10 );
+								$nextscore = ( int )round( $nextscore * 9 / 10 );
 							}
 						}
 						if( $item != -$nextscore ) {

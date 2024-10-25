@@ -3,11 +3,8 @@ header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 
 function getadvancethrottle( $maxscore ) {
-	if( $maxscore >= 100 ) {
+	if( $maxscore >= 50 ) {
 		$throttle = $maxscore;
-	}
-	else if( $maxscore >= 50 ) {
-		$throttle = $maxscore - 1;
 	}
 	else if( $maxscore >= -30 ) {
 		$throttle = (int)( $maxscore - 40 / ( 1 + exp( -abs( $maxscore ) / 10 ) ) );
