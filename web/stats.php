@@ -87,14 +87,16 @@ try{
 	}
 	$redis = new Redis();
 	$redis->pconnect('192.168.1.2', 8889, 1.0);
-	$count1 = $redis->dbsize();
+	$pos_count = $redis->dbsize();
 
 	$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
 	$collection = $m->selectDB('ccdbqueue')->selectCollection('queuedb');
-	$count2 = $collection->count();
+	$queue_count = $collection->count();
+	$queue_count_prio = $collection->count( array( 'p' => array( '$gt' => 0 ) ) );
 
 	$collection = $m->selectDB('ccdbsel')->selectCollection('seldb');
-	$count3 = $collection->count();
+	$sel_count = $collection->count();
+	$sel_count_prio = $collection->count( array( 'p' => array( '$gt' => 0 ) ) );
 
 	$egtb_count_dtc = 0;
 	$egtb_size_dtc = 0;
@@ -143,23 +145,23 @@ try{
 		$nps /= 60 * 1000 * 1000;
 		$queue = $memcache_obj->get('QueueCount::' . $lastminute);
 		$sel = $memcache_obj->get('SelCount::' . $lastminute);
-		$est = max( ( $count2 + $count3 ) / ( $queue + 1 ), $count3 / ( $sel + 1 ) );
+		$est = max( ( $queue_count + $sel_count ) / ( $queue + 1 ), $sel_count / ( $sel + 1 ) );
 	}
-	$memcache_obj->set('RateLimit', max( 5, (int)(1000 - $count2 * 20 / ( $queue + 1 ) - $count3 / ( $sel + 1 )) ) );
+	$memcache_obj->set('RateLimit', max( 5, (int)(1000 - ( $queue_count_prio * 2 + $queue_count ) * 30 / ( $queue + 1 ) - $sel_count_prio * 12 / ( $sel + 1 )) ) );
 	if( $isJson ) {
 		header('Content-type: application/json');
-		echo '{"status":"ok","positions":' . $count1 . ',"queue":{"scoring":' . $count2 . ',"sieving":' . $count3 . '},"worker":{"backlog":' . (int)($est * 60) . ',"speed":' . (int)($nps * 1000) . '},"egtb":{"count":{"dtc":' . $egtb_count_dtc . ',"dtm":' . $egtb_count_dtm . '},"size":{"dtc":' . $egtb_count_dtc . ',"dtm":' . $egtb_size_dtm . '}}}';
+		echo '{"status":"ok","positions":' . $pos_count . ',"queue":{"scoring":' . $queue_count . ',"sieving":' . $sel_count . '},"worker":{"backlog":' . (int)($est * 60) . ',"speed":' . (int)($nps * 1000) . '},"egtb":{"count":{"dtc":' . $egtb_count_dtc . ',"dtm":' . $egtb_count_dtm . '},"size":{"dtc":' . $egtb_count_dtc . ',"dtm":' . $egtb_size_dtm . '}}}';
 	} else {
 		echo '<table class="stats">';
 		if($lang == 0) {
-			echo '<tr><td>局面数量（近似）：</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
-			echo '<tr><td>学习队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
+			echo '<tr><td>局面数量（近似）：</td><td style="text-align: right;">' . number_format( $pos_count ) . '</td></tr>';
+			echo '<tr><td>学习队列（评估 / 筛选）：</td><td style="text-align: right;">' . number_format( $queue_count ) . ' / ' . number_format( $sel_count ) . '</td></tr>';
 			echo '<tr><td>后台计算（剩时 / 速度）：</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 			echo '<tr><td>残局库数量（ DTC / DTM ）：</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
 			echo '<tr><td>残局库体积（ DTC / DTM ）：</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
 		} else {
-			echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $count1 ) . '</td></tr>';
-			echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $count2 ) . ' / ' . number_format( $count3 ) . '</td></tr>';
+			echo '<tr><td>Position Count ( Approx. ) :</td><td style="text-align: right;">' . number_format( $pos_count ) . '</td></tr>';
+			echo '<tr><td>Queue ( Scoring / Sieving ) :</td><td style="text-align: right;">' . number_format( $queue_count ) . ' / ' . number_format( $sel_count ) . '</td></tr>';
 			echo '<tr><td>Worker ( Backlog / Speed ) :</td><td style="text-align: right;">' . secondsToTime( $est * 60 ) . ' @ ' . number_format( $nps, 3, '.', '' ) . ' GNPS</td></tr>';
 			echo '<tr><td>EGTB Count ( DTC / DTM ) :</td><td style="text-align: right;">' . number_format( $egtb_count_dtc ) . ' / ' . number_format( $egtb_count_dtm ) . '</td></tr>';
 			echo '<tr><td>EGTB File Size ( DTC / DTM ) :</td><td style="text-align: right;">' . sizeFilter( $egtb_size_dtc ) . ' / ' . sizeFilter( $egtb_size_dtm ) . '</td></tr>';
