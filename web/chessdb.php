@@ -945,6 +945,8 @@ function getMovesWithCheck( $redis, $row, $banmoves, $ply, $enumlimit, $resetlim
 					}
 					else if( $ply == 0 )
 						updateQueue( $row, $key, 2 );
+					else if(count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4)
+						updateSel( $nextfen, 0 );
 				}
 
 				if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {
@@ -1325,6 +1327,8 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 					}
 					else if( $ply == 0 )
 						updateQueue( $row, $key, 2 );
+					else if(count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4)
+						updateSel( $nextfen, 0 );
 				}
 
 				if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 ) {

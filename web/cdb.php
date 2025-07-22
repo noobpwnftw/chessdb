@@ -602,6 +602,8 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 					{
 						if( $ply == 0 )
 							updateQueue( $row, $key, 2 );
+						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+							updateSel( $nextfen, 0 );
 					}
 					else if( abs( $moves1[$key] ) <= 10000 )
 					{
@@ -930,6 +932,8 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 					{
 						if( $ply == 0 )
 							updateQueue( $row, $key, 2 );
+						else if( count_pieces( $nextfen ) >= 10 && count_attackers( $nextfen ) >= 4 )
+							updateSel( $nextfen, 0 );
 					}
 					else if( abs( $moves1[$key] ) <= 10000 )
 					{
