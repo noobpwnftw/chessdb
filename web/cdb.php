@@ -1080,38 +1080,37 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 
 function getEngineMove( $row, $movelist, $maxtime ) {
 	$result = '';
-	$descriptorspec = array( 0 => array("pipe", "r"),1 => array("pipe", "w") );
-	$process = proc_open( '/home/apache/enginec', $descriptorspec, $pipes, NULL, NULL );
-	if( is_resource( $process ) ) {
-		fwrite( $pipes[0], 'position fen ' . $row);
+	$sock = fsockopen('unix:///tmp/ceval.sock');
+	if( $sock ) {
+		stream_set_blocking( $sock, FALSE );
+		fwrite( $sock, 'position fen ' . $row);
 		if( count( $movelist ) > 0 ) {
-			fwrite( $pipes[0], ' moves ' . implode(' ', $movelist ) );
+			fwrite( $sock, ' moves ' . implode(' ', $movelist ) );
 		}
-		fwrite( $pipes[0], PHP_EOL . 'go depth 22' . PHP_EOL );
+		fwrite( $sock, PHP_EOL . 'go depth 22' . PHP_EOL );
 		$startTime = time();
-		$readfd = array( $pipes[1] );
+		$readfd = array( $sock );
 		$writefd = NULL;
 		$errfd = NULL;
-		stream_set_blocking( $pipes[1], FALSE );
 		while( true ) {
 			$res = @stream_select( $readfd, $writefd, $errfd, 1 );
-			if( $res > 0 && ( $out = fgets( $pipes[1] ) ) ) {
+			if( $res > 0 && ( $out = fgets( $sock ) ) ) {
 				if( $move = strstr( $out, 'bestmove' ) ) {
 					$result = rtrim( substr( $move, 9, 5 ) );
+					fwrite( $sock, 'DONE' . PHP_EOL );
 					break;
 				}
 			}
 			else if( $res > 0 )
 				break;
 			if( time() - $startTime >= $maxtime ) {
-				if( fwrite( $pipes[0], 'stop' . PHP_EOL ) === FALSE )
+				$startTime++;
+				if( fwrite( $sock, 'stop' . PHP_EOL ) === FALSE )
 					break;
 			}
-			$readfd = array( $pipes[1] );
-		}		
-		fclose( $pipes[0] );
-		fclose( $pipes[1] );
-		proc_close( $process );
+			$readfd = array( $sock );
+		}
+		fclose( $sock );
 	}
 	return $result;
 }

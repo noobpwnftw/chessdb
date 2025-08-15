@@ -1485,38 +1485,37 @@ function getAnalysisPath( $redis, $row, $banmoves, $ply, $enumlimit, $isbest, $l
 
 function getEngineMove( $row, $movelist, $maxtime ) {
 	$result = '';
-	$descriptorspec = array( 0 => array("pipe", "r"),1 => array("pipe", "w") );
-	$process = proc_open( '/home/apache/engine', $descriptorspec, $pipes, NULL, NULL );
-	if( is_resource( $process ) ) {
-		fwrite( $pipes[0], 'fen ' . $row);
+	$sock = fsockopen('unix:///tmp/cceval.sock');
+	if( $sock ) {
+		stream_set_blocking( $sock, FALSE );
+		fwrite( $sock, 'fen ' . $row);
 		if( count( $movelist ) > 0 ) {
-			fwrite( $pipes[0], ' moves ' . implode(' ', $movelist ) );
+			fwrite( $sock, ' moves ' . implode(' ', $movelist ) );
 		}
-		fwrite( $pipes[0], PHP_EOL . 'go' . PHP_EOL );
+		fwrite( $sock, PHP_EOL . 'go' . PHP_EOL );
 		$startTime = time();
-		$readfd = array( $pipes[1] );
+		$readfd = array( $sock );
 		$writefd = NULL;
 		$errfd = NULL;
-		stream_set_blocking( $pipes[1], FALSE );
 		while( true ) {
 			$res = @stream_select( $readfd, $writefd, $errfd, 1 );
-			if( $res > 0 && ( $out = fgets( $pipes[1] ) ) ) {
+			if( $res > 0 && ( $out = fgets( $sock ) ) ) {
 				if( $move = strstr( $out, 'bestmove' ) ) {
 					$result = substr( $move, 9, 4 );
+					fwrite( $sock, 'DONE' . PHP_EOL );
 					break;
 				}
 			}
 			else if( $res > 0 )
 				break;
 			if( time() - $startTime >= $maxtime ) {
-				if( fwrite( $pipes[0], 'stop' . PHP_EOL ) === FALSE )
+				$startTime++;
+				if( fwrite( $sock, 'stop' . PHP_EOL ) === FALSE )
 					break;
 			}
-			$readfd = array( $pipes[1] );
+			$readfd = array( $sock );
 		}
-		fclose( $pipes[0] );
-		fclose( $pipes[1] );
-		proc_close( $process );
+		fclose( $sock );
 	}
 	return $result;
 }
