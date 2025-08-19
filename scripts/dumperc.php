@@ -211,12 +211,6 @@ try{
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
 	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
 }
-catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
-}
-catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
-}
 catch (Exception $e) {
 	echo 'Error: ' . $e->getMessage();
 }

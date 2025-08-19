@@ -2,66 +2,6 @@
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 
-class MyRWLock {
-	private $handle;
-	private $locked;
-	private $iswrite;
-
-	public function __construct( $name ) {
-		$this->handle = fopen( sys_get_temp_dir() . '/' . $name . '.lock', 'c' );
-	}
-
-	public function readlock () {
-		if( $this->locked )
-			throw new Exception( 'Read lock error.' );
-
-		if( !flock( $this->handle, LOCK_SH ) )
-			throw new Exception( 'Lock operation failed.' );
-
-		$this->iswrite = false;
-		$this->locked = true;
-	}
-
-	public function writelock () {
-		if( $this->locked )
-			throw new Exception( 'Write lock error.' );
-
-		if( !flock( $this->handle, LOCK_EX ) )
-			throw new Exception( 'Lock operation failed.' );
-
-		$this->iswrite = true;
-		$this->locked = true;
-	}
-
-	public function readunlock () {
-		if( !$this->locked || $this->iswrite )
-			throw new Exception( 'Read unlock error.' );
-
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-
-		$this->iswrite = false;
-		$this->locked = false;
-	}
-
-	public function writeunlock () {
-		if( !$this->locked || !$this->iswrite )
-			throw new Exception( 'Write unlock error.' );
-
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-		
-		$this->iswrite = false;
-		$this->locked = false;
-	}
-
-	public function __destruct () {
-		fclose( $this->handle );
-	}
-}
-
-$readwrite_queue = new MyRWLock( "ChessDBLockQueue" );
-
 function count_pieces( $fen ) {
 	@list( $board, $color ) = explode( " ", $fen );
 	$pieces = 'rnckabp';
@@ -285,9 +225,7 @@ function updateScore( $redis, $minbinfen, $minindex, $hasLRmirror, $updatemoves 
 	}
 }
 function updateQueue( $row, $key, $priority ) {
-	global $readwrite_queue;
-	$m = new MongoClient('mongodb://localhost');
-	$collection = $m->selectDB('ccdbqueue')->selectCollection('queuedb');
+	$fq = new FlexibleQueueDBClient( '/tmp/ccqueue.sock' );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
@@ -295,190 +233,51 @@ function updateQueue( $row, $key, $priority ) {
 		$LRBWfen = ccbgetLRfen( $BWfen );
 		list( $minbinfen, $minindex ) = getBinFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen), ccbfen2hexfen($LRfen), ccbfen2hexfen($LRBWfen) ) );
 		if( $minindex == 0 ) {
-			$readwrite_queue->readlock();
-			do {
-				try {
-					$tryAgain = false;
-					if( $priority ) {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					} else {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					}
-				}
-				catch( MongoDuplicateKeyException $e ) {
-					$tryAgain = true;
-				}
-			} while($tryAgain);
-			$readwrite_queue->readunlock();
+			$fq->push( 0, $minbinfen, $key, $priority, time() + 7200, true, true );
 		}
 		else if( $minindex == 1 ) {
-			$readwrite_queue->readlock();
-			do {
-				try {
-					$tryAgain = false;
-					if( $priority ) {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, ccbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					} else {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( ccbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					}
-				}
-				catch( MongoDuplicateKeyException $e ) {
-					$tryAgain = true;
-				}
-			} while($tryAgain);
-			$readwrite_queue->readunlock();
+			$fq->push( 0, $minbinfen, ccbgetBWmove( $key ), $priority, time() + 7200, true, true );
 		}
 		else if( $minindex == 2 ) {
-			$readwrite_queue->readlock();
-			do {
-				try {
-					$tryAgain = false;
-					if( $priority ) {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, ccbgetLRmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					} else {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( ccbgetLRmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					}
-				}
-				catch( MongoDuplicateKeyException $e ) {
-					$tryAgain = true;
-				}
-			} while($tryAgain);
-			$readwrite_queue->readunlock();
+			$fq->push( 0, $minbinfen, ccbgetLRmove( $key ), $priority, time() + 7200, true, true );
 		}
 		else {
-			$readwrite_queue->readlock();
-			do {
-				try {
-					$tryAgain = false;
-					if( $priority ) {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, ccbgetLRBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					} else {
-						$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( ccbgetLRBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-					}
-				}
-				catch( MongoDuplicateKeyException $e ) {
-					$tryAgain = true;
-				}
-			} while($tryAgain);
-			$readwrite_queue->readunlock();
+			$fq->push( 0, $minbinfen, ccbgetLRBWmove( $key ), $priority, time() + 7200, true, true );
 		}
 	}
 	else {
 		list( $minbinfen, $minindex ) = getBinFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
 		if( $minindex == 0 ) {
-			if( $key != ccbgetLRmove( $key ) ) {
-				$readwrite_queue->readlock();
-				do {
-					try {
-						$tryAgain = false;
-						if( $priority ) {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$unset' => array( ccbgetLRmove( $key ) => 0 ), '$set' => array( 'p' => 1, $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						} else {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$unset' => array( ccbgetLRmove( $key ) => 0 ), '$set' => array( $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						}
-					}
-					catch( MongoDuplicateKeyException $e ) {
-						$tryAgain = true;
-					}
-				} while($tryAgain);
-				$readwrite_queue->readunlock();
+			if( $key <= ccbgetLRmove( $key ) ) {
+				$fq->push( 0, $minbinfen, $key, $priority, time() + 7200, true, true );
 			}
 			else {
-				$readwrite_queue->readlock();
-				do {
-					try {
-						$tryAgain = false;
-						if( $priority ) {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						} else {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						}
-					}
-					catch( MongoDuplicateKeyException $e ) {
-						$tryAgain = true;
-					}
-				} while($tryAgain);
-				$readwrite_queue->readunlock();
+				$fq->push( 0, $minbinfen, ccbgetLRmove( $key ), $priority, time() + 7200, true, true );
 			}
 		}
 		else if( $minindex == 1 ) {
-			if( $key != ccbgetLRmove( $key ) ) {
-				$readwrite_queue->readlock();
-				do {
-					try {
-						$tryAgain = false;
-						if( $priority ) {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$unset' => array( ccbgetLRBWmove( $key ) => 0 ), '$set' => array( 'p' => 1, ccbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						} else {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$unset' => array( ccbgetLRBWmove( $key ) => 0 ), '$set' => array( ccbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						}
-					}
-					catch( MongoDuplicateKeyException $e ) {
-						$tryAgain = true;
-					}
-				} while($tryAgain);
-				$readwrite_queue->readunlock();
+			if( ccbgetBWmove( $key ) <= ccbgetLRBWmove( $key ) ) {
+				$fq->push( 0, $minbinfen, ccbgetBWmove( $key ), $priority, time() + 7200, true, true );
 			}
 			else {
-				$readwrite_queue->readlock();
-				do {
-					try {
-						$tryAgain = false;
-						if( $priority ) {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, ccbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						} else {
-							$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( ccbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-						}
-					}
-					catch( MongoDuplicateKeyException $e ) {
-						$tryAgain = true;
-					}
-				} while($tryAgain);
-				$readwrite_queue->readunlock();
+				$fq->push( 0, $minbinfen, ccbgetLRBWmove( $key ), $priority, time() + 7200, true, true );
 			}
 		}
 	}
 }
 function updateSel( $row, $priority ) {
-	$m = new MongoClient('mongodb://localhost');
-	$collection = $m->selectDB('ccdbsel')->selectCollection('seldb');
+	$fq = new FlexibleQueueDBClient( '/tmp/ccsel.sock' );
 	$LRfen = ccbgetLRfen( $row );
 	$BWfen = ccbgetBWfen( $row );
 	$hasLRmirror = ( $row == $LRfen ? false : true );
 	if( $hasLRmirror ) {
 		$LRBWfen = ccbgetLRfen( $BWfen );
 		list( $minbinfen, $minindex ) = getBinFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen), ccbfen2hexfen($LRfen), ccbfen2hexfen($LRBWfen) ) );
-		if( $priority ) {
-			$doc = array( '$set' => array( 'p' => 1, 'e' => new MongoDate() ) );
-		} else {
-			$doc = array( 'e' => new MongoDate() );
-		}
-		do {
-			try {
-				$tryAgain = false;
-				$collection->update( array( '_id' => new MongoBinData($minbinfen) ), $doc, array( 'upsert' => true ) );
-			}
-			catch( MongoDuplicateKeyException $e ) {
-				$tryAgain = true;
-			}
-		} while($tryAgain);
+		$fq->push( 0, $minbinfen, '', $priority, time() + 7200, true, false );
 	}
 	else {
 		list( $minbinfen, $minindex ) = getBinFenStorage( array( ccbfen2hexfen($row), ccbfen2hexfen($BWfen) ) );
-		if( $priority ) {
-			$doc = array( '$set' => array( 'p' => 1, 'e' => new MongoDate() ) );
-		} else {
-			$doc = array( 'e' => new MongoDate() );
-		}
-		do {
-			try {
-				$tryAgain = false;
-				$collection->update( array( '_id' => new MongoBinData($minbinfen) ), $doc, array( 'upsert' => true ) );
-			}
-			catch( MongoDuplicateKeyException $e ) {
-				$tryAgain = true;
-			}
-		} while($tryAgain);
+		$fq->push( 0, $minbinfen, '', $priority, time() + 7200, true, false );
 	}
 }
 function getMoves( $redis, $row, $depth ) {
@@ -779,12 +578,6 @@ try{
 	getMoves( $redis, 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w', 0 );
 	echo 'ok' . "\n";
 
-}
-catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
-}
-catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
 }
 catch (Exception $e) {
 	echo 'Error: ' . $e->getMessage();

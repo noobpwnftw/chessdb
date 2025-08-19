@@ -6,80 +6,185 @@ header("Access-Control-Allow-Origin: *");
 
 $MASTER_PASSWORD = '123456';
 
-class MyRWLock {
-	private $handle;
-	private $locked;
-	private $iswrite;
+final class FlexibleQueueDBClient
+{
+    private $sock;
+    private $socketPath;
+    private $timeout; // connect timeout (seconds)
 
-	public function __construct( $name ) {
-		$this->handle = fopen( sys_get_temp_dir() . '/' . $name . '.lock', 'c' );
-	}
+    /**
+     * @param string $socketPath Path to Unix socket (default "/tmp/fqdb.sock")
+     * @param float  $timeout    Connect timeout in seconds (default 1.0).
+     */
+    public function __construct($socketPath = "/tmp/fqdb.sock", $timeout = 1.0)
+    {
+        $this->socketPath = $socketPath;
+        $this->timeout = $timeout;
+        $this->connectPersistent();
+    }
 
-	public function readlock () {
-		if( $this->locked )
-			throw new Exception( 'Read lock error.' );
+    /** PUSH: returns array('exists'=>bool, 'updated'=>bool) */
+    public function push($type, $key, $value, $priority, $expiry, $upsert, $mutate)
+    {
+        $payload  = $this->u32(strlen($key));
+        $payload .= $this->u32(strlen($value));
+        $payload .= $this->u16($priority);
+        $payload .= $this->u64($expiry);
+        $payload .= chr($upsert ? 1 : 0);
+        $payload .= chr($mutate ? 1 : 0);
+        $payload .= $key . $value;
 
-		if( !flock( $this->handle, LOCK_SH ) )
-			throw new Exception( 'Lock operation failed.' );
+        $resp = $this->rpc($type, 1, $payload);
+        return array('exists'=>ord($resp[0])!==0, 'updated'=>ord($resp[1])!==0);
+    }
 
-		$this->iswrite = false;
-		$this->locked = true;
-	}
+    /** POP: returns array of items */
+    public function pop($type, $n, $direction)
+    {
+        $payload = $this->u32($n) . chr($direction);
+        $resp = $this->rpc($type, 2, $payload);
 
-	public function writelock () {
-		if( $this->locked )
-			throw new Exception( 'Write lock error.' );
+        $off=0; $count=$this->ru32($resp,$off); $items=array();
+        for($i=0;$i<$count;$i++){
+            $klen=$this->ru32($resp,$off);
+            $vlen=$this->ru32($resp,$off);
+            $pri =$this->ru16($resp,$off);
+            $exp =$this->ru64($resp,$off);
+            $key =substr($resp,$off,$klen); $off+=$klen;
+            $val =substr($resp,$off,$vlen); $off+=$vlen;
+            $items[]=array('key'=>$key,'value'=>$val,'priority'=>$pri,'expiry'=>$exp);
+        }
+        return $items;
+    }
 
-		if( !flock( $this->handle, LOCK_EX ) )
-			throw new Exception( 'Lock operation failed.' );
+    /** REFRESH: returns array of items */
+    public function refresh($type, $threshold, $expiry, $n)
+    {
+        $payload  = $this->u64($threshold);
+        $payload .= $this->u64($expiry);
+        $payload .= $this->u32($n);
+        $resp = $this->rpc($type, 3, $payload);
 
-		$this->iswrite = true;
-		$this->locked = true;
-	}
+        $off=0; $count=$this->ru32($resp,$off); $items=array();
+        for($i=0;$i<$count;$i++){
+            $klen=$this->ru32($resp,$off);
+            $vlen=$this->ru32($resp,$off);
+            $pri =$this->ru16($resp,$off);
+            $exp =$this->ru64($resp,$off);
+            $key =substr($resp,$off,$klen); $off+=$klen;
+            $val =substr($resp,$off,$vlen); $off+=$vlen;
+            $items[]=array('key'=>$key,'value'=>$val,'priority'=>$pri,'expiry'=>$exp);
+        }
+        return $items;
+    }
 
-	public function trywritelock () {
-		if( $this->locked )
-			throw new Exception( 'Write lock error.' );
+    /** REMOVE: returns bool */
+    public function remove($type, $key)
+    {
+        $payload  = $this->u32(strlen($key));
+        $payload .= $key;
 
-		if( !flock( $this->handle, LOCK_EX | LOCK_NB, $wouldblock ) ) {
-			if( $wouldblock )
-				return false;
-			else
-				throw new Exception( 'Lock operation failed.' );
-		}
-		$this->iswrite = true;
-		$this->locked = true;
-		return true;
-	}
+        $resp = $this->rpc($type, 4, $payload);
+        return ord($resp[0])!==0;
+    }
 
-	public function readunlock () {
-		if( !$this->locked || $this->iswrite )
-			throw new Exception( 'Read unlock error.' );
+    /** COUNT: returns u64 (as int on 64-bit PHP) */
+    public function count($type, $min, $max)
+    {
+        $payload = $this->u32($min & 0xFFFFFFFF).$this->u32($max & 0xFFFFFFFF);
+        $resp = $this->rpc($type, 5, $payload);
+        $off=0; return $this->ru64($resp,$off);
+    }
 
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
+    /** Optional explicit close */
+    public function close()
+    {
+        if (is_resource($this->sock)) {
+            @fclose($this->sock);
+        }
+        $this->sock = null;
+    }
 
-		$this->iswrite = false;
-		$this->locked = false;
-	}
+    // ---------------------------------------------------------------------
+    // Internals
+    // ---------------------------------------------------------------------
 
-	public function writeunlock () {
-		if( !$this->locked || !$this->iswrite )
-			throw new Exception( 'Write unlock error.' );
+    private function connectPersistent()
+    {
+        $errno = 0; $errstr = '';
+        $this->sock = @pfsockopen("unix://".$this->socketPath, -1, $errno, $errstr, $this->timeout);
+        if (!$this->sock) {
+            throw new RuntimeException("connect($this->socketPath): [$errno] $errstr");
+        }
+        stream_set_blocking($this->sock, true);
+    }
 
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-		
-		$this->iswrite = false;
-		$this->locked = false;
-	}
+    private function ensureConnected()
+    {
+        if (!is_resource($this->sock) || feof($this->sock)) {
+            $this->close();
+            $this->connectPersistent();
+        }
+    }
 
-	public function __destruct () {
-		fclose( $this->handle );
-	}
+    /** RPC with close on failure. */
+    private function rpc($type, $op, $payload)
+    {
+        $this->ensureConnected();
+
+        $hdr = $this->u16($type).$this->u16($op).$this->u32(strlen($payload));
+        $buf = $hdr.$payload;
+
+        try {
+            $this->writeAll($buf);
+            $h=$this->readN(4); $off=0; $len=$this->ru32($h,$off);
+            if($len==0){
+                throw new RuntimeException("server error");
+            }
+            return $this->readN($len);
+        } catch (Exception $e) {
+            $this->close();
+            throw $e;
+        }
+    }
+
+    private function writeAll($buf)
+    {
+        $n=strlen($buf); $o=0;
+        while($o<$n){
+            $w=@fwrite($this->sock, substr($buf,$o));
+            if($w===false || $w===0){
+                throw new RuntimeException("socket write failed");
+            }
+            $o+=$w;
+        }
+    }
+
+    private function readN($n)
+    {
+        $out='';
+        while(strlen($out)<$n){
+            $chunk=@fread($this->sock, $n - strlen($out));
+            if($chunk===false || $chunk===''){
+                $meta = @stream_get_meta_data($this->sock);
+                if (!empty($meta['timed_out'])) {
+                    throw new RuntimeException("socket read timeout");
+                }
+                throw new RuntimeException("socket closed");
+            }
+            $out.=$chunk;
+        }
+        return $out;
+    }
+
+    // Little-endian pack/unpack
+    private function u16($v){return pack('v',$v & 0xFFFF);}
+    private function u32($v){return pack('V',$v & 0xFFFFFFFF);}
+    private function u64($v){return pack('P',$v);}
+    private function ru16($b,&$o){$v=unpack('v',substr($b,$o,2));$o+=2;return $v[1];}
+    private function ru32($b,&$o){$v=unpack('V',substr($b,$o,4));$o+=4;return $v[1];}
+    private function ru64($b,&$o){$v=unpack('P',substr($b,$o,8));$o+=8;return $v[1];}
 }
-
-$readwrite_queue = new MyRWLock( "ChessDBLockQueue2" );
 
 function getWinRate( $score ) {
 	return number_format( 100 / ( 1 + exp( -$score / 330 ) ), 2 );
@@ -201,65 +306,21 @@ function updateScore( $redis, $minbinfen, $minindex, $updatemoves ) {
 	}
 }
 function updateQueue( $row, $key, $priority ) {
-	global $readwrite_queue;
-	$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
-	$collection = $m->selectDB('cdbqueue')->selectCollection('queuedb');
+	$fq = new FlexibleQueueDBClient( '/tmp/cqueue.sock' );
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	if( $minindex == 0 ) {
-		$readwrite_queue->readlock();
-		do {
-			try {
-				$tryAgain = false;
-				if( $priority ) {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$max' => array( 'p' => $priority ), '$set' => array( $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				} else {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				}
-			}
-			catch( MongoDuplicateKeyException $e ) {
-				$tryAgain = true;
-			}
-		} while($tryAgain);
-		$readwrite_queue->readunlock();
+		$fq->push( 0, $minbinfen, $key, $priority, time() + 7200, true, true );
 	}
 	else if( $minindex == 1 ) {
-		$readwrite_queue->readlock();
-		do {
-			try {
-				$tryAgain = false;
-				if( $priority ) {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$max' => array( 'p' => $priority ), '$set' => array( cbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				} else {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				}
-			}
-			catch( MongoDuplicateKeyException $e ) {
-				$tryAgain = true;
-			}
-		} while($tryAgain);
-		$readwrite_queue->readunlock();
+		$fq->push( 0, $minbinfen, cbgetBWmove( $key ), $priority, time() + 7200, true, true );
 	}
 }
 function updateSel( $row, $priority ) {
-	$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
-	$collection = $m->selectDB('cdbsel')->selectCollection('seldb');
+	$fq = new FlexibleQueueDBClient( '/tmp/csel.sock' );
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
-	if( $priority ) {
-		$doc = array( '$max' => array( 'p' => $priority ), '$set' => array( 'e' => new MongoDate() ) );
-	} else {
-		$doc = array( '$set' => array( 'e' => new MongoDate() ) );
-	}
-	do {
-		try {
-			$tryAgain = false;
-			$collection->update( array( '_id' => new MongoBinData($minbinfen) ), $doc, array( 'upsert' => true ) );
-		}
-		catch( MongoDuplicateKeyException $e ) {
-			$tryAgain = true;
-		}
-	} while($tryAgain);
+	$fq->push( 0, $minbinfen, '', $priority, time() + 7200, true, false );
 }
 function updatePly( $redis, $minbinfen, $ply ) {
 	if( $redis->hSet( $minbinfen, 'a0a0', $ply ) === FALSE )
@@ -853,16 +914,11 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 						}
 					}
 					uksort( $moves2, function ( $a, $b ) use ( $moves2, $moves3 ) {
-						if( $moves2[$a] != $moves2[$b] ) {
-							return $moves2[$b] - $moves2[$a];
-						} else if( $moves3[$a][1] != $moves3[$b][1] ) {
-							return $moves3[$a][1] - $moves3[$b][1];
-						} else if( $moves3[$a][0] != $moves3[$b][0] ) {
-							return $moves3[$b][0] - $moves3[$a][0];
-						} else {
-							return $a - $b;
-						}
-					} );
+						return ( $moves2[$b] <=> $moves2[$a] )
+							?: ( $moves3[$a][1] <=> $moves3[$b][1] )
+							?: ( $moves3[$b][0] <=> $moves3[$a][0] )
+							?: ( $a <=> $b );
+					});
 				}
 				foreach( $moves2 as $key => $item ) {
 					$GLOBALS['counter']++;
@@ -1717,9 +1773,9 @@ try{
 								else {
 									if( end( $statmoves ) >= -50 ) {
 										if( $isJson )
-											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+											echo '"status":"ok","move":"' . array_key_last( $statmoves ) . '"';
 										else
-											echo 'move:' . end( array_keys( $statmoves ) );
+											echo 'move:' . array_key_last( $statmoves );
 									}
 									else {
 										if( $isJson )
@@ -1772,9 +1828,9 @@ try{
 								else {
 									if( end( $statmoves ) >= -50 ) {
 										if( $isJson )
-											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+											echo '"status":"ok","move":"' . array_key_last( $statmoves ) . '"';
 										else
-											echo 'move:' . end( array_keys( $statmoves ) );
+											echo 'move:' . array_key_last( $statmoves );
 									}
 									else {
 										if( $isJson )
@@ -1798,18 +1854,12 @@ try{
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
-
 								uksort( $statmoves, function ( $a, $b ) use ( $statmoves, $variations ) {
-									if( $statmoves[$a] != $statmoves[$b] ) {
-										return $statmoves[$b] - $statmoves[$a];
-									} else if( $variations[$a][1] != $variations[$b][1] ) {
-										return $variations[$a][1] - $variations[$b][1];
-									} else if( $variations[$a][0] != $variations[$b][0] ) {
-										return $variations[$b][0] - $variations[$a][0];
-									} else {
-										return $a - $b;
-									}
-								} );
+									return ( $statmoves[$b] <=> $statmoves[$a] )
+										?: ( $variations[$a][1] <=> $variations[$b][1] )
+										?: ( $variations[$b][0] <=> $variations[$a][0] )
+										?: ( $a <=> $b );
+								});
 								$maxscore = reset( $statmoves );
 								$throttle = getthrottle( $maxscore );
 								$isfirst = true;
@@ -1968,9 +2018,9 @@ try{
 								else {
 									if( end( $statmoves ) >= -75 ) {
 										if( $isJson )
-											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+											echo '"status":"ok","move":"' . array_key_last( $statmoves ) . '"';
 										else
-											echo 'move:' . end( array_keys( $statmoves ) );
+											echo 'move:' . array_key_last( $statmoves );
 									}
 									else {
 										if( $isJson )
@@ -2034,9 +2084,9 @@ try{
 								else {
 									if( end( $statmoves ) >= -50 ) {
 										if( $isJson )
-											echo '"status":"ok","move":"' . end( array_keys( $statmoves ) ) . '"';
+											echo '"status":"ok","move":"' . array_key_last( $statmoves ) . '"';
 										else
-											echo 'move:' . end( array_keys( $statmoves ) );
+											echo 'move:' . array_key_last( $statmoves );
 									}
 									else {
 										if( $isJson )
@@ -2252,30 +2302,22 @@ try{
 				$activelist[$_SERVER['REMOTE_ADDR']] = 1;
 				$memcache_obj->set( 'WorkerList2', $activelist, 0, 0 );
 			}
-			$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
-			$collection = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
-			$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
-			if( !empty( $doc ) && isset( $doc['data'] ) ) {
-				echo $doc['data'];
+			$fq = new FlexibleQueueDBClient( '/tmp/cqueue.sock' );
+			$docs = $fq->refresh( 1, time() - 3600, time(), 1 );
+			if( count( $docs ) > 0 && isset( $docs[0]['key'] ) ) {
+				echo $docs[0]['value'];
 			}
-			else if( $readwrite_queue->trywritelock() )
+			else
 			{
-				$collection2 = $m->selectDB('cdbqueue')->selectCollection('queuedb');
-				$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => 1 ) )->limit(10);
-				$docs = array();
+				$docs = $fq->pop( 0, 10, 0 );
 				$queueout = '';
 				$thisminute = date('i');
-				foreach( $cursor as $doc ) {
-					$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
+				foreach( $docs as $doc ) {
+					$fen = cbhexfen2fen( bin2hex( $doc['key'] ) );
 					$moves = array();
-					foreach( $doc as $key => $item ) {
-						if( $key == '_id' )
-							continue;
-						else if( $key == 'p' )
-							continue;
-						else if( $key == 'e' )
-							continue;
-						else if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
+					$values = explode( ",", $doc['value'] );
+					foreach( $values as $key ) {
+						if( $memcache_obj->add( 'QueueHistory2::' . $fen . $key, 1, 0, 300 ) )
 							$moves[] = $key;
 					}
 					if( count( $moves ) > 0 ) {
@@ -2285,16 +2327,11 @@ try{
 						$memcache_obj->add( 'QueueCount2::' . $thisminute, 0, 0, 150 );
 						$memcache_obj->increment( 'QueueCount2::' . $thisminute );
 					}
-					$docs[] = $doc['_id'];
 				}
-				if( count( $docs ) > 0 ) {
-					$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
-				}
-				if( strlen($queueout) > 0 ) {
-					$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $queueout ))) ), array( 'data' => $queueout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+				if( strlen( $queueout ) > 0 ) {
+					$fq->push( 1, hex2bin( hash( 'md5', $queueout ) ), $queueout, 0, time(), true, false);
 					echo $queueout;
 				}
-				$readwrite_queue->writeunlock();
 			}
 		}
 		else {
@@ -2304,9 +2341,8 @@ try{
 	}
 	else if( $action == 'ackqueue' ) {
 		if( isset( $_REQUEST['key'] ) && isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) . $_REQUEST['key'] ) ) {
-			$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
-			$collection = $m->selectDB('cdbackqueue')->selectCollection('ackqueuedb');
-			$collection->remove( array( '_id' => new MongoBinData(hex2bin($_REQUEST['key'])) ) );
+			$fq = new FlexibleQueueDBClient( '/tmp/cqueue.sock' );
+			$fq->remove( 1, hex2bin( $_REQUEST['key'] ) );
 			echo 'ok';
 		}
 		else {
@@ -2327,22 +2363,19 @@ try{
 					$activelist[$_SERVER['REMOTE_ADDR']] = 1;
 					$memcache_obj->set( 'SelList2', $activelist, 0, 0 );
 			}
-			$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
-			$collection = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
-			$doc = $collection->findAndModify( array( 'ts' => array( '$lt' => new MongoDate( time() - 3600 ) ) ), array( '$set' => array( 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ) ) );
-			if( !empty( $doc ) && isset( $doc['data'] ) ) {
-				echo $doc['data'];
+			$fq = new FlexibleQueueDBClient( '/tmp/csel.sock' );
+			$docs = $fq->refresh( 1, time() - 3600, time(), 1 );
+			if( count( $docs ) > 0 && isset( $docs[0]['key'] ) ) {
+				echo $docs[0]['value'];
 			}
 			else
 			{
-				$collection2 = $m->selectDB('cdbsel')->selectCollection('seldb');
-				$cursor = $collection2->find()->sort( array( 'p' => -1, 'e' => -1 ) )->limit(10);
-				$docs = array();
+				$docs = $fq->pop( 0, 10, 1 );
 				$selout = '';
 				$thisminute = date('i');
-				foreach( $cursor as $doc ) {
-					$fen = cbhexfen2fen(bin2hex($doc['_id']->bin));
-					if( isset( $doc['p'] ) && $doc['p'] > 0 )
+				foreach( $docs as $doc ) {
+					$fen = cbhexfen2fen( bin2hex( $doc['key'] ) );
+					if( $doc['priority'] > 0 )
 					{
 						if( $memcache_obj->add( 'SelHistory2::!' . $fen, 1, 0, 300 ) )
 						{
@@ -2351,20 +2384,14 @@ try{
 						}
 					}
 					else {
-						if( $memcache_obj->get( 'SelCount2::' . $thisminute ) > $memcache_obj->get( 'QueueCount2::' . $thisminute ) + 10 )
-							break;
 						if( $memcache_obj->add( 'SelHistory2::' . $fen, 1, 0, 300 ) )
 							$selout .=  $fen . "\n";
 					}
 					$memcache_obj->add( 'SelCount2::' . $thisminute, 0, 0, 150 );
 					$memcache_obj->increment( 'SelCount2::' . $thisminute );
-					$docs[] = $doc['_id'];
 				}
-				if( count( $docs ) > 0 ) {
-					$collection2->remove( array( '_id' => array( '$in' => $docs ) ) );
-				}
-				if( strlen($selout) > 0 ) {
-					$collection->update( array( '_id' => new MongoBinData(hex2bin(hash( 'md5', $selout ))) ), array( 'data' => $selout, 'ip' => $_SERVER['REMOTE_ADDR'], 'ts' => new MongoDate() ), array( 'upsert' => true ) );
+				if( strlen( $selout ) > 0 ) {
+					$fq->push( 1, hex2bin( hash( 'md5', $selout ) ), $selout, 0, time(), true, false);
 					echo $selout;
 				}
 			}
@@ -2376,9 +2403,8 @@ try{
 	}
 	else if( $action == 'acksel' ) {
 		if( isset( $_REQUEST['key'] ) && isset( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) . $_REQUEST['key'] ) ) {
-			$m = new MongoClient('mongodb:///tmp/mongodb-27017.sock');
-			$collection = $m->selectDB('cdbacksel')->selectCollection('ackseldb');
-			$collection->remove( array( '_id' => new MongoBinData(hex2bin($_REQUEST['key'])) ) );
+			$fq = new FlexibleQueueDBClient( '/tmp/csel.sock' );
+			$fq->remove( 1, hex2bin( $_REQUEST['key'] ) );
 			echo 'ok';
 		}
 		else {
@@ -2397,16 +2423,6 @@ try{
 		else
 			echo 'invalid parameters';
 	}
-}
-catch (MongoException $e) {
-	error_log( $e->getMessage(), 0 );
-	http_response_code(503);
-	echo 'Error: ' . $e->getMessage();
-}
-catch (RedisException $e) {
-	error_log( $e->getMessage(), 0 );
-	http_response_code(503);
-	echo 'Error: ' . $e->getMessage();
 }
 catch (Exception $e) {
 	error_log( $e->getMessage(), 0 );

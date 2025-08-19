@@ -2,66 +2,6 @@
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
 
-class MyRWLock {
-	private $handle;
-	private $locked;
-	private $iswrite;
-
-	public function __construct( $name ) {
-		$this->handle = fopen( sys_get_temp_dir() . '/' . $name . '.lock', 'c' );
-	}
-
-	public function readlock () {
-		if( $this->locked )
-			throw new Exception( 'Read lock error.' );
-
-		if( !flock( $this->handle, LOCK_SH ) )
-			throw new Exception( 'Lock operation failed.' );
-
-		$this->iswrite = false;
-		$this->locked = true;
-	}
-
-	public function writelock () {
-		if( $this->locked )
-			throw new Exception( 'Write lock error.' );
-
-		if( !flock( $this->handle, LOCK_EX ) )
-			throw new Exception( 'Lock operation failed.' );
-
-		$this->iswrite = true;
-		$this->locked = true;
-	}
-
-	public function readunlock () {
-		if( !$this->locked || $this->iswrite )
-			throw new Exception( 'Read unlock error.' );
-
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-
-		$this->iswrite = false;
-		$this->locked = false;
-	}
-
-	public function writeunlock () {
-		if( !$this->locked || !$this->iswrite )
-			throw new Exception( 'Write unlock error.' );
-
-		if( !flock( $this->handle, LOCK_UN ) )
-			throw new Exception( 'Unlock operation error.' );
-		
-		$this->iswrite = false;
-		$this->locked = false;
-	}
-
-	public function __destruct () {
-		fclose( $this->handle );
-	}
-}
-
-$readwrite_queue = new MyRWLock( "ChessDBLockQueue2" );
-
 function count_pieces( $fen ) {
 	@list( $board, $color ) = explode( " ", $fen );
 	$pieces = 'kqrbnp';
@@ -146,44 +86,14 @@ function updateScore( $redis, $minbinfen, $minindex, $updatemoves ) {
 	}
 }
 function updateQueue( $row, $key, $priority ) {
-	global $readwrite_queue;
-	$m = new MongoClient('mongodb://localhost');
-	$collection = $m->selectDB('cdbqueue')->selectCollection('queuedb');
+	$fq = new FlexibleQueueDBClient( '/tmp/cqueue.sock' );
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	if( $minindex == 0 ) {
-		$readwrite_queue->readlock();
-		do {
-			try {
-				$tryAgain = false;
-				if( $priority ) {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				} else {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( $key => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				}
-			}
-			catch( MongoDuplicateKeyException $e ) {
-				$tryAgain = true;
-			}
-		} while($tryAgain);
-		$readwrite_queue->readunlock();
+		$fq->push( 0, $minbinfen, $key, $priority, time() + 7200, true, true );
 	}
 	else if( $minindex == 1 ) {
-		$readwrite_queue->readlock();
-		do {
-			try {
-				$tryAgain = false;
-				if( $priority ) {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( 'p' => 1, cbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				} else {
-					$collection->update( array( '_id' => new MongoBinData($minbinfen) ), array( '$set' => array( cbgetBWmove( $key ) => 0 ), '$setOnInsert' => array( 'e' => new MongoDate() ) ), array( 'upsert' => true ) );
-				}
-			}
-			catch( MongoDuplicateKeyException $e ) {
-				$tryAgain = true;
-			}
-		} while($tryAgain);
-		$readwrite_queue->readunlock();
+		$fq->push( 0, $minbinfen, cbgetBWmove( $key ), $priority, time() + 7200, true, true );
 	}
 }
 function getMoves( $redis, $row, $depth ) {
@@ -378,12 +288,6 @@ try{
 	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
 	echo 'ok' . "\n";
 
-}
-catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
-}
-catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
 }
 catch (Exception $e) {
 	echo 'Error: ' . $e->getMessage();

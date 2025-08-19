@@ -377,12 +377,6 @@ try{
 	echo 'ok' . "\n";
 
 }
-catch (MongoException $e) {
-	echo 'Error: ' . $e->getMessage();
-}
-catch (RedisException $e) {
-	echo 'Error: ' . $e->getMessage();
-}
 catch (Exception $e) {
 	echo 'Error: ' . $e->getMessage();
 }
