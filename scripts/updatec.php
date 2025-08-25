@@ -112,7 +112,7 @@ function shuffle_assoc(&$array) {
 	$array = $new;
 	return true;
 }
-function getMoves( $redis, $redis2, $row, $depth, $progress, $total ) {
+function getMoves( $redis, $redis2, $row, $frc, $depth, $progress, $total ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
@@ -154,11 +154,11 @@ function getMoves( $redis, $redis2, $row, $depth, $progress, $total ) {
 	if( $recurse && $depth < 30000 )
 	{
 /*
-		$errors = array_diff_key( $moves1, cbmovegen( $row ) );
+		$errors = array_diff_key( $moves1, cbmovegen( $row, $frc ) );
 		if( count( $errors ) ) {
 			echo $row . "\n";
 			delScore( $redis, $minbinfen, $minindex, $errors );
-			$moves1 = array_intersect_key( $moves1, cbmovegen( $row ) );
+			$moves1 = array_intersect_key( $moves1, cbmovegen( $row, $frc ) );
 		}
 */
 		$updatemoves = array();
@@ -207,7 +207,7 @@ function getMoves( $redis, $redis2, $row, $depth, $progress, $total ) {
 					}
 					if( isset( $finals[ $key ] ) )
 						continue;
-					$nextfen = cbmovemake( $row, $key );
+					list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 					if( count_pieces( $nextfen ) <= 7 ) {
 						if( abs( $item ) < 10000 ) {
 							$egtbresult = json_decode( file_get_contents( 'http://localhost:9000/standard?fen=' . urlencode( $nextfen ) ), TRUE );
@@ -252,7 +252,7 @@ function getMoves( $redis, $redis2, $row, $depth, $progress, $total ) {
 					}
 					$GLOBALS['historytt'][$row]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$row]['move'] = $key;
-					$nextmoves = getMoves( $redis, $redis2, $nextfen, $depth + 1, $progress, $total );
+					$nextmoves = getMoves( $redis, $redis2, $nextfen, $nextfrc, $depth + 1, $progress, $total );
 					unset( $GLOBALS['historytt'][$row] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
 						$GLOBALS['looptt'][$row][$key] = $GLOBALS['loopcheck'];
@@ -418,7 +418,7 @@ try{
 	$GLOBALS['last_counter'] = 0;
 	$GLOBALS['looptt'] = array();
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
-	getMoves( $redis, $redis2, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0, 0, 0 );
+	getMoves( $redis, $redis2, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', false, 0, 0, 0 );
 	echo 'ok' . "\n";
 
 }

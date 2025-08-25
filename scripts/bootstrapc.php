@@ -96,7 +96,7 @@ function updateQueue( $row, $key, $priority ) {
 		$fq->push( 0, $minbinfen, cbgetBWmove( $key ), $priority, time() + 7200, true, true );
 	}
 }
-function getMoves( $redis, $row, $depth ) {
+function getMoves( $redis, $row, $frc, $depth ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
@@ -147,7 +147,7 @@ function getMoves( $redis, $row, $depth ) {
 			if( $depth < 5 )
 			{
 				asort( $moves1 );
-				$moves2 = cbmovegen( $row );
+				$moves2 = cbmovegen( $row, $frc );
 				foreach( $moves1 as $key => $item ) {
 					$moves2[ $key ] = $item;
 				}
@@ -157,10 +157,10 @@ function getMoves( $redis, $row, $depth ) {
 						$GLOBALS['curmove'] = $key;
 					if( isset( $finals[ $key ] ) )
 						continue;
-					$nextfen = cbmovemake( $row, $key );
+					list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 					$GLOBALS['historytt'][$row]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$row]['move'] = $key;
-					$nextmoves = getMoves( $redis, $nextfen, $depth + 1 );
+					$nextmoves = getMoves( $redis, $nextfen, $nextfrc, $depth + 1 );
 					unset( $GLOBALS['historytt'][$row] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
 						$GLOBALS['looptt'][$row][$key] = $GLOBALS['loopcheck'];
@@ -198,7 +198,7 @@ function getMoves( $redis, $row, $depth ) {
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count_pieces( $nextfen ) >= 22 && count_attackers( $nextfen ) >= 10 && count( cbmovegen( $nextfen ) ) > 0 )
+					else if( count_pieces( $nextfen ) >= 22 && count_attackers( $nextfen ) >= 10 && count( cbmovegen( $nextfen, $nextfrc ) ) > 0 )
 					{
 						updateQueue( $row, $key, false );
 					}
@@ -285,7 +285,7 @@ try{
 	$redis->pconnect('192.168.1.2', 8888);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
-	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
+	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', false, 0 );
 	echo 'ok' . "\n";
 
 }

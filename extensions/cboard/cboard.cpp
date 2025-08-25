@@ -7,19 +7,6 @@ extern "C" {
 }
 #include "php_cboard.h"
 
-#include <cctype>
-#include <string>
-#include <stdlib.h>
-#include <vector>
-
-extern "C" {
-#include "fen.h"
-#include "position.h"
-#include "generate.h"
-#include "print.h"
-#include "parse.h"
-}
-
 #include "cboard_arginfo.h"
 
 zend_function_entry cboard_functions[] = {
@@ -62,43 +49,441 @@ ZEND_GET_MODULE(cboard)
 }
 #endif
 
+#include <string>
+#include <vector>
+#include <array>
+#include <cctype>
+#include <algorithm>
+#include <bitset>
+
+#include "chess.hpp"   // Disservin's header-only library
+
+using namespace chess;
+
+// -------------------- utils --------------------
+static inline uint8_t files_mask(Bitboard bb) {
+	uint8_t m = 0;
+	while (bb) m |= static_cast<uint8_t>(1u << Square(bb.pop()).file());
+	return m;
+}
+constexpr inline bool is_file_tok(char c) {
+	return (c >= 'A' && c <= 'H') || (c >= 'a' && c <= 'h');
+}
+constexpr inline bool is_fen_tok(char c) {
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '/' || c == '-';
+}
+constexpr inline bool is_sep_tok(char c) {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '_' || c == '+';
+}
+static std::vector<std::string> split_ws(const std::string& s) {
+	std::vector<std::string> out; std::string cur; cur.reserve(s.size());
+	for (char c : s) {
+		if (is_sep_tok(c)) {
+			if (!cur.empty()) { out.push_back(cur); cur.clear(); }
+		}
+		else if (is_fen_tok(c)) { cur.push_back(c); }
+	}
+	if (!cur.empty()) out.push_back(cur);
+	return out;
+}
+static inline bool aligned3(Square a, Square k, Square b) {
+	// same file or rank
+	if (a.file() == k.file() && k.file() == b.file()) return true;
+	if (a.rank() == k.rank() && k.rank() == b.rank()) return true;
+	// same diagonal / anti-diagonal
+	if (a.diagonal_of() == k.diagonal_of() && k.diagonal_of() == b.diagonal_of()) return true;
+	if (a.antidiagonal_of() == k.antidiagonal_of() && k.antidiagonal_of() == b.antidiagonal_of()) return true;
+	return false;
+}
+// -------------------- sanitizer --------------------
+// Returns empty err on success; may normalize EP to "-"; returns normalized fen via reference.
+static std::string sanitize_xfen(std::string& fen, bool& implied960) {
+	auto f = split_ws(fen);
+	if (f.size() < 2) return "FEN must have at least 2 fields";
+
+	// 1) piece placement
+	const std::string& board = f[0];
+	int rank = 7, file = 0;
+
+	int wKing = 0, bKing = 0;
+	std::array<int, 2> pawn_count{ 0,0 };
+	std::array<int, 2> pawns_on_edge{ 0,0 };
+	enum { P = 0, N, B, R, Q, K };
+	std::array<int, 6> wc{}; std::array<int, 6> bc{};
+
+	// Build bitboards directly during parsing
+	Bitboard WP = 0, WN = 0, WB = 0, WR = 0, WQ = 0, WK = 0;
+	Bitboard BP = 0, BN = 0, BBb = 0, BR = 0, BQ = 0, BK = 0;
+	auto put = [&](char c)->const char* {
+		const int sqi = rank * 8 + file;
+		const Bitboard m = Bitboard(1ull) << sqi;
+
+		switch (c) {
+		case 'K': ++wKing; ++wc[K];	WK |= m; break;
+		case 'Q': ++wc[Q];			WQ |= m; break;
+		case 'R': ++wc[R];			WR |= m; break;
+		case 'B': ++wc[B];			WB |= m; break;
+		case 'N': ++wc[N];			WN |= m; break;
+		case 'P':
+			++pawn_count[0]; ++wc[P];
+			if (rank == 0 || rank == 7) ++pawns_on_edge[0];
+			WP |= m; break;
+
+		case 'k': ++bKing; ++bc[K];	BK |= m; break;
+		case 'q': ++bc[Q];			BQ |= m; break;
+		case 'r': ++bc[R];			BR |= m; break;
+		case 'b': ++bc[B];			BBb |= m; break;
+		case 'n': ++bc[N];			BN |= m; break;
+		case 'p':
+			++pawn_count[1]; ++bc[P];
+			if (rank == 0 || rank == 7) ++pawns_on_edge[1];
+			BP |= m; break;
+
+		default:
+			return "Illegal piece char in placement";
+		}
+		++file;
+		return nullptr;
+		};
+
+	for (size_t i = 0; i < board.size(); ++i) {
+		char c = board[i];
+		if (c == '/') {
+			if (file != 8) return "Each rank must sum to 8";
+			if (--rank < 0) return "Too many ranks";
+			file = 0; continue;
+		}
+		if (std::isdigit((unsigned char)c)) {
+			int n = c - '0';
+			if (n < 1 || n > 8) return "Digit in placement must be 1..8";
+			if (file + n > 8)   return "Rank overflows 8 files";
+			file += n; continue;
+		}
+		if (file >= 8) return "Too many files in a rank";
+
+		if (const char* err = put(c)) return err;
+	}
+	if (rank != 0 || file != 8) return "Placement must be 8 ranks of 8 files";
+	if (wKing != 1 || bKing != 1) return "Must have exactly one king per side";
+	if (pawns_on_edge[0] || pawns_on_edge[1]) return "Pawns cannot be on rank 1/8";
+	if (pawn_count[0] > 8 || pawn_count[1] > 8) return "Too many pawns";
+
+	auto sum6 = [](const std::array<int, 6>& a) { int s = 0; for (int v : a) s += v; return s; };
+	if (sum6(wc) > 16 || sum6(bc) > 16) return "Too many pieces for a side (>16)";
+	auto over_type_caps = [](const std::array<int, 6>& c)->const char* {
+		if (c[Q] > 9) return "Too many queens";
+		if (c[R] > 10) return "Too many rooks";
+		if (c[B] > 10) return "Too many bishops";
+		if (c[N] > 10) return "Too many knights";
+		if (c[K] != 1) return "Must have exactly one king per side";
+		return nullptr;
+		};
+	if (const char* msg = over_type_caps(wc)) return msg;
+	if (const char* msg = over_type_caps(bc)) return msg;
+	auto promos_needed = [](const std::array<int, 6>& c)->int {
+		int n = 0;
+		n += (c[Q] > 1) ? (c[Q] - 1) : 0;
+		n += (c[R] > 2) ? (c[R] - 2) : 0;
+		n += (c[B] > 2) ? (c[B] - 2) : 0;
+		n += (c[N] > 2) ? (c[N] - 2) : 0;
+		return n;
+		};
+	int w_promos = promos_needed(wc);
+	int b_promos = promos_needed(bc);
+	if (w_promos > 8 - wc[P]) return "White promotions exceed missing pawns";
+	if (b_promos > 8 - bc[P]) return "Black promotions exceed missing pawns";
+
+	// 2) active color
+	const std::string& active = f[1];
+	if (!(active == "w" || active == "b")) return "Active color must be 'w' or 'b'";
+
+	// 3) Tactical impossibilities via Disservin bitboards
+
+	const Bitboard WHITE = WP | WN | WB | WR | WQ | WK;
+	const Bitboard BLACK = BP | BN | BBb | BR | BQ | BK;
+	const Bitboard OCC = WHITE | BLACK;
+	const int wk_sq_i = WK ? WK.lsb() : -1;
+	const int bk_sq_i = BK ? BK.lsb() : -1;
+	if (wk_sq_i < 0 || bk_sq_i < 0) return "Missing king";
+
+	// Kings cannot be adjacent
+	if (attacks::king(Square(wk_sq_i)) & BK) return "Kings cannot be adjacent";
+
+	auto attackers_on_king = [&](int ksq, bool by_white) {
+		Bitboard bb = 0;
+		bb |= attacks::knight(Square(ksq)) & (by_white ? WN : BN);
+		bb |= attacks::pawn(by_white ? Color::BLACK : Color::WHITE, Square(ksq)) & (by_white ? WP : BP);
+		bb |= attacks::rook(Square(ksq), OCC) & (by_white ? (WR | WQ) : (BR | BQ));
+		bb |= attacks::bishop(Square(ksq), OCC) & (by_white ? (WB | WQ) : (BBb | BQ));
+		return bb;
+		};
+	Bitboard w_checks = attackers_on_king(wk_sq_i, /*by_white=*/false);
+	Bitboard b_checks = attackers_on_king(bk_sq_i, /*by_white=*/true);
+
+	const int w_total = w_checks.count();
+	const int b_total = b_checks.count();
+
+	if ((active == "w" && b_total > 0) || (active == "b" && w_total > 0)) return "Side not to move is in check";
+	if (w_total > 2 || b_total > 2) return "More than double check is impossible";
+
+	auto aligned_checks = [&](Bitboard bb, int ksq) -> bool {
+		if (bb.count() == 2) {
+			Bitboard t = bb;
+			const Square sq_a = t.pop();
+			const Square sq_b = t.pop();
+			if (aligned3(sq_a, Square(ksq), sq_b))
+				return true;
+		}
+		return false;
+		};
+	if (aligned_checks(w_checks, wk_sq_i)) return "Discovered checkers cannot be aligned";
+	if (aligned_checks(b_checks, bk_sq_i)) return "Discovered checkers cannot be aligned";
+
+	// 4) castling: validate, infer 960 if needed, normalize preferring KQkq,
+	// but use letter tokens when ambiguity requires them.
+	if (f.size() > 2) {
+		std::string& cr_ref = f[2];
+
+		if (cr_ref != "-") {
+			// Step 1: filter allowed tokens & dedup
+			std::string src = cr_ref;
+			std::string cr_filt; cr_filt.reserve(src.size());
+			std::bitset<256> seen;
+			for (unsigned char c0 : src) {
+				bool ok = (c0 == 'K' || c0 == 'Q' || c0 == 'k' || c0 == 'q' || is_file_tok(c0));
+				if (ok && !seen[c0]) { cr_filt.push_back(char(c0)); seen[c0] = true; }
+			}
+			cr_ref = cr_filt.empty() ? std::string("-") : cr_filt;
+		}
+
+		if (cr_ref != "-") {
+			const int wf = Square(wk_sq_i).file();
+			const int bf = Square(bk_sq_i).file();
+
+			const uint8_t wHomeRooks = files_mask(WR & Bitboard(Rank::RANK_1));
+			const uint8_t bHomeRooks = files_mask(BR & Bitboard(Rank::RANK_8));
+
+			// Step 2: validate letter tokens against actual home-rank rooks
+			{
+				std::string kept; kept.reserve(cr_ref.size());
+				for (char c : cr_ref) {
+					if (is_file_tok(c)) {
+						const unsigned char cu = static_cast<unsigned char>(c);
+						const int fidx = std::tolower(cu) - 'a';
+						const bool white = std::isupper(cu);
+						const uint8_t mask = white ? wHomeRooks : bHomeRooks;
+
+						bool ok = (fidx >= 0 && fidx < 8) && (mask & (1u << fidx));
+						if (ok) kept.push_back(c);
+					}
+					else {
+						kept.push_back(c);
+					}
+				}
+				cr_ref = kept.empty() ? std::string("-") : kept;
+			}
+			if (cr_ref != "-") {
+				// Step 3: parse requested sides & specific letters from input
+				const bool wantWK = cr_ref.find('K') != std::string::npos;
+				const bool wantWQ = cr_ref.find('Q') != std::string::npos;
+				const bool wantBK = cr_ref.find('k') != std::string::npos;
+				const bool wantBQ = cr_ref.find('q') != std::string::npos;
+				uint8_t reqWMask = 0, reqBMask = 0; // bit f set iff file f requested
+				for (char c : cr_ref) if (is_file_tok(c)) {
+					const unsigned char cu = static_cast<unsigned char>(c);
+					const int fidx = std::tolower(cu) - 'a';
+					if (fidx >= 0 && fidx < 8) {
+						if (std::isupper(cu))	reqWMask |= (1u << fidx);
+						else					reqBMask |= (1u << fidx);
+					}
+				}
+
+				// Step 4: collect candidate rook files per side (relative to king)
+
+				auto candidates_side = [&](bool white, bool kingSide) -> std::vector<int> {
+					std::vector<int> out;
+					const int kf = white ? wf : bf;
+					const uint8_t mask = white ? wHomeRooks : bHomeRooks;
+					if (kf < 0) return out;
+					if (kingSide) {
+						for (int f = 7; f > kf; --f) if (mask & (1u << f)) out.push_back(f);
+					}
+					else {
+						for (int f = 0; f < kf; ++f) if (mask & (1u << f)) out.push_back(f);
+					}
+					// already naturally ordered
+					return out;
+					};
+
+				std::string wLtrs, bLtrs;
+				// cand: sorted ascending files for that side;
+				auto emit_side = [&](bool white, bool kingSide,
+					bool sideRequested,									// 'K'/'Q' (or 'k'/'q') present?
+					uint8_t reqMask) -> bool							// requested files for this color (letters only)
+					{
+						auto cand = candidates_side(white, kingSide);
+						if (!sideRequested && !reqMask) return true;	// nothing requested for this wing
+						if (cand.empty()) return true;					// no rook on this wing
+
+						auto& out = white ? wLtrs : bLtrs;
+						bool found = false;
+						for (int f : cand) {
+							if (f == cand.front()) {					// outermost, A/H implies KQ/kq
+								if (sideRequested || (reqMask & (1u << f))) {
+									out.push_back(white
+										? (kingSide ? 'K' : 'Q')
+										: (kingSide ? 'k' : 'q')
+									);
+									found = true;
+								}
+								continue;
+							}
+							if (!(reqMask & (1u << f))) continue;		// keep only specifically requested files if any
+							if (f == 0 || f == 7) continue;				// emit letters only for B..G/b..g
+							if (!found) {
+								out.push_back(white ? char('A' + f) : char('a' + f));
+								found = true;
+							}
+							else
+								return false;
+						}
+						return true;
+					};
+				// Step 5: build normalized CR
+				if (!emit_side(true, true, wantWK, reqWMask)
+					|| !emit_side(true, false, wantWQ, reqWMask)
+					|| !emit_side(false, true, wantBK, reqBMask)
+					|| !emit_side(false, false, wantBQ, reqBMask)
+					) return "Too many castling rights";
+
+				if (wLtrs.empty() && bLtrs.empty()) {
+					cr_ref = "-";
+				}
+				else {
+					std::string norm; norm.reserve(4);
+					norm += wLtrs; // K,Q,B..G
+					norm += bLtrs; // k,q,b..g
+					cr_ref.swap(norm);
+				}
+				// Step 6: infer 960
+				implied960 = false;
+				// letters in output → clearly 960 needed for disambiguation
+				for (char c : cr_ref) if (is_file_tok(c)) { implied960 = true; break; }
+				// king not on e-file while having rights
+				if (!implied960) {
+					const bool w_wantCR = wantWK || wantWQ;
+					const bool b_wantCR = wantBK || wantBQ;
+					if ((wf != 4 && w_wantCR) || (bf != 4 && b_wantCR)) {
+						implied960 = true;
+					}
+				}
+				// classic corner-rook feasibility check (if generics exist but corners missing)
+
+				auto corner_ok = [&](bool white, bool kingSide) -> bool {
+					int kf = white ? wf : bf;
+					if (kf != 4) return false; // classic expects king on e-file
+					uint8_t mask = white ? wHomeRooks : bHomeRooks;
+					int fidx = kingSide ? 7 : 0;
+					return (mask & (1u << fidx)) != 0;
+					};
+
+				if (!implied960) {
+					if ((cr_ref.find('K') != std::string::npos && !corner_ok(true, true)) ||
+						(cr_ref.find('Q') != std::string::npos && !corner_ok(true, false)) ||
+						(cr_ref.find('k') != std::string::npos && !corner_ok(false, true)) ||
+						(cr_ref.find('q') != std::string::npos && !corner_ok(false, false))) {
+						implied960 = true;
+					}
+				}
+			}
+		}
+		else {
+			implied960 = false;
+		}
+	}
+	else {
+		f.push_back("-");
+		implied960 = false;
+	}
+
+	// 5) En passant — delegate to movegen: keep EP iff a legal EP capture exists
+	// Requires: #include "chess.hpp"
+	if (f.size() > 3) {
+		std::string& ep = f[3];
+
+		if (ep != "-") {
+			bool keep = false;
+			if (Square::is_valid_string_sq(ep)) {
+				// Build a minimal FEN for the position at hand.
+				// NOTE: Set castling to '-' intentionally; it doesn't affect EP legality and sidesteps X-FEN parsing differences.
+				const std::string fen_board = f[0];
+				const std::string fen_turn = f[1];
+				const std::string fen_castling = "-";
+				const std::string fen_ep = ep;
+
+				const std::string fen =
+					fen_board + " " + fen_turn + " " + fen_castling + " " + fen_ep;
+
+				// Construct board and ask movegen for legal moves.
+				Board b = Board(fen);
+				Movelist ml;
+				movegen::legalmoves(ml, b);
+
+				// Keep EP iff there's a legal ENPASSANT move to that exact EP square.
+				const Square epSq = b.enpassantSq();
+				for (const Move& m : ml) {
+					if (m.typeOf() == Move::ENPASSANT && m.to() == epSq) {
+						keep = true;
+						break;
+					}
+				}
+			}
+			if (!keep) ep = "-";
+		}
+	}
+	else {
+		f.push_back("-");
+	}
+	std::string norm = f[0] + " " + f[1] + " " + f[2] + " " + f[3];
+	fen.swap(norm);
+	return {};
+}
+
 PHP_MINIT_FUNCTION(cboard)
 {
-	chess_generate_init();
 	return SUCCESS;
 }
 PHP_FUNCTION(cbgetfen)
 {
 	char* fenstr;
 	size_t fenstr_len;
+	array_init(return_value);
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &fenstr, &fenstr_len) != FAILURE) {
-		ChessPosition cp;
-		if(chess_fen_load(fenstr, &cp))
+		std::string fen(fenstr, fenstr_len);
+		bool implied960;
+		if (sanitize_xfen(fen, implied960).empty())
 		{
-			char fen[CHESS_FEN_MAX_LENGTH];
-			chess_fen_save(&cp, fen);
-			RETURN_STRING(fen);
+			add_next_index_stringl(return_value, fen.c_str(), fen.size());
+			add_next_index_bool(return_value, implied960);
+			return;
 		}
 	}
-	RETURN_NULL();
+	add_next_index_null(return_value);
+	add_next_index_null(return_value);
 }
 PHP_FUNCTION(cbmovegen)
 {
 	char* fenstr;
 	size_t fenstr_len;
+	zend_bool frc = 0;
 	array_init(return_value);
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &fenstr, &fenstr_len) != FAILURE) {
-		ChessPosition cp;
-		if(chess_fen_load(fenstr, &cp)) {
-			ChessMoveGenerator generator;
-			ChessMove move;
-			chess_move_generator_init(&generator, &cp);
-			while ((move = chess_move_generator_next(&generator)))
-			{
-				char movestr[6];
-				chess_print_move(move, movestr);
-				add_assoc_long(return_value, movestr, 0);
-			}
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|b", &fenstr, &fenstr_len, &frc) != FAILURE) {
+		Board b = Board(std::string_view(fenstr, fenstr_len), frc);
+		Movelist ml;
+		movegen::legalmoves(ml, b);
+		for (const Move& m : ml) {
+			std::string movestr = uci::moveToUci(m, frc);
+			add_assoc_long_ex(return_value, movestr.c_str(), movestr.size(), 0);
 		}
 	}
 }
@@ -106,11 +491,10 @@ PHP_FUNCTION(cbincheck)
 {
 	char* fenstr;
 	size_t fenstr_len;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &fenstr, &fenstr_len) != FAILURE) {
-		ChessPosition cp;
-		if(chess_fen_load(fenstr, &cp)) {
-			RETURN_BOOL(chess_position_is_check(&cp));
-		}
+	zend_bool frc = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|b", &fenstr, &fenstr_len, &frc) != FAILURE) {
+		Board b = Board(std::string_view(fenstr, fenstr_len), frc);
+		RETURN_BOOL(b.inCheck());
 	}
 	RETURN_NULL();
 }
@@ -120,42 +504,49 @@ PHP_FUNCTION(cbmovemake)
 	size_t fenstr_len;
 	char* movestr;
 	size_t movestr_len;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ss", &fenstr, &fenstr_len, &movestr, &movestr_len) != FAILURE) {
-		ChessPosition cp;
-		ChessMove move;
-		if(chess_fen_load(fenstr, &cp) && chess_parse_move(movestr, &cp, &move) == CHESS_PARSE_MOVE_OK) {
-			char fen[CHESS_FEN_MAX_LENGTH];
-			chess_position_make_move(&cp, move);
-			chess_fen_save(&cp, fen);
-			RETURN_STRING(fen);
+	zend_bool frc = 0;
+	array_init(return_value);
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ss|b", &fenstr, &fenstr_len, &movestr, &movestr_len, &frc) != FAILURE) {
+		Board b = Board(std::string_view(fenstr, fenstr_len), frc);
+		Move move = uci::uciToMove(b, std::string_view(movestr, movestr_len));
+		if (move != Move::NO_MOVE) {
+			b.makeMove(move);
+			std::string fen = b.getFen(false);
+			bool implied960;
+			// if we don't re-sanitize, then need EP filter + standard compatible check
+			if (sanitize_xfen(fen, implied960).empty())
+			{
+				add_next_index_stringl(return_value, fen.c_str(), fen.size());
+				add_next_index_bool(return_value, implied960);
+				return;
+			}
 		}
 	}
-	RETURN_NULL();
+	add_next_index_null(return_value);
+	add_next_index_null(return_value);
 }
 PHP_FUNCTION(cbmovesan)
 {
 	char* fenstr;
 	size_t fenstr_len;
 	zval* arr;
+	zend_bool frc = 0;
 	array_init(return_value);
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sa", &fenstr, &fenstr_len, &arr) != FAILURE) {
-		ChessPosition cp;
-		if(chess_fen_load(fenstr, &cp)) {
-			HashTable* arr_hash = Z_ARRVAL_P(arr);
-			HashPosition pointer;
-			zval* data;
-			for(zend_hash_internal_pointer_reset_ex(arr_hash, &pointer); data = zend_hash_get_current_data_ex(arr_hash, &pointer); zend_hash_move_forward_ex(arr_hash, &pointer)) {
-				if (Z_TYPE_P(data) == IS_STRING) {
-					ChessMove move;
-					if(chess_parse_move(Z_STRVAL_P(data), &cp, &move) == CHESS_PARSE_MOVE_OK) {
-						char san[10];
-						chess_print_move_san(move, &cp, san);
-						add_next_index_string(return_value, san);
-						chess_position_make_move(&cp, move);
-					}
-					else
-						break;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "sa|b", &fenstr, &fenstr_len, &arr, &frc) != FAILURE) {
+		Board b = Board(std::string_view(fenstr, fenstr_len), frc);
+		HashTable* arr_hash = Z_ARRVAL_P(arr);
+		HashPosition pointer;
+		zval* data;
+		for (zend_hash_internal_pointer_reset_ex(arr_hash, &pointer); data = zend_hash_get_current_data_ex(arr_hash, &pointer); zend_hash_move_forward_ex(arr_hash, &pointer)) {
+			if (Z_TYPE_P(data) == IS_STRING) {
+				Move move = uci::uciToMove(b, std::string_view(Z_STRVAL_P(data), Z_STRLEN_P(data)));
+				if (move != Move::NO_MOVE) {
+					std::string san = uci::moveToSan(b, move);
+					add_next_index_stringl(return_value, san.c_str(), san.size());
+					b.makeMove(move);
 				}
+				else
+					break;
 			}
 		}
 	}
@@ -385,7 +776,7 @@ PHP_FUNCTION(cbhexfen2fen)
 	size_t fenstr_len;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &fenstr, &fenstr_len) != FAILURE) {
 		int index = 0;
-		char fen[CHESS_FEN_MAX_LENGTH];
+		char fen[128];
 		int tmpidx = 0;
 		for(int sq = 0; sq < 64; sq++)
 		{
@@ -473,8 +864,8 @@ PHP_FUNCTION(cbgetBWfen)
 	char* fenstr;
 	size_t fenstr_len;
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &fenstr, &fenstr_len) != FAILURE) {
-		char fen[CHESS_FEN_MAX_LENGTH];
-		char tmp[CHESS_FEN_MAX_LENGTH];
+		char fen[128];
+		char tmp[128];
 		int index = 0;
 		int tmpidx = 0;
 		fen[0] = '\0';

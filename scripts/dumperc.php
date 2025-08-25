@@ -61,7 +61,7 @@ function updatePly( $redis, $minbinfen, $ply ) {
 	if( $redis->hSet( $minbinfen, 'a0a0', $ply ) === FALSE )
 		throw new RedisException( 'Server operation error.' );
 }
-function getMoves( $redis, $row, $depth ) {
+function getMoves( $redis, $row, $frc, $depth ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
@@ -127,10 +127,10 @@ function getMoves( $redis, $row, $depth ) {
 			foreach( $moves2 as $key => $item ) {
 				if( isset( $finals[ $key ] ) )
 					continue;
-				$nextfen = cbmovemake( $row, $key );
+				list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 				$GLOBALS['historytt'][$row]['fen'] = $nextfen;
 				$GLOBALS['historytt'][$row]['move'] = $key;
-				$nextmoves = getMoves( $redis, $$nextfen, $depth + 1 );
+				$nextmoves = getMoves( $redis, $nextfen, $nextfrc, $depth + 1 );
 				unset( $GLOBALS['historytt'][$row] );
 				if( isset( $GLOBALS['loopcheck'] ) ) {
 					$GLOBALS['looptt'][$row][$key] = $GLOBALS['loopcheck'];
@@ -209,7 +209,7 @@ try{
 	$redis->pconnect('192.168.1.2', 8888);
 	$GLOBALS['counter'] = 0;
 	$GLOBALS['boardtt'] = new Judy( Judy::BITSET );
-	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', 0 );
+	getMoves( $redis, 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -', false, 0 );
 }
 catch (Exception $e) {
 	echo 'Error: ' . $e->getMessage();

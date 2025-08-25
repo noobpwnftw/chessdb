@@ -336,7 +336,7 @@ function shuffle_assoc(&$array) {
 	$array = $new;
 	return true;
 }
-function getMoves( $redis, $row, $update, $learn, $depth ) {
+function getMoves( $redis, $row, $frc, $update, $learn, $depth ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
@@ -370,8 +370,8 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 			$moves2[ $key ][1] = 0;
 			if( isset( $finals[ $key ] ) )
 				continue;
-			$nextfen = cbmovemake( $row, $key );
-			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false, $depth );
+			list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
+			list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, $nextfrc, false, false, $depth );
 			if( count( $nextmoves ) > 0 ) {
 				arsort( $nextmoves );
 				$nextscore = reset( $nextmoves );
@@ -408,9 +408,9 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 					$updatemoves[ $key ] = $nextscore;
 				}
 			}
-			else if( count( cbmovegen( $nextfen ) ) == 0 )
+			else if( count( cbmovegen( $nextfen, $nextfrc ) ) == 0 )
 			{
-				if( cbincheck( $nextfen ) ) {
+				if( cbincheck( $nextfen, $nextfrc ) ) {
 					$moves1[ $key ] = 30000;
 					$updatemoves[ $key ] = -30000;
 				}
@@ -468,7 +468,7 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 		if( !$memcache_obj->pconnect('unix:///var/run/memcached/memcached.sock', 0) )
 			throw new Exception( 'Memcache error.' );
 		if( count_pieces( $row ) > 7 ) {
-			$allmoves = cbmovegen( $row );
+			$allmoves = cbmovegen( $row, $frc );
 			if( count( $allmoves ) > count( $moves1 ) ) {
 				if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
 					updateSel( $row, 1 );
@@ -480,8 +480,8 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 				}
 				$learnArr = array();
 				foreach( $findmoves as $key => $item ) {
-					$nextfen = cbmovemake( $row, $key );
-					list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false, $depth );
+					list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
+					list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, $nextfrc, false, false, $depth );
 					if( count( $nextmoves ) > 0 || count_pieces( $nextfen ) <= 7 ) {
 						updateQueue( $row, $key, 2 );
 					}
@@ -512,7 +512,7 @@ function getMoves( $redis, $row, $update, $learn, $depth ) {
 	}
 	return array( $moves1, $moves2 );
 }
-function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn, $depth ) {
+function getMovesWithCheck( $redis, $row, $frc, $ply, $enumlimit, $resetlimit, $learn, $depth ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
@@ -597,10 +597,10 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							$GLOBALS['movecnt'][$key] = $GLOBALS['counter1'];
 						continue;
 					}
-					$nextfen = cbmovemake( $row, $key );
+					list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 					$GLOBALS['historytt'][$row]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$row]['move'] = $key;
-					$nextmoves = getMovesWithCheck( $redis, $nextfen, $ply + 1, $enumlimit, false, false, $depth );
+					$nextmoves = getMovesWithCheck( $redis, $nextfen, $nextfrc, $ply + 1, $enumlimit, false, false, $depth );
 					unset( $GLOBALS['historytt'][$row] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
 						$GLOBALS['looptt'][$row][$key] = $GLOBALS['loopcheck'];
@@ -648,9 +648,9 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count( cbmovegen( $nextfen ) ) == 0 )
+					else if( count( cbmovegen( $nextfen, $nextfrc ) ) == 0 )
 					{
-						if( cbincheck( $nextfen ) ) {
+						if( cbincheck( $nextfen, $nextfrc ) ) {
 							$moves1[ $key ] = 30000;
 							$updatemoves[ $key ] = -30000;
 						}
@@ -707,7 +707,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 				}
 
 				if( count_pieces( $row ) > 7 ) {
-					$allmoves = cbmovegen( $row );
+					$allmoves = cbmovegen( $row, $frc );
 					if( count( $allmoves ) > count( $moves1 ) ) {
 						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
 							updateSel( $row, $ply == 0 ? 1 : 0 );
@@ -723,7 +723,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 							}
 							$learnArr = array();
 							foreach( $findmoves as $key => $item ) {
-								$nextfen = cbmovemake( $row, $key );
+								list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 								if( $learn ) {
 									$learnArr['Learn2::' . $nextfen] = array( $row, $key );
 								}
@@ -824,7 +824,7 @@ function getMovesWithCheck( $redis, $row, $ply, $enumlimit, $resetlimit, $learn,
 	}
 	return $moves1;
 }
-function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $depth, &$pv, $stable ) {
+function getAnalysisPath( $redis, $row, $frc, $ply, $enumlimit, $isbest, $learn, $depth, &$pv, $stable ) {
 	$BWfen = cbgetBWfen( $row );
 	list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex );
@@ -896,8 +896,8 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 						$moves3[ $key ][1] = 0;
 						if( isset( $finals[ $key ] ) )
 							continue;
-						$nextfen = cbmovemake( $row, $key );
-						list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, false, false, $depth );
+						list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
+						list( $nextmoves, $variations ) = getMoves( $redis, $nextfen, $nextfrc, false, false, $depth );
 						if( count( $nextmoves ) > 0 ) {
 							arsort( $nextmoves );
 							$nextscore = reset( $nextmoves );
@@ -929,10 +929,10 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 						$isbest = false;
 						continue;
 					}
-					$nextfen = cbmovemake( $row, $key );
+					list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 					$GLOBALS['historytt'][$row]['fen'] = $nextfen;
 					$GLOBALS['historytt'][$row]['move'] = $key;
-					$nextmoves = getAnalysisPath( $redis, $nextfen, $ply + 1, $enumlimit, $isbest, false, $depth, $pv, $stable );
+					$nextmoves = getAnalysisPath( $redis, $nextfen, $nextfrc, $ply + 1, $enumlimit, $isbest, false, $depth, $pv, $stable );
 					$isbest = false;
 					unset( $GLOBALS['historytt'][$row] );
 					if( isset( $GLOBALS['loopcheck'] ) ) {
@@ -973,9 +973,9 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							$updatemoves[ $key ] = $nextscore;
 						}
 					}
-					else if( count( cbmovegen( $nextfen ) ) == 0 )
+					else if( count( cbmovegen( $nextfen, $nextfrc ) ) == 0 )
 					{
-						if( cbincheck( $nextfen ) ) {
+						if( cbincheck( $nextfen, $nextfrc ) ) {
 							$moves1[ $key ] = 30000;
 							$updatemoves[ $key ] = -30000;
 						}
@@ -1032,7 +1032,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 				}
 
 				if( count_pieces( $row ) > 7 ) {
-					$allmoves = cbmovegen( $row );
+					$allmoves = cbmovegen( $row, $frc );
 					if( count( $allmoves ) > count( $moves1 ) ) {
 						if( count_pieces( $row ) >= 10 && count_attackers( $row ) >= 4 && count( $moves1 ) > 0 && count( $moves1 ) < 5 ) {
 							updateSel( $row, $ply == 0 ? 1 : 0 );
@@ -1048,7 +1048,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 							}
 							$learnArr = array();
 							foreach( $findmoves as $key => $item ) {
-								$nextfen = cbmovemake( $row, $key );
+								list( $nextfen, $nextfrc ) = cbmovemake( $row, $key, $frc );
 								if( $learn ) {
 									$learnArr['Learn2::' . $nextfen] = array( $row, $key );
 								}
@@ -1134,7 +1134,7 @@ function getAnalysisPath( $redis, $row, $ply, $enumlimit, $isbest, $learn, $dept
 	return $moves1;
 }
 
-function getEngineMove( $row, $movelist, $maxtime ) {
+function getEngineMove( $row, $frc, $movelist, $maxtime ) {
 	$result = '';
 	$sock = fsockopen('unix:///tmp/ceval.sock');
 	if( $sock ) {
@@ -1246,7 +1246,11 @@ try{
 		if( $isJson )
 			echo '{';
 
-		$row = cbgetfen( $_REQUEST['board'] );
+		list( $row, $frc ) = cbgetfen( $_REQUEST['board'] );
+
+		if( $frc )
+			unset( $row );
+
 		if( isset( $row ) && !empty( $row ) ) {
 			if( isset( $_REQUEST['endgame'] ) ) {
 				$endgame = is_true( $_REQUEST['endgame'] );
@@ -1272,7 +1276,7 @@ try{
 				if( isset( $_REQUEST['move'] ) && !empty( $_REQUEST['move'] ) && count_pieces( $row ) > 7 ) {
 					$BWfen = cbgetBWfen( $row );
 					list( $minbinfen, $minindex ) = getBinFenStorage( array( cbfen2hexfen($row), cbfen2hexfen($BWfen) ) );
-					$moves = cbmovegen( $row );
+					$moves = cbmovegen( $row, $frc );
 					$move = $_REQUEST['move'];
 					if( isset( $moves[$move] ) && isset( $_REQUEST['score'] ) ) {
 						if( isset( $_REQUEST['token'] ) && !empty( $_REQUEST['token'] ) && $_REQUEST['token'] == hash( 'md5', hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD ) . $_REQUEST['board'] . $_REQUEST['move'] . $_REQUEST['score'] ) ) {
@@ -1295,7 +1299,8 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							if( !scoreExists( $redis, $minbinfen, $minindex, $move ) || countAllScores( $redis, cbmovemake( $row, $move ) ) == 0 ) {
+							list( $nextfen, $nextfrc ) = cbmovemake( $row, $move, $frc );
+							if( !scoreExists( $redis, $minbinfen, $minindex, $move ) || countAllScores( $redis, $nextfen ) == 0 ) {
 								updateScore( $redis, $minbinfen, $minindex, array( $move => $score ) );
 								echo 'ok';
 							}
@@ -1315,7 +1320,8 @@ try{
 							}
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							if( !scoreExists( $redis, $minbinfen, $minindex, $move ) || countAllScores( $redis, cbmovemake( $row, $move ) ) == 0 ) {
+							list( $nextfen, $nextfrc ) = cbmovemake( $row, $move, $frc );
+							if( !scoreExists( $redis, $minbinfen, $minindex, $move ) || countAllScores( $redis, $nextfen ) == 0 ) {
 								updateQueue( $row, $move, $priority );
 								if( $isJson )
 									echo '"status":"ok"';
@@ -1361,7 +1367,7 @@ try{
 										echo 'stalemate';
 								}
 								else if( $egtbresult['category'] == 'unknown' ) {
-									$allmoves = cbmovegen( $row );
+									$allmoves = cbmovegen( $row, $frc );
 									if( count( $allmoves ) > 0 ) {
 										if( $showall ) {
 											if( $isJson )
@@ -1377,7 +1383,7 @@ try{
 												else
 													$isfirst = false;
 												if( $isJson )
-													echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
+													echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ), $frc )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
 												else
 													echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
 											}
@@ -1392,7 +1398,7 @@ try{
 										}
 									}
 									else {
-										if( cbincheck( $row ) ) {
+										if( cbincheck( $row, $frc ) ) {
 											if( $isJson )
 												echo '"status":"checkmate"';
 											else
@@ -1696,12 +1702,13 @@ try{
 									if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
 										$movelist = explode( "|", $_REQUEST['movelist'] );
 										$nextfen = $row;
+										$nextfrc = $frc;
 										$movecount = count( $movelist );
 										if( $movecount > 0 && $movecount < 2047 ) {
 											foreach( $movelist as $entry ) {
-												$validmoves = cbmovegen( $nextfen );
+												$validmoves = cbmovegen( $nextfen, $nextfrc );
 												if( isset( $validmoves[$entry] ) )
-													$nextfen = cbmovemake( $nextfen, $entry );
+													list( $nextfen, $nextfrc ) = cbmovemake( $nextfen, $entry, $nextfrc );
 												else {
 													$isvalid = false;
 													break;
@@ -1717,7 +1724,7 @@ try{
 										if( $result === FALSE ) {
 											$memcache_obj->add( 'EngineCount2', 0 );
 											$engcount = $memcache_obj->increment( 'EngineCount2' );
-											$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
+											$result = getEngineMove( $row, $frc, $movelist, 5 - min( 4, $engcount / 2 ) );
 											$memcache_obj->decrement( 'EngineCount2' );
 											$memcache_obj->add( $cachekey, $result, 0, 30 );
 										}
@@ -1743,7 +1750,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, $frc, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
@@ -1797,7 +1804,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, $frc, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
@@ -1850,7 +1857,7 @@ try{
 						else if( $action == 'queryall' ) {
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, true, $learn, 0 );
+							list( $statmoves, $variations ) = getMoves( $redis, $row, $frc, true, $learn, 0 );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
 									echo '"status":"ok","moves":[{';
@@ -1881,14 +1888,14 @@ try{
 									}
 									if( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) {
 										if( $isJson )
-											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+											echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ), $frc )[0] . '","score":' . $score . ',"rank":2,"note":"! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 										else
 											echo 'move:' . $record . ',score:' . $score . ',rank:2,note:! (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 									}
 									else if( $score >= $throttle ) {
 										if( $isfirst || $learn ) {
 											if( $isJson )
-												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ), $frc )[0] . '","score":' . $score . ',"rank":1,"note":"* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 											else
 												echo 'move:' . $record . ',score:' . $score . ',rank:1,note:* (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 										}
@@ -1898,7 +1905,7 @@ try{
 									else {
 										if( $isfirst || $learn ) {
 											if( $isJson )
-												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
+												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ), $frc )[0] . '","score":' . $score . ',"rank":0,"note":"? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')"' . $winrate;
 											else
 												echo 'move:' . $record . ',score:' . $score . ',rank:0,note:? (' . str_pad( $variations[$record][0], 2, '0', STR_PAD_LEFT ) . '-' . str_pad( $variations[$record][1], 2, '0', STR_PAD_LEFT ) . ')' . $winrate;
 										}
@@ -1908,11 +1915,11 @@ try{
 									$isfirst = false;
 								}
 								if( $showall || !$learn ) {
-									$allmoves = cbmovegen( $row );
+									$allmoves = cbmovegen( $row, $frc );
 									foreach( $allmoves as $record => $score ) {
 										if( !isset( $statmoves[$record] ) ) {
 											if( $isJson )
-												echo '},{"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
+												echo '},{"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ), $frc )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
 											else
 												echo '|move:' . $record . ',score:??,rank:0,note:? (??-??)';
 										}
@@ -1936,7 +1943,7 @@ try{
 								}
 							}
 							else {
-								$allmoves = cbmovegen( $row );
+								$allmoves = cbmovegen( $row, $frc );
 								if( count( $allmoves ) > 0 ) {
 									if( $showall ) {
 										if( $isJson )
@@ -1952,7 +1959,7 @@ try{
 											else
 												$isfirst = false;
 											if( $isJson )
-												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ) )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
+												echo '"uci":"' . $record . '","san":"' . cbmovesan( $row, array( $record ), $frc )[0] . '","score":"??","rank":0,"note":"? (??-??)"';
 											else
 												echo 'move:' . $record . ',score:??,rank:0,note:? (??-??)';
 										}
@@ -1967,7 +1974,7 @@ try{
 									}
 								}
 								else {
-									if( cbincheck( $row ) ) {
+									if( cbincheck( $row, $frc ) ) {
 										if( $isJson )
 											echo '"status":"checkmate"';
 										else
@@ -1987,7 +1994,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, $frc, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
 									$finals = array();
@@ -2042,7 +2049,7 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, 0, 20, false, $learn, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, $frc, 0, 20, false, $learn, 0 );
 							if( count( $statmoves ) > 0 && $GLOBALS['counter'] >= 10 && $GLOBALS['counter2'] >= 4 ) {
 								if( count( $statmoves ) > 1 ) {
 									arsort( $statmoves );
@@ -2056,14 +2063,14 @@ try{
 											if( $entry >= $throttle ) {
 												if( !$isfirst ) {
 													if( $isJson )
-														echo '},{"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ) )[0] . '"';
+														echo '},{"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ), $frc )[0] . '"';
 													else
 														echo '|search:' . $key;
 												}
 												else {
 													$isfirst = false;
 													if( $isJson )
-														echo '"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ) )[0] . '"';
+														echo '"uci":"' . $key . '","san":"' . cbmovesan( $row, array( $key ), $frc )[0] . '"';
 													else
 														echo 'search:' . $key;
 												}
@@ -2115,15 +2122,15 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getAnalysisPath( $redis, $row, 0, 200, true, $learn, 0, $pv, $stable );
+							$statmoves = getAnalysisPath( $redis, $row, $frc, 0, 200, true, $learn, 0, $pv, $stable );
 							if( count( $statmoves ) > 0 ) {
 								if( $isJson )
-									echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"],"pvSAN":["' . implode( '","', cbmovesan( $row, $pv ) ) . '"]';
+									echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"],"pvSAN":["' . implode( '","', cbmovesan( $row, $pv, $frc ) ) . '"]';
 								else
 									echo 'score:' . $statmoves[$pv[0]] . ',depth:' . count( $pv ) . ',pv:' . implode( '|', $pv );
 							}
 							else {
-								$allmoves = cbmovegen( $row );
+								$allmoves = cbmovegen( $row, $frc );
 								if( count( $allmoves ) > 0 ) {
 									if( $isJson )
 										echo '"status":"unknown"';
@@ -2131,7 +2138,7 @@ try{
 										echo 'unknown';
 								}
 								else {
-									if( cbincheck( $row ) ) {
+									if( cbincheck( $row, $frc ) ) {
 										if( $isJson )
 											echo '"status":"checkmate"';
 										else
@@ -2149,7 +2156,7 @@ try{
 						else if( $action == 'queryscore' ) {
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							list( $statmoves, $variations ) = getMoves( $redis, $row, true, true, 0 );
+							list( $statmoves, $variations ) = getMoves( $redis, $row, $frc, true, true, 0 );
 							if( count( $statmoves ) > 0 ) {
 								arsort( $statmoves );
 								$maxscore = reset( $statmoves );
@@ -2174,7 +2181,7 @@ try{
 									echo 'eval:' . $maxscore;
 							}
 							else {
-								$allmoves = cbmovegen( $row );
+								$allmoves = cbmovegen( $row, $frc );
 								if( count( $allmoves ) > 0 ) {
 									if( $isJson )
 										echo '"status":"unknown"';
@@ -2182,7 +2189,7 @@ try{
 										echo 'unknown';
 								}
 								else {
-									if( cbincheck( $row ) ) {
+									if( cbincheck( $row, $frc ) ) {
 										if( $isJson )
 											echo '"status":"checkmate"';
 										else
@@ -2202,14 +2209,14 @@ try{
 							$GLOBALS['boardtt'] = new Judy( Judy::STRING_TO_INT );
 							$redis = new Redis();
 							$redis->pconnect('192.168.1.2', 8888, 1.0);
-							$statmoves = getMovesWithCheck( $redis, $row, 0, 200, true, true, 0 );
+							$statmoves = getMovesWithCheck( $redis, $row, $frc, 0, 200, true, true, 0 );
 							if( count( $statmoves ) >= 5 ) {
 								if( $isJson )
 									echo '"status":"ok"';
 								else
 									echo 'ok';
 							}
-							else if( count_pieces( $row ) > 7 && count( cbmovegen( $row ) ) > 0 ) {
+							else if( count_pieces( $row ) > 7 && count( cbmovegen( $row, $frc ) ) > 0 ) {
 								if( isset( $_REQUEST['token'] ) && !empty( $_REQUEST['token'] ) && substr( hash( 'md5', $_REQUEST['board'] . $_REQUEST['token'] ), 0, 2 ) == '00' )
 									updateSel( $row, 2 );
 								else
@@ -2227,12 +2234,13 @@ try{
 								if( isset( $_REQUEST['movelist'] ) && !empty( $_REQUEST['movelist'] ) ) {
 									$movelist = explode( "|", $_REQUEST['movelist'] );
 									$nextfen = $row;
+									$nextfrc = $frc;
 									$movecount = count( $movelist );
 									if( $movecount > 0 && $movecount < 2047 ) {
 										foreach( $movelist as $entry ) {
-											$validmoves = cbmovegen( $nextfen );
+											$validmoves = cbmovegen( $nextfen, $nextfrc );
 											if( isset( $validmoves[$entry] ) )
-												$nextfen = cbmovemake( $nextfen, $entry );
+												list( $nextfen, $nextfrc ) = cbmovemake( $nextfen, $entry, $nextfrc );
 											else {
 												$isvalid = false;
 												break;
@@ -2248,7 +2256,7 @@ try{
 									if( $result === FALSE ) {
 										$memcache_obj->add( 'EngineCount2', 0 );
 										$engcount = $memcache_obj->increment( 'EngineCount2' );
-										$result = getEngineMove( $row, $movelist, 5 - min( 4, $engcount / 2 ) );
+										$result = getEngineMove( $row, $frc, $movelist, 5 - min( 4, $engcount / 2 ) );
 										$memcache_obj->decrement( 'EngineCount2' );
 										$memcache_obj->add( $cachekey, $result, 0, 30 );
 									}
