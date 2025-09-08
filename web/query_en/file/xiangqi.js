@@ -1,6 +1,7 @@
 ﻿var PREFIX = '/';
 var apiurl = new String(PREFIX + 'chessdb.php');
 var statsurl = new String(PREFIX + 'stats.php?lang=1');
+var llmurl = new String(PREFIX + 'llm.php?lang=1');
 var f = 0,
 	iif = 0,
 	kk = 0,
@@ -10,7 +11,9 @@ var f = 0,
 	busy = 0,
 	automove = 0,
 	autotimer = 0,
-	curstep = 0;
+	curstep = 0,
+	llmtimer = 0,
+	llmevt = null;
 var fens = new String();
 var desk = new Array(9);
 var movtable = new Array();
@@ -299,6 +302,10 @@ function RefreshInner() {
 	if(autotimer) {
 		clearTimeout(autotimer);
 		autotimer = 0;
+	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
 	}
 	ClearDot();
 	while (movtable.length) {
@@ -845,6 +852,10 @@ function PreviousStep() {
 		clearTimeout(autotimer);
 		autotimer = 0;
 	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
+	}
 	Vwauto.checked = false;
 	Vbauto.checked = false;
 	
@@ -913,6 +924,10 @@ function NavStep(pos) {
 		clearTimeout(autotimer);
 		autotimer = 0;
 	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
+	}
 	Vwauto.checked = false;
 	Vbauto.checked = false;
 	if(pos == 0) {
@@ -943,7 +958,7 @@ function SyncHistory()
 	} else {
 		s2 = s2 + '<b>&nbsp;&nbsp;===&nbsp;Move History&nbsp;===&nbsp;&nbsp;<\/b>';
 	}
-	s2 = s2 + '<\/div><\/td><\/tr><\/thead><tbody id="movehis" style="margin-top:2px;">';
+	s2 = s2 + '<\/div><\/td><\/tr><\/thead><tbody id="movehis" style="margin-top:2px;height:608px;">';
 	if (prevmove.length != 0) {
 		for (var x = 0; x < prevmove.length; x += 2) {
 			s2 = s2 + '<tr style="height: 20px;"><td><span style="display: inline-block; min-width:30px; text-align:right; background-color: inherit;">' + (x / 2 + 1) + '.&nbsp;<\/span><div onClick="nclick(event, ' + (x + 1) + ')" onContextMenu="ncontext(event)">';
@@ -965,12 +980,19 @@ function SyncHistory()
 			s2 = s2 + '<\/td><\/tr>';
 		}
 		s2 = s2 + '<\/tbody><\/table>';
-		Vout2.innerHTML = s2;
 		var Vcontainer = document.getElementById('movehis');
+		var oldScrollTop = Vcontainer.scrollTop;
 		var containerRect = Vcontainer.getBoundingClientRect();
-		var curRect = document.getElementById('cur').getBoundingClientRect();
-		if (curRect.top < containerRect.top || curRect.bottom > containerRect.bottom) {
-			Vcontainer.scrollTop = curRect.top;
+		Vout2.innerHTML = s2;
+		Vcontainer = document.getElementById('movehis');
+		var Vcur = document.getElementById('cur');
+		if (Vcontainer.contains(Vcur)) {
+			var curRect = Vcur.getBoundingClientRect();
+			if (curRect.top < containerRect.top + oldScrollTop || curRect.bottom > containerRect.bottom + oldScrollTop) {
+				Vcontainer.scrollTop = curRect.top - containerRect.top;
+			} else {
+				Vcontainer.scrollTop = oldScrollTop;
+			}
 		}
 	} else {
 		s2 = s2 + '<\/tbody><\/table>';
@@ -1039,7 +1061,7 @@ function GetMoveList(s) {
 		ml = new String();
 	a = trimNull(s).split('|');
 	if( !Vhidescore.checked ) {
-		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:20px;"><td><b>Move<\/b><\/td><td><b>Rank<\/b><\/td><td><b>Score<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>Notes<\/b><\/td><\/tr><\/thead><tbody style="height:640px">';
+		s = '<table cellspacing="0" style="text-align:center;" class="movelist"><thead><tr style="height:20px;"><td><b>Move<\/b><\/td><td><b>Rank<\/b><\/td><td><b>Score<\/b><\/td><td style="min-width:100px;padding-right:20px;"><b>Notes<\/b><\/td><\/tr><\/thead><tbody style="height:520px">';
 		var skip = 0;
 		for (var x = 0; x < a.length; x++) {
 			vs = a[x];
@@ -1069,6 +1091,29 @@ function GetMoveList(s) {
 		} else {
 			s = s + '<\/tbody><\/table>';
 			Vout.innerHTML = s;
+			var llmout = document.createElement("span");
+			llmout.style = "display:block;height:111px;width:360px;margin:9px 0px 0px;overflow-y:auto;user-select:text;scrollbar-gutter:stable;line-height:22px;";
+			Vout.appendChild(llmout);
+			if(llmtimer) {
+				clearTimeout(llmtimer);
+			}
+			llmtimer = setTimeout(() => {
+				if(llmevt) {
+					llmevt.close();
+				}
+				if( Vdtctb.checked )
+					llmevt = new EventSource(llmurl + "&action=ccllm&board=" + fens + "&egtbmetric=dtc");
+				else
+					llmevt = new EventSource(llmurl + "&action=ccllm&board=" + fens + "&egtbmetric=dtm");
+				llmevt.onmessage = function(event) {
+					if (event.data === "[DONE]") {
+						llmevt.close();
+						llmevt = null;
+						return;
+					}
+					llmout.textContent += event.data;
+				};
+			}, 1500);
 		}
 	} else {
 		for (var x = 0; x < a.length; x++) {
@@ -1157,6 +1202,10 @@ function ResetFen(s) {
 	if(autotimer) {
 		clearTimeout(autotimer);
 		autotimer = 0;
+	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
 	}
 	Vbauto.checked = Vbauto.defaultChecked;
 	Vwauto.checked = Vwauto.defaultChecked;
@@ -1838,6 +1887,10 @@ function AutoMove() {
 	if(autotimer) {
 		clearTimeout(autotimer);
 		autotimer = 0;
+	}
+	if(llmtimer) {
+		clearTimeout(llmtimer);
+		llmtimer = 0;
 	}
 	if(movtable.length) {
 		busy = 1;
