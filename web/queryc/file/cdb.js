@@ -171,11 +171,15 @@ function Start() {
 	Vwqs = document.getElementById("wqs");
 	Vtheme = document.getElementById("theme");
 
-	var month = new Date().getMonth();
-	if (month >= 11 || month <= 1) {
-		Vtheme.href = "/file/style_candy.css";
-	} else if (month >= 5 && month <= 7) {
-		Vtheme.href = "/file/style_mint.css";
+	if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+		Vtheme.href = "/file/style_dark.css";
+	} else {
+		var month = new Date().getMonth();
+		if (month >= 11 || month <= 1) {
+			Vtheme.href = "/file/style_candy.css";
+		} else if (month >= 5 && month <= 7) {
+			Vtheme.href = "/file/style_mint.css";
+		}
 	}
 
 	Vrulecheck.checked = Vrulecheck.defaultChecked;
