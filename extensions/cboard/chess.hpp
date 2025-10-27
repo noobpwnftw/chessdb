@@ -4641,8 +4641,6 @@ class StreamParser {
 };
 }  // namespace chess::pgn
 
-#include <sstream>
-
 
 namespace chess {
 class uci {
@@ -4653,7 +4651,7 @@ class uci {
      * @param chess960
      * @return
      */
-    [[nodiscard]] static std::string moveToUci(const Move &move, bool chess960 = false) noexcept(false) {
+    static void moveToUci(const Move &move, std::string &str, bool chess960 = false) noexcept(false) {
         // Get the from and to squares
         Square from_sq = move.from();
         Square to_sq   = move.to();
@@ -4664,17 +4662,15 @@ class uci {
             to_sq = Square(to_sq > from_sq ? File::FILE_G : File::FILE_C, from_sq.rank());
         }
 
-        std::stringstream ss;
 
         // Add the from and to squares to the string stream
-        ss << from_sq << to_sq;
+        str += static_cast<std::string>(from_sq);
+        str += static_cast<std::string>(to_sq);
 
         // If the move is a promotion, add the promoted piece to the string stream
         if (move.typeOf() == Move::PROMOTION) {
-            ss << static_cast<std::string>(move.promotionType());
+            str += static_cast<std::string>(move.promotionType());
         }
-
-        return ss.str();
     }
 
     /**
@@ -4735,10 +4731,8 @@ class uci {
      * @param move
      * @return
      */
-    [[nodiscard]] static std::string moveToSan(const Board &board, const Move &move) noexcept(false) {
-        std::string san;
-        moveToRep<false>(board, move, san);
-        return san;
+    static inline void moveToSan(const Board &board, const Move &move, std::string &str) noexcept(false) {
+        moveToRep<false>(board, move, str);
     }
 
     /**
@@ -4747,10 +4741,8 @@ class uci {
      * @param move
      * @return
      */
-    [[nodiscard]] static std::string moveToLan(const Board &board, const Move &move) noexcept(false) {
-        std::string lan;
-        moveToRep<true>(board, move, lan);
-        return lan;
+    static inline void moveToLan(const Board &board, const Move &move, std::string &str) noexcept(false) {
+        moveToRep<true>(board, move, str);
     }
 
     class SanParseError : public std::exception {

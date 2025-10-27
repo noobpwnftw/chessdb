@@ -487,8 +487,11 @@ PHP_FUNCTION(cbmovegen)
 		Board b = Board(std::string_view(fenstr, fenstr_len), frc);
 		Movelist ml;
 		movegen::legalmoves(ml, b);
+		std::string movestr;
+		movestr.reserve(5);
 		for (const Move& m : ml) {
-			std::string movestr = uci::moveToUci(m, frc);
+			movestr.clear();
+			uci::moveToUci(m, movestr, frc);
 			add_assoc_long_ex(return_value, movestr.c_str(), movestr.size(), 0);
 		}
 	}
@@ -543,12 +546,15 @@ PHP_FUNCTION(cbmovesan)
 		HashTable* arr_hash = Z_ARRVAL_P(arr);
 		HashPosition pointer;
 		zval* data;
+		std::string movestr;
+		movestr.reserve(8);
 		for (zend_hash_internal_pointer_reset_ex(arr_hash, &pointer); data = zend_hash_get_current_data_ex(arr_hash, &pointer); zend_hash_move_forward_ex(arr_hash, &pointer)) {
 			if (Z_TYPE_P(data) == IS_STRING) {
 				Move move = uci::uciToMove(b, std::string_view(Z_STRVAL_P(data), Z_STRLEN_P(data)));
 				if (move != Move::NO_MOVE) {
-					std::string san = uci::moveToSan(b, move);
-					add_next_index_stringl(return_value, san.c_str(), san.size());
+					movestr.clear();
+					uci::moveToSan(b, move, movestr);
+					add_next_index_stringl(return_value, movestr.c_str(), movestr.size());
 					b.makeMove(move);
 					std::string fen = b.getFen(false);
 					bool implied960;
