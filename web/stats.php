@@ -13,9 +13,9 @@ final class FlexibleQueueDBClient
 
     /**
      * @param string $socketPath Path to Unix socket (default "/tmp/fqdb.sock")
-     * @param float  $timeout    Connect timeout in seconds (default 1.0).
+     * @param float  $timeout    Connect timeout in seconds (default 5.0).
      */
-    public function __construct($socketPath = "/tmp/fqdb.sock", $timeout = 1.0)
+    public function __construct($socketPath = "/tmp/fqdb.sock", $timeout = 5.0)
     {
         $this->socketPath = $socketPath;
         $this->timeout = $timeout;
@@ -214,7 +214,7 @@ try{
 		$isJson = false;
 	}
 	$redis = new Redis();
-	$redis->pconnect('dbserver.internal', 8889, 1.0);
+	$redis->pconnect('dbserver.internal', 8889, 5.0);
 	$pos_count = $redis->dbsize();
 
 	$fq_queue = new FlexibleQueueDBClient( '/run/ccqueue/ccqueue.sock' );

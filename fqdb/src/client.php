@@ -16,9 +16,9 @@ final class FlexibleQueueDBClient
 
     /**
      * @param string $socketPath Path to Unix socket (default "/tmp/fqdb.sock")
-     * @param float  $timeout    Connect timeout in seconds (default 1.0).
+     * @param float  $timeout    Connect timeout in seconds (default 5.0).
      */
-    public function __construct($socketPath = "/tmp/fqdb.sock", $timeout = 1.0)
+    public function __construct($socketPath = "/tmp/fqdb.sock", $timeout = 5.0)
     {
         $this->socketPath = $socketPath;
         $this->timeout = $timeout;
