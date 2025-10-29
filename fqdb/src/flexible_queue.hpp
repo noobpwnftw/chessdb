@@ -21,9 +21,8 @@
 #include <sys/syscall.h>
 #include <linux/futex.h>
 #include <limits.h>
-#include <map>
-#include <set>
-#include <unordered_map>
+#include "absl/container/btree_set.h"
+#include "absl/container/btree_map.h"
 #if defined(__x86_64__) || defined(_M_X64)
 #include <immintrin.h>
 #define CPU_RELAX() _mm_pause()
@@ -67,32 +66,23 @@ namespace FlexibleQueue {
 			free(const_cast<char*>(b.data));
 	}
 
-	struct ByteSpanHash {
+	struct ByteSpanLess {
 		using is_transparent = void;
-		size_t operator()(ByteSpan b) const noexcept {
-			return std::hash<std::string_view>{}(
-				std::string_view(b.data ? b.data : "", b.data ? b.size : 0));
+		bool operator()(const ByteSpan& a, const ByteSpan& b) const noexcept {
+			if (a.data == b.data) return a.size < b.size;
+			size_t n = std::min<size_t>(a.size, b.size);
+			int c = std::memcmp(a.data, b.data, n);
+			return (c < 0) || (c == 0 && a.size < b.size);
 		}
-		size_t operator()(std::string_view sv) const noexcept {
-			return std::hash<std::string_view>{}(sv);
+		bool operator()(const ByteSpan& a, std::string_view b) const noexcept {
+			size_t n = std::min<size_t>(a.size, b.size());
+			int c = std::memcmp(a.data, b.data(), n);
+			return (c < 0) || (c == 0 && a.size < b.size());
 		}
-	};
-	struct ByteSpanEq {
-		using is_transparent = void;
-		bool operator()(ByteSpan a, ByteSpan b) const noexcept {
-			if (a.size != b.size)
-				return false;
-			if (a.data == b.data)
-				return true;
-			return a.size == 0 || std::memcmp(a.data, b.data, a.size) == 0;
-		}
-		bool operator()(ByteSpan a, std::string_view sv) const noexcept {
-			if (a.size != sv.size())
-				return false;
-			return a.size == 0 || std::memcmp(a.data, sv.data(), a.size) == 0;
-		}
-		bool operator()(std::string_view sv, ByteSpan a) const noexcept {
-			return (*this)(a, sv);
+		bool operator()(std::string_view a, const ByteSpan& b) const noexcept {
+			size_t n = std::min<size_t>(a.size(), b.size);
+			int c = std::memcmp(a.data(), b.data, n);
+			return (c < 0) || (c == 0 && a.size() < b.size);
 		}
 	};
 
@@ -1437,8 +1427,6 @@ namespace FlexibleQueue {
 				return;
 			}
 
-			key_map_.reserve(count);
-
 			for (uint64_t idx = 0; idx < count; ++idx) {
 				uint16_t priority = 0;
 				uint64_t expiry = 0;
@@ -1489,9 +1477,9 @@ namespace FlexibleQueue {
 				return a < b;
 			}
 		};
-		using ItemSet = std::multiset<Node*, EPtrLess>;
-		using ItemSetMap = std::map<Pri, ItemSet*, std::greater<Pri>>;
-		using KeyMap = std::unordered_map<ByteSpan, Node*, ByteSpanHash, ByteSpanEq>;
+		using ItemSet = absl::btree_multiset<Node*, EPtrLess>;
+		using ItemSetMap = absl::btree_map<Pri, ItemSet*, std::greater<Pri>>;
+		using KeyMap = absl::btree_map<ByteSpan, Node*, ByteSpanLess>;
 
 		std::conditional_t<WithPriority, ItemSetMap, ItemSet> items_;
 		KeyMap key_map_;

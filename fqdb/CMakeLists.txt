@@ -14,6 +14,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "RelWithDebInfo" "MinSizeRel")
 endif()
 
+add_subdirectory(abseil-cpp)
+
 add_executable(fqdb
     src/main.cpp
 )
@@ -21,7 +23,7 @@ add_executable(fqdb
 target_include_directories(fqdb PRIVATE ${CMAKE_SOURCE_DIR})
 
 find_package(Threads REQUIRED)
-target_link_libraries(fqdb PRIVATE Threads::Threads jemalloc)
+target_link_libraries(fqdb PRIVATE Threads::Threads jemalloc absl::btree)
 
 target_compile_options(fqdb PRIVATE
     $<$<CONFIG:Release>:-O3 -fomit-frame-pointer>
