@@ -313,7 +313,7 @@ function getMoves( $redis, $redis2, $row, $depth ) {
 	list( $moves1, $finals ) = getAllScores( $redis, $minbinfen, $minindex, $hasLRmirror );
 
 	$recurse = false;
-	$dedup = ( $depth < 24 || ( ( xxhash64( $minbinfen ) & PHP_INT_MAX ) & 7 ) == 0 );
+	$dedup = ( $depth < 24 ) || ( ( ( xxhash64( $minbinfen ) >> 33 ) & 7 ) == 0 );
 	if( isset($moves1['ply']) )
 	{
 		if( $moves1['ply'] < 0 || $moves1['ply'] > $depth )
