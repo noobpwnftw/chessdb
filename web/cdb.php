@@ -2428,7 +2428,10 @@ try{
 		}
 	}
 	else if( $action == 'gettoken' && isset( $_REQUEST['key'] ) ) {
-		echo hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $_REQUEST['key'] );
+		if( hash_equals( $MASTER_PASSWORD, $_REQUEST['key'] ) )
+			echo hash( 'md5', 'ChessDB' . $_SERVER['REMOTE_ADDR'] . $MASTER_PASSWORD );
+		else
+			echo 'tokenerror';
 	}
 	else if( $action == 'getip' ) {
 		echo $_SERVER['REMOTE_ADDR'];
