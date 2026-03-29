@@ -243,8 +243,11 @@ try{
 	} else {
 		$egtbstats = file_get_contents( 'http://tbserver.internal/tbproxy.php?action=cegtbstats' );
 		if( $egtbstats !== FALSE ) {
-			list( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ) = unserialize( $egtbstats );
-			$memcache_obj->set( 'EGTBStats2', array( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ), 0, 86400 );
+			$decoded_stats = json_decode( $egtbstats, true );
+			if( is_array( $decoded_stats ) && count( $decoded_stats ) === 4 ) {
+				list( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ) = $decoded_stats;
+				$memcache_obj->set( 'EGTBStats2', $decoded_stats, 0, 86400 );
+			}
 		}
 	}
 	$nps = 0;
