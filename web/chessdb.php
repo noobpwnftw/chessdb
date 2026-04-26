@@ -1897,7 +1897,7 @@ try{
 						if( $egtbresult === FALSE ) {
 							$egtbresult = file_get_contents( 'http://tbserver.internal/tbproxy.php?action=ccegtbprobe&board=' . urlencode( $row ) . '&egtbmetric=' . ( $dtmtb ? 'dtm' : 'dtc' ) );
 							if( $egtbresult !== FALSE ) {
-								$egtbresult = unserialize( $egtbresult );
+								$egtbresult = json_decode( $egtbresult, true );
 								if( !empty( $egtbresult ) ) {
 									if( $dtmtb )
 										$memcache_obj->add( 'EGTB_DTM::' . $row, $egtbresult, 0, 30 );

@@ -2,6 +2,7 @@
 ignore_user_abort(true);
 header("Cache-Control: no-cache");
 header("Pragma: no-cache");
+header("Content-Type: application/json");
 
 try{
 	if( !isset( $_REQUEST['action'] ) || $_SERVER['REMOTE_ADDR'] != '127.0.0.1' ) {
@@ -18,7 +19,7 @@ try{
 				else {
 					$dtmtb = true;
 				}
-				echo serialize( ccegtbprobe( $row, $dtmtb ) );
+				echo json_encode( ccegtbprobe( $row, $dtmtb ) );
 			}
 		}
 		else if( $action == 'cegtbprobe' ) {
@@ -50,7 +51,7 @@ try{
 				$egtb_size_dtm += $file->getSize();
 			}
 		}
-		echo serialize( array( $egtb_count_dtc, $egtb_size_dtc, $egtb_count_dtm, $egtb_size_dtm ) );
+		echo json_encode( array( $egtb_count_dtc, $egtb_size_dtc, $egtb_count_dtm, $egtb_size_dtm ) );
 	}
 	else if( $action == 'cegtbstats' ) {
 		$egtb_count_wdl = 0;
@@ -73,7 +74,7 @@ try{
 				}
 			}
 		}
-		echo serialize( array( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ) );
+		echo json_encode( array( $egtb_count_wdl, $egtb_size_wdl, $egtb_count_dtz, $egtb_size_dtz ) );
 	}
 }
 catch (Exception $e) {
