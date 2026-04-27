@@ -68,7 +68,7 @@ static inline bool read_exact(int fd, void* buf, size_t n) {
 
 bool group_init()
 {
-	int fd = open("/home/apache/GROUP.dat", O_RDONLY);
+	int fd = open("/home/apache/GROUP.dat", O_RDONLY | O_CLOEXEC);
 	if (fd == -1)
 	{
 		return false;

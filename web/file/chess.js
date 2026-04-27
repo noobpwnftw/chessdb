@@ -853,11 +853,22 @@ var Chess = function(fen) {
 
     while (true) {
       /* remove the last two fields in the FEN string, they're not needed
-       * when checking for draw by rep */
-      var fen = generate_fen()
-        .split(' ')
-        .slice(0, 4)
-        .join(' ');
+       * when checking for draw by rep; the en passant square counts only
+       * when an en passant capture is legal (FIDE): a double push that
+       * nothing can take repeats the position before it */
+      var fields = generate_fen().split(' ').slice(0, 4);
+      if (fields[3] !== '-') {
+        var ep_legal = false;
+        var legal_moves = generate_moves();
+        for (var m = 0; m < legal_moves.length; m++) {
+          if (legal_moves[m].flags & BITS.EP_CAPTURE) {
+            ep_legal = true;
+            break;
+          }
+        }
+        if (!ep_legal) fields[3] = '-';
+      }
+      var fen = fields.join(' ');
 
       /* has the position occurred three or move times */
       positions[fen] = fen in positions ? positions[fen] + 1 : 1;

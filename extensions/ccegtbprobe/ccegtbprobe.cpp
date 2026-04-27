@@ -25,7 +25,7 @@ extern "C" {
 
 #include "xiangqi.h"
 #include "piece_set.h"
-#include "LZMA/LzmaLib.h"
+#include "lzma_decode.h"
 
 static constexpr U64 EGTB_LOW20_MASK = 0xFFFFFull;
 static constexpr U64 EGTB_OFFREL_SHIFT = 20ULL;
@@ -74,13 +74,6 @@ extern "C" {
 ZEND_GET_MODULE(ccegtbprobe)
 }
 #endif
-
-static inline int uncompress_lzma(char* dest, size_t* destLen, const char* src, size_t* srcLen, const char* props) {
-    return LzmaUncompress(reinterpret_cast<unsigned char*>(dest), destLen,
-                          reinterpret_cast<const unsigned char*>(src), srcLen,
-                          reinterpret_cast<const unsigned char*>(props), 5);
-}
-
 
 static inline int decode_root_dtm(U16 raw) {
     const int flag = (raw >> 11) & 1;
@@ -168,7 +161,7 @@ public:
         if (it != files_.end()) return it->second;
 
         auto ctx = std::make_shared<FileCtx>();
-        ctx->fd = open(file_name, O_RDONLY);
+        ctx->fd = open(file_name, O_RDONLY | O_CLOEXEC);
         if (ctx->fd == -1) return nullptr;
 
         U32 ctrl[2];
@@ -285,12 +278,11 @@ public:
             size_t decode_size = last_block ? f->tail_size[side] : f->block_size[side];
             std::vector<char> dst(decode_size);
 
-            size_t srclen  = comp_size - 5;
-            const char* props = src.data() + (comp_size - 5);
-            int rc = uncompress_lzma(dst.data(), &decode_size, src.data(), &srclen, props);
+            const bool ok = lzma_decode(reinterpret_cast<uint8_t*>(dst.data()), decode_size,
+                                        reinterpret_cast<const uint8_t*>(src.data()), comp_size);
             {
                 std::lock_guard<std::mutex> lk(slot->m);
-                if (rc != SZ_OK) {
+                if (!ok) {
                     slot->error = true;
                 } else {
                     slot->data.swap(dst);

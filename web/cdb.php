@@ -186,7 +186,12 @@ final class FlexibleQueueDBClient
 }
 
 function getWinRate( $score ) {
-	return number_format( 100 / ( 1 + exp( -$score / 330 ) ), 2 );
+	$a = 100;
+	$b = 25;
+	$w = round( 100 / ( 1 + exp( ( $a - $score ) / $b ) ), 2 );
+	$l = round( 100 / ( 1 + exp( ( $a + $score ) / $b ) ), 2 );
+	$d = max( 0, round( 100 - $w - $l, 2 ) );
+	return array( number_format( $w, 2, '.', '' ), number_format( $d, 2, '.', '' ), number_format( $l, 2, '.', '' ) );
 }
 function count_pieces( $fen ) {
 	$count = 0;
@@ -1897,13 +1902,11 @@ try{
 								$isfirst = true;
 
 								foreach( $statmoves as $record => $score ) {
-									$winrate = '';
-									if( abs( $score ) < 10000 ) {
-										if( $isJson )
-											$winrate = ',"winrate":"' . getWinRate( $score ) . '"';
-										else
-											$winrate = ',winrate:' . getWinRate( $score );
-									}
+									list( $wr, $dr, $lr ) = getWinRate( $score );
+									if( $isJson )
+										$winrate = ',"winrate":"' . $wr . '","drawrate":"' . $dr . '","lossrate":"' . $lr . '"';
+									else
+										$winrate = ',winrate:' . $wr . ',drawrate:' . $dr . ',lossrate:' . $lr;
 
 									if( !$isfirst && ( $learn || ( $score >= $throttle && $score >= getbestthrottle( $maxscore ) ) ) ) {
 										if( $isJson )
@@ -2269,17 +2272,30 @@ try{
 										$memcache_obj->add( $cachekey, $result, 0, 30 );
 									}
 									if( !empty( $result ) ) {
-										echo 'move:' . $result;
+										if( $isJson )
+											echo '"status":"ok","move":"' . $result . '"';
+										else
+											echo 'move:' . $result;
 									}
 									else {
-										echo 'nobestmove';
+										if( $isJson )
+											echo '"status":"nobestmove"';
+										else
+											echo 'nobestmove';
 									}
 								}
-								else
-									echo 'invalid movelist';
+								else {
+									if( $isJson )
+										echo '"status":"invalid movelist"';
+									else
+										echo 'invalid movelist';
+								}
 							}
 							else {
-								echo 'invalid parameters';
+								if( $isJson )
+									echo '"status":"invalid parameters"';
+								else
+									echo 'invalid parameters';
 							}
 						}
 					}
