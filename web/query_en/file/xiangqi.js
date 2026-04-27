@@ -166,7 +166,7 @@ function Start() {
 
 		}
 	}
-	inS = inS + '<img alt="" style="z-index:3;margin:0px" src="/file/xiangqi.gif"><img alt="" id="select" style="position:absolute;top:0px;left:0px;z-index:4" src="/file/oo.gif"><img alt="" id="secselect" style="position:absolute;top:0px;left:0px;z-index:4" src="/file/oo.gif"><img alt="" id="firselect" style="position:absolute;top:0px;left:0px;z-index:4" src="/file/oo.gif">';
+	inS = inS + '<img alt="" style="z-index:3;margin:0px" src="/file/xiangqi.svg"><img alt="" id="select" style="position:absolute;top:0px;left:0px;z-index:4" src="/file/oo.gif"><img alt="" id="secselect" style="position:absolute;top:0px;left:0px;z-index:4" src="/file/oo.gif"><img alt="" id="firselect" style="position:absolute;top:0px;left:0px;z-index:4" src="/file/oo.gif">';
 	Vdesk.innerHTML = inS;
 
 	Vselect = document.getElementById("select");
@@ -275,11 +275,11 @@ function ChangeMoveOrder(o) {
 	Vsecsel.src = '/file/oo.gif';
 	wb = o;
 	if (o == 1) {
-		document.getElementById('bturn').src = '/file/bturn.png';
+		document.getElementById('bturn').src = '/file/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/wturn.png';
+		document.getElementById('wturn').src = '/file/wturn.svg';
 	}
 	while (prevmove.length)
 		prevmove.pop();
@@ -333,12 +333,12 @@ function mdown(cid) {
 	wb = 1 - wb;
 	if (wb == 1) {
 		Vbmm.checked = 'checked';
-		document.getElementById('bturn').src = '/file/bturn.png';
+		document.getElementById('bturn').src = '/file/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		Vwmm.checked = 'checked';
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/wturn.png';
+		document.getElementById('wturn').src = '/file/wturn.svg';
 	}
 	var a = new Array();
 	var b = new Array();
@@ -1272,7 +1272,7 @@ function FillPV(id, stable) {
 
 	var xmlhttpPV = getXmlHttp();
 
-	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2] + "&stable=" + stable, true);
+	xmlhttpPV.open('GET', apiurl + '?action=querypv&board=' + b[2] + "&stable=" + stable + (Vdtctb.checked ? '&egtbmetric=dtc' : ''), true);
 	xmlhttpPV.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 	xmlhttpPV.onreadystatechange = function() {
 		if (xmlhttpPV.readyState == 4) {
@@ -1364,13 +1364,13 @@ function SyncDesk() {
 	if (wb == 1) {
 		fens = fens + ' b';
 		Vbmm.checked = 'checked';
-		document.getElementById('bturn').src = '/file/bturn.png';
+		document.getElementById('bturn').src = '/file/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		fens = fens + ' w';
 		Vwmm.checked = 'checked';
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/wturn.png';
+		document.getElementById('wturn').src = '/file/wturn.svg';
 	}
 	
 	if (flipmode == 1) {
@@ -1417,13 +1417,13 @@ function Initialize() {
 	if (s.charAt(s.length - 1) == 'b') {
 		Vbmm.checked = 'checked';
 		wb = 1;
-		document.getElementById('bturn').src = '/file/bturn.png';
+		document.getElementById('bturn').src = '/file/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		Vwmm.checked = 'checked';
 		wb = 0;
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/wturn.png';
+		document.getElementById('wturn').src = '/file/wturn.svg';
 	}
 	var x = 0;
 	for (var y = 0; y < 10; y++) {
@@ -1480,7 +1480,7 @@ function AddFigure(x, y, id) {
 	elem.id = id + String(z) + 'd';
 	elem.style.Class = 'chess';
 	elem.style.position = 'absolute';
-	elem.innerHTML = "<img alt='' draggable='true' onmousedown='onmdown2(event,\"" + s + "\")' ondragstart='ondstart(event,\"" + s + "\")' ondragend='ondend(event)' style='position:absolute;z-index:6' id='" + s + "'src='/file/" + id.toLowerCase() + ".png'>";
+	elem.innerHTML = "<img alt='' draggable='true' onmousedown='onmdown2(event,\"" + s + "\")' ondragstart='ondstart(event,\"" + s + "\")' ondragend='ondend(event)' style='position:absolute;z-index:6' id='" + s + "'src='/file/" + id.toLowerCase() + ".svg'>";
 	plaza.appendChild(elem);
 	plaza.lastChild.style.left = a;
 	plaza.lastChild.style.top = b;

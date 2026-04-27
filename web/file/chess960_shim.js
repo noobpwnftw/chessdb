@@ -236,12 +236,13 @@ Chess960.prototype._makeCastleMove = function (side, from, to) {
   const rank = (side==='w') ? '1' : '8';
   var rookFile = null, which = null;
 
-  if (to === this._kingTarget(side,'K')) { which = 'k'; rookFile = this._rightRookFile(side); }
-  else if (to === this._kingTarget(side,'Q')) { which = 'q'; rookFile = this._leftRookFile(side); }
-  else { // king→rook encoding
+  if (to[1] === rank && hasRight(this.cr[side], to[0])) {
     rookFile = to[0];
     which = (rookFile > from[0]) ? 'k' : 'q';
   }
+  else if (to === this._kingTarget(side,'K')) { which = 'k'; rookFile = this._rightRookFile(side); }
+  else if (to === this._kingTarget(side,'Q')) { which = 'q'; rookFile = this._leftRookFile(side); }
+  else return null;
   if (!rookFile) return null;
 
   const kingFrom = from;

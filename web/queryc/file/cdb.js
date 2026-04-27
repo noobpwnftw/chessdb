@@ -263,12 +263,12 @@ function ChangeMoveOrder(o) {
 	var tokens = chess.fen().split(' ');
 	if (o == 1) {
 		tokens[1] = 'b';
-		document.getElementById('bturn').src = '/file/chess/bturn.png';
+		document.getElementById('bturn').src = '/file/chess/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		tokens[1] = 'w';
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/chess/wturn.png';
+		document.getElementById('wturn').src = '/file/chess/wturn.svg';
 	}
 	tokens[3] = '-';
 	chess.load(tokens.join(' '));
@@ -385,12 +385,12 @@ function mdown(cid) {
 	wb = 1 - wb;
 	if (wb == 1) {
 		Vbmm.checked = 'checked';
-		document.getElementById('bturn').src = '/file/chess/bturn.png';
+		document.getElementById('bturn').src = '/file/chess/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		Vwmm.checked = 'checked';
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/chess/wturn.png';
+		document.getElementById('wturn').src = '/file/chess/wturn.svg';
 	}
 	var a = new Array();
 	var b = new Array();
@@ -1252,12 +1252,12 @@ function ncontext(e) {
 function SyncDesk() {
 	if (wb == 1) {
 		Vbmm.checked = 'checked';
-		document.getElementById('bturn').src = '/file/chess/bturn.png';
+		document.getElementById('bturn').src = '/file/chess/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		Vwmm.checked = 'checked';
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/chess/wturn.png';
+		document.getElementById('wturn').src = '/file/chess/wturn.svg';
 	}
 	RefreshAll();
 	return;
@@ -1309,13 +1309,13 @@ function Initialize() {
 	if (chess.turn() == 'b') {
 		Vbmm.checked = 'checked';
 		wb = 1;
-		document.getElementById('bturn').src = '/file/chess/bturn.png';
+		document.getElementById('bturn').src = '/file/chess/bturn.svg';
 		document.getElementById('wturn').src = '/file/ooo.gif';
 	} else {
 		Vwmm.checked = 'checked';
 		wb = 0;
 		document.getElementById('bturn').src = '/file/ooo.gif';
-		document.getElementById('wturn').src = '/file/chess/wturn.png';
+		document.getElementById('wturn').src = '/file/chess/wturn.svg';
 	}
 	SyncCastling();
 	var x = 0;
