@@ -2635,7 +2635,7 @@ try{
 							$redis = new Redis();
 							$redis->pconnect('dbserver.internal', 8889, 5.0);
 							$statmoves = getAnalysisPath( $redis, $row, $banmoves, 0, 200, true, $learn, 0, $pv, $stable, $sieve );
-							if( count( $statmoves ) > 0 ) {
+							if( count( $statmoves ) > 0 && isset( $statmoves[$pv[0]] ) ) {
 								if( $isJson )
 									echo '"status":"ok","score":' . $statmoves[$pv[0]] . ',"depth":' . count( $pv ) . ',"pv":["' . implode( '","', $pv ) . '"]';
 								else
